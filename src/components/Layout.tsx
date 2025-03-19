@@ -1,9 +1,27 @@
-import React, { useState } from 'react';
-import { Layout, Menu, theme } from 'antd';
-import { HomeOutlined, UnorderedListOutlined, SettingOutlined } from '@ant-design/icons';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, CSSProperties } from "react";
+import { ConfigProvider, Layout, Menu, theme } from "antd";
+import {
+  HomeOutlined,
+  UnorderedListOutlined,
+  SettingOutlined,
+  GithubOutlined
+} from "@ant-design/icons";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import ImgLogo from "../assets/MarkPDFdown.png";
 
-const { Sider, Content, Footer } = Layout;
+const { Header, Sider, Content, Footer } = Layout;
+
+// 扩展window接口以包含electron
+declare global {
+  interface Window {
+    electron?: {
+      ipcRenderer: {
+        send: (channel: string, data: any) => void;
+        on: (channel: string, func: (...args: any[]) => void) => void;
+      }
+    }
+  }
+}
 
 type MenuItem = {
   key: string;
@@ -12,72 +30,176 @@ type MenuItem = {
   path: string;
 };
 
+// 扩展样式类型以支持特殊的CSS属性
+interface CustomCSSProperties extends CSSProperties {
+  WebkitAppRegion?: 'drag' | 'no-drag';
+}
+
 const AppLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const {
-    token: { colorBgContainer, borderRadiusLG },
+    token: { colorBgContainer, borderRadiusLG, colorBgLayout },
   } = theme.useToken();
 
   const menuItems: MenuItem[] = [
     {
-      key: '1',
+      key: "1",
       icon: <HomeOutlined />,
-      label: '主页',
-      path: '/',
+      label: "主页",
+      path: "/",
     },
     {
-      key: '2',
+      key: "2",
       icon: <UnorderedListOutlined />,
-      label: '列表',
-      path: '/list',
+      label: "列表",
+      path: "/list",
     },
     {
-      key: '3',
+      key: "3",
       icon: <SettingOutlined />,
-      label: '设置',
-      path: '/settings',
+      label: "设置",
+      path: "/settings",
     },
   ];
 
   // 根据当前路径确定选中的菜单项
   const getSelectedKey = () => {
     const currentPath = location.pathname;
-    const item = menuItems.find(item => item.path === currentPath);
-    return item ? item.key : '1';
+    const item = menuItems.find((item) => item.path === currentPath);
+    return item ? item.key : "1";
+  };
+
+  // 定义自定义样式
+  const headerStyle: CustomCSSProperties = {
+    WebkitAppRegion: 'drag'
+  };
+  
+  // 打开外部链接
+  const openExternalLink = (url: string) => {
+    if (window.electron?.ipcRenderer) {
+      // 使用通过上下文桥接口提供的IPC
+      window.electron.ipcRenderer.send('open-external-link', url);
+    } else {
+      // 降级为普通链接（在浏览器中运行时）
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   return (
-    <Layout style={{ minHeight: '100vh', width: '100%', display: 'flex', flexDirection: 'row' }}>
-      <Sider collapsed={true} defaultCollapsed={true}>
-        <div style={{ height: '48px', margin: '16px', background: 'rgba(255, 255, 255, .2)', borderRadius: '6px'}} />
-        <Menu
-          theme="dark"
-          defaultSelectedKeys={[getSelectedKey()]}
-          mode="inline"
-          items={menuItems.map(item => ({
-            key: item.key,
-            icon: item.icon,
-            label: item.label,
-          }))}
-          onClick={({ key }) => {
-            const selectedItem = menuItems.find(item => item.key === key);
-            if (selectedItem) {
-              navigate(selectedItem.path);
-            }
-          }}
-        />
-      </Sider>
-      <Layout style={{ flex: '1 1 auto', width: '100%' }}>
-        <Content style={{ margin: '16px 16px 0', background: colorBgContainer, borderRadius: borderRadiusLG, flex: '1 1 auto' }}>
-          <div style={{ padding: 24, height: '100%' }}>
+    <ConfigProvider
+      theme={{
+        components: {
+          Menu: {
+            itemMarginInline: 18,
+          },
+          Layout: {
+            footerPadding: "12px 50px",
+            headerHeight: "20px",
+            headerBg: colorBgLayout,
+          },
+        },
+      }}
+    >
+      <Layout
+        style={{
+          minHeight: "100vh",
+          width: "100%",
+          display: "flex",
+          flexDirection: "row",
+        }}
+      >
+        <Sider collapsed={true} defaultCollapsed={true} style={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          height: '100vh',
+          position: 'relative'
+        }}>
+          <div
+            style={{
+              margin: "48px 16px 16px",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              borderRadius: borderRadiusLG,
+              overflow: "hidden",
+            }}
+          >
+            <img
+              src={ImgLogo}
+              alt="MarkPDFdown"
+              style={{ width: "48px", height: "48px" }}
+              draggable={false}
+            />
+          </div>
+
+          <Menu
+            theme="dark"
+            defaultSelectedKeys={[getSelectedKey()]}
+            mode="inline"
+            items={menuItems.map((item) => ({
+              key: item.key,
+              icon: item.icon,
+              label: item.label,
+            }))}
+            onClick={({ key }) => {
+              const selectedItem = menuItems.find((item) => item.key === key);
+              if (selectedItem) {
+                navigate(selectedItem.path);
+              }
+            }}
+          />
+          
+          <div style={{ 
+            position: 'absolute',
+            bottom: '24px',
+            left: 0,
+            right: 0,
+            display: 'flex', 
+            justifyContent: 'center',
+            padding: '16px 0'
+          }}>
+            <div
+              onClick={() => openExternalLink('https://github.com/jorben/markpdfdown_desktop')}
+              style={{ 
+                color: 'rgba(255, 255, 255, 0.65)', 
+                fontSize: '20px', 
+                transition: 'color 0.3s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'white'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.65)'}
+            >
+              <GithubOutlined />
+            </div>
+          </div>
+        </Sider>
+
+        <Layout style={{ flex: "1 1 auto", width: "100%" }}>
+          <Header style={headerStyle}></Header>
+          <Content
+            style={{
+              margin: "0px 16px 0",
+              background: colorBgContainer,
+              borderRadius: borderRadiusLG,
+              flex: "1 1 auto",
+            }}
+          >
+            <div style={{ padding: 24, height: "100%" }}>
               <Outlet />
             </div>
-        </Content>
-        <Footer style={{ textAlign: 'center' }}>Copyright &copy; {new Date().getFullYear()} MarkPDFdown All Rights Reserved.</Footer>
+          </Content>
+          <Footer style={{ textAlign: "center" }}>
+            Copyright &copy; {new Date().getFullYear()} MarkPDFdown All Rights
+            Reserved.
+          </Footer>
+        </Layout>
       </Layout>
-    </Layout>
+    </ConfigProvider>
   );
 };
 
-export default AppLayout; 
+export default AppLayout;
