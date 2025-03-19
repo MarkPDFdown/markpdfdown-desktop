@@ -113,7 +113,11 @@ const AppLayout: React.FC = () => {
           display: 'flex', 
           flexDirection: 'column',
           height: '100vh',
-          position: 'relative'
+          position: 'fixed',  
+          left: 0,
+          top: 0,
+          bottom: 0,
+          zIndex: 10
         }}>
           <div
             style={{
@@ -178,8 +182,16 @@ const AppLayout: React.FC = () => {
           </div>
         </Sider>
 
-        <Layout style={{ flex: "1 1 auto", width: "100%" }}>
-          <Header style={headerStyle}></Header>
+        <Layout style={{ flex: "1 1 auto", width: "100%", marginLeft: '80px' }}>
+          <Header style={{
+            ...headerStyle,
+            position: 'fixed',
+            width: 'calc(100% - 80px)',
+            top: 0,
+            right: 0,
+            zIndex: 9,
+            background: colorBgLayout
+          }}></Header>
           <Content
             style={{
               margin: "0px 16px 0",

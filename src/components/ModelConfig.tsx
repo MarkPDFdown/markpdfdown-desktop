@@ -6,6 +6,7 @@ const ModelConfig: React.FC = () => {
   return (
     <div>
       <Tabs
+        style={{ minHeight: '645px' }}
         defaultActiveKey="0"
         tabPosition="left"
         items={Array.from({ length: 5 }, (_, i) => {
