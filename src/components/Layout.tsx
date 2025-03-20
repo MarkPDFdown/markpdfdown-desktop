@@ -194,7 +194,7 @@ const AppLayout: React.FC = () => {
           }}></Header>
           <Content
             style={{
-              margin: "0px 16px 0",
+              margin: "20px 16px 0",
               background: colorBgContainer,
               borderRadius: borderRadiusLG,
               flex: "1 1 auto",
