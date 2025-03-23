@@ -1,7 +1,31 @@
 import React from 'react';
-import { Tabs, Button } from 'antd';
-
+import { Tabs } from 'antd';
+import Model from './Model';
 const ModelConfig: React.FC = () => {
+  const items = [
+    {
+      key: '1',
+      label: 'MarkPDFdown',
+      children: 'Content of Tab 1',
+    },
+    {
+      key: '2',
+      label: 'OpenRouter',
+      children: 'Content of Tab 2',
+    },
+    {
+      key: '3',
+      label: '腾讯云TI',
+      children: 'Content of Tab 3',
+    },
+    {
+      key: '4',
+      label: '添加服务商',
+      children: <Model />,
+    },
+    
+    
+  ];
 
   return (
     <div>
@@ -9,14 +33,7 @@ const ModelConfig: React.FC = () => {
         style={{ height: 'calc(100vh - 180px)' }}
         defaultActiveKey="0"
         tabPosition="left"
-        items={Array.from({ length: 5 }, (_, i) => {
-          const id = String(i);
-          return {
-            label: id === '4' ? '添加服务商' :`Tab-${id}`,
-            key: id,
-            children: `Content of tab ${id}`,
-          };
-        })}
+        items={items}
       />
     </div>
   );
