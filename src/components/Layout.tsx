@@ -173,7 +173,7 @@ const AppLayout: React.FC = () => {
             padding: '16px 0'
           }}>
             <div
-              onClick={() => openExternalLink('https://github.com/MarkPDFdown/markpdfdown_desktop')}
+              onClick={() => openExternalLink('https://github.com/MarkPDFdown/desktop')}
               style={{ 
                 color: 'rgba(255, 255, 255, 0.65)', 
                 fontSize: '20px', 
