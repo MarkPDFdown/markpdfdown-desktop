@@ -73,6 +73,9 @@ const List: React.FC = () => {
     <Table
       columns={columns}
       dataSource={data}
+      pagination={{
+        position: ['bottomCenter'],
+      }}
     />
   );
 };

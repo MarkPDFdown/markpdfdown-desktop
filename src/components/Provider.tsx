@@ -20,12 +20,11 @@ const Provider: React.FC = () => {
       <div>
         <Typography.Text>API 地址：</Typography.Text>
         <Space.Compact style={{ width: "100%" }}>
-          <Input placeholder="请输入API地址" />
-          <Select style={{ width: 250 }} defaultValue="/chat/completions" options={[
+          <Input placeholder="请输入API地址" addonAfter={<Select style={{ width: 180 }} defaultValue="/chat/completions" options={[
             { label: "/chat/completions", value: "/chat/completions" },
             { label: "/v1/chat/completions", value: "/v1/chat/completions" },
             { label: "无需后缀", value: "" },
-          ]} />
+          ]} />} />
         </Space.Compact>
       </div>
       <Divider variant="dashed" dashed plain={true}>
@@ -67,7 +66,7 @@ const Provider: React.FC = () => {
         </Space>
         <Button type="primary" icon={<PlusOutlined />}>添加模型</Button>
       </div>
-      <Typography.Text type="secondary">注意：请添加支持视觉识别的模型，并确保模型ID正确，否则模型将无法使用</Typography.Text>
+      <Typography.Text type="secondary">注意：请添加支持视觉识别的模型，并确保模型ID正确，否则模型将无法正常使用！</Typography.Text>
 
     </Flex>
   );
