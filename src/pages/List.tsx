@@ -1,11 +1,12 @@
 import React from 'react';
 import { Progress, Space, Table, Tooltip, Typography, Tag } from 'antd';
-import { FilePdfOutlined, FilePdfTwoTone } from '@ant-design/icons';
+import { FilePdfTwoTone } from '@ant-design/icons';
 
 const { Text } = Typography;
 
 const data = [
   {
+    id: '1',
     filename: 'some name for the cardsome name for the cardsome name for the cardsome name for the card.pdf',
     pages: 10,
     model: 'Claude 3.7 Sonnet | Openrouter',
@@ -15,6 +16,7 @@ const data = [
     createdAt: '2024-01-01 12:00:00',
   },
   {
+    id: '2',
     filename: 'some name for the card.pdf',
     pages: 10,
     model: 'Claude 3.7 Sonnet | Openrouter',
@@ -24,6 +26,7 @@ const data = [
     createdAt: '2024-01-01 12:00:00',
   },
   {
+    id: '3',
     filename: 'some name for the card.pdf',
     pages: 10,
     model: 'Claude 3.7 Sonnet | Openrouter',
@@ -63,7 +66,7 @@ const List: React.FC = () => {
       title: '操作',
       dataIndex: 'action',
       width: 160,
-      render: (text: string) => <Space size="small"><a>{text}</a><Text type="danger">删除</Text></Space>,
+      render: (text: string, record: any) => <Space size="small"><a href={`/list/preview/${record.id}`}>{text}</a><Text type="danger">删除</Text></Space>,
     },
   ];
   return (

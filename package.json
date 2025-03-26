@@ -17,9 +17,16 @@
     "antd": "^5.24.4",
     "electron": "^35.0.2",
     "electron-is-dev": "^3.0.1",
+    "katex": "^0.16.21",
+    "prismjs": "^1.30.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-router-dom": "^7.3.0"
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.3.0",
+    "rehype-katex": "^7.0.1",
+    "rehype-prism-plus": "^2.0.0",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",

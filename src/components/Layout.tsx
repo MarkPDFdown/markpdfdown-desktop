@@ -66,8 +66,17 @@ const AppLayout: React.FC = () => {
   // 根据当前路径确定选中的菜单项
   const getSelectedKey = () => {
     const currentPath = location.pathname;
-    const item = menuItems.find((item) => item.path === currentPath);
-    return item ? item.key : "1";
+    
+    // 检查是否为子路径
+    for (const item of menuItems) {
+      // 如果当前路径以某个菜单项的路径为开头，则选中该菜单项
+      if (currentPath === item.path || (item.path !== '/' && currentPath.startsWith(item.path))) {
+        return item.key;
+      }
+    }
+    
+    // 如果没有匹配，则默认选中首页
+    return "1";
   };
 
   // 定义自定义样式
@@ -164,7 +173,7 @@ const AppLayout: React.FC = () => {
             padding: '16px 0'
           }}>
             <div
-              onClick={() => openExternalLink('https://github.com/jorben/markpdfdown_desktop')}
+              onClick={() => openExternalLink('https://github.com/MarkPDFdown/markpdfdown_desktop')}
               style={{ 
                 color: 'rgba(255, 255, 255, 0.65)', 
                 fontSize: '20px', 
