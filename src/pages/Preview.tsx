@@ -1,9 +1,21 @@
-import { ArrowLeftOutlined, FileMarkdownOutlined } from "@ant-design/icons";
-import { Button, Pagination, Space, Splitter } from "antd";
+import {
+  ArrowLeftOutlined,
+  FileMarkdownOutlined,
+  FilePdfTwoTone,
+} from "@ant-design/icons";
+import {
+  Button,
+  Pagination,
+  Space,
+  Splitter,
+  Tooltip,
+  Typography,
+} from "antd";
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import MarkdownPreview from "../components/MarkdownPreview";
 
+const { Text } = Typography;
 const MockMarkdown = `
 (3) Maj1@N (majority-voting-at-N): $N$ sampled solutions are first clustered by their math equivalence, i.e., $g(A_i, A_j)$. Then, one solution $A^*$ from a most frequent cluster is selected for calculating the accuracy, $g(A, A^*)$.
 
@@ -62,14 +74,18 @@ console.log(c);
 const Preview: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+  const title = "some name for the card some name for the card some name for the card.pdf";
+  const pages = 10;
+
   return (
-    <div style={{ 
-      height: "calc(100vh - 114px)", 
-      display: "flex", 
-      flexDirection: "column",
-      gap: "24px"
-    }}>
+    <div
+      style={{
+        height: "calc(100vh - 114px)",
+        display: "flex",
+        flexDirection: "column",
+        gap: "24px",
+      }}
+    >
       <div style={{ display: "flex", justifyContent: "space-between" }}>
         <Button
           onClick={() => navigate("/list")}
@@ -79,26 +95,41 @@ const Preview: React.FC = () => {
         >
           返回
         </Button>
+        <Space
+          style={{
+            maxWidth: "580px",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <FilePdfTwoTone twoToneColor="#ec5f4a" />
+          <Tooltip title={title}>
+            <Text strong>
+              [{pages}页]{title}
+            </Text>
+          </Tooltip>
+        </Space>
         <Space>
           <Button
             color="primary"
             icon={<FileMarkdownOutlined />}
             variant="filled"
           >
-            下载
+            下载 .md
           </Button>
           <Button color="danger" variant="filled">
             删除
           </Button>
         </Space>
       </div>
-      
+
       <Splitter
         style={{
           flex: 1,
           width: "100%",
           height: "calc(100vh - 224px)",
-          boxShadow: "0 0 10px rgba(0, 0, 0, 0.1)",
+          border: "2px solid rgba(0, 0, 0, 0.05)",
         }}
       >
         <Splitter.Panel
@@ -109,7 +140,6 @@ const Preview: React.FC = () => {
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            overflow: "hidden",
             padding: "12px",
           }}
         >

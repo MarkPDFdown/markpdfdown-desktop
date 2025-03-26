@@ -1,21 +1,22 @@
-import React from 'react';
-import { Tabs } from 'antd';
-import type { TabsProps } from 'antd';
-import ModelConfig from '../components/ModelConfig';
-import { ApiOutlined, MailOutlined } from '@ant-design/icons';
+import React from "react";
+import { Tabs } from "antd";
+import type { TabsProps } from "antd";
+import ModelService from "../components/ModelService";
+import { ApiOutlined, MailOutlined } from "@ant-design/icons";
+import About from "../components/About";
 const Settings: React.FC = () => {
-  const items: TabsProps['items'] = [
+  const items: TabsProps["items"] = [
     {
-      key: '1',
-      label: '模型服务',
+      key: "1",
+      label: "模型服务",
       icon: <ApiOutlined />,
-      children: <ModelConfig />,
+      children: <ModelService />,
     },
     {
-      key: '2',
-      label: '关于我们',
+      key: "2",
+      label: "关于我们",
       icon: <MailOutlined />,
-      children: <div>Content of Tab 2</div>,
+      children: <About />,
     },
   ];
   return (
@@ -25,4 +26,4 @@ const Settings: React.FC = () => {
   );
 };
 
-export default Settings; 
+export default Settings;
