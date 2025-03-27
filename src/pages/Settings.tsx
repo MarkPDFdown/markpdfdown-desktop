@@ -19,11 +19,7 @@ const Settings: React.FC = () => {
       children: <About />,
     },
   ];
-  return (
-    <div>
-      <Tabs defaultActiveKey="1" items={items} />
-    </div>
-  );
+  return <Tabs defaultActiveKey="1" items={items} />;
 };
 
 export default Settings;

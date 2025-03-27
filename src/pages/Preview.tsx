@@ -133,7 +133,7 @@ const Preview: React.FC = () => {
         }}
       >
         <Splitter.Panel
-          defaultSize="50%"
+          defaultSize="40%"
           min="30%"
           max="70%"
           style={{
