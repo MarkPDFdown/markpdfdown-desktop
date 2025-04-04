@@ -40,3 +40,8 @@
 .read-the-docs {
   color: #888;
 }
+
+.ant-upload-list {
+  max-height: 180px;
+  overflow-y: auto;
+}
