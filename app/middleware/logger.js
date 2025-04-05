@@ -25,7 +25,7 @@ const errorLogger = (err, req, res, next) => {
   next(err);
 };
 
-module.exports = {
+export {
   requestLogger,
   errorLogger
 }; 

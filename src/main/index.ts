@@ -4,25 +4,30 @@ import isDev from 'electron-is-dev';
 
 // 添加错误处理
 let backend: any;
-try {
-  // 解决模块导入问题
-  if (isDev) {
-    backend = require(path.join(process.cwd(), 'app/app'));
-  } else {
-    // 在打包环境中使用绝对路径
-    backend = require(path.join(app.getAppPath(), 'app/app'));
-  }
-} catch (error) {
-  console.error('Error loading backend:', error);
-  process.exit(1);
-}
-
 let mainWindow: BrowserWindow | null;
 let backendServer: any;
+
+// 加载后端服务
+async function loadBackend() {
+  try {
+    // 解决模块导入问题
+    if (isDev) {
+      return await import(path.join(process.cwd(), 'app/app.js'));
+    } else {
+      // 在打包环境中使用绝对路径
+      return await import(path.join(app.getAppPath(), 'app/app.js'));
+    }
+  } catch (error) {
+    console.error('Error loading backend:', error);
+    process.exit(1);
+  }
+}
 
 // 启动后端服务器并确保可以获取到端口
 async function startBackendServer(): Promise<number> {
   return new Promise(async (resolve) => {
+    // 首先加载后端
+    backend = await loadBackend();
     backendServer = await backend.start();
 
     // 检查服务器是否已成功监听

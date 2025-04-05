@@ -1,4 +1,4 @@
-const { prisma } = require('../db');
+import { prisma } from '../db/index.js';
 
 // 查找所有用户
 const findAll = async () => {
@@ -56,7 +56,7 @@ const remove = async (id) => {
   });
 };
 
-module.exports = {
+export {
   findAll,
   findById,
   findByEmail,

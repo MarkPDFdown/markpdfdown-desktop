@@ -1,8 +1,8 @@
-const path = require('path');
-const fs = require('fs');
-const { PrismaClient } = require('@prisma/client');
-const isDev = require('electron-is-dev');
-const { app } = require('electron');
+import path from 'path';
+import fs from 'fs';
+import { PrismaClient } from '@prisma/client';
+import isDev from 'electron-is-dev';
+import { app } from 'electron';
 
 // 获取迁移文件目录
 const getMigrationsDir = () => {
@@ -186,6 +186,6 @@ const runMigrations = async (dbUrl) => {
   }
 };
 
-module.exports = {
+export {
   runMigrations
 }; 

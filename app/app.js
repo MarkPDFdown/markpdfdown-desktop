@@ -1,8 +1,8 @@
-const express = require('express');
-const cors = require('cors');
-const bodyParser = require('body-parser');
-const { requestLogger, errorLogger } = require('./middleware/logger');
-const db = require('./db');
+import express from 'express';
+import cors from 'cors';
+import bodyParser from 'body-parser';
+import { requestLogger, errorLogger } from './middleware/logger.js';
+import { initDatabase, disconnect } from './db/index.js';
 
 // 初始化Express应用
 const app = express();
@@ -14,7 +14,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(requestLogger);
 
 // 导入路由
-const userRoutes = require('./routes/userRoutes');
+import userRoutes from './routes/userRoutes.js';
 
 // 使用路由
 app.use('/api/users', userRoutes);
@@ -37,27 +37,26 @@ app.use((err, req, res, next) => {
 
 // 优雅关闭
 process.on('SIGINT', async () => {
-    await db.disconnect();
+    await disconnect();
     console.log('Backend server has been shut down');
     process.exit(0);
 });
 
 let server = null;
 
-module.exports = {
-    start: async () => {
-        // 确保不会重复启动服务器
-        if (server) {
-            return server;
-        }
-        
-        // 在启动服务器前初始化数据库
-        await db.initDatabase();
-        
-        // 启动服务器并监听随机端口
-        server = app.listen(0, 'localhost');
+export { app };
+export const start = async () => {
+    // 确保不会重复启动服务器
+    if (server) {
         return server;
-    },
-    getServer: () => server,
-    app
-}; 
+    }
+    
+    // 在启动服务器前初始化数据库
+    await initDatabase();
+    
+    // 启动服务器并监听随机端口
+    server = app.listen(0, 'localhost');
+    return server;
+};
+
+export const getServer = () => server; 

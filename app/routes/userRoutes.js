@@ -1,21 +1,21 @@
-const express = require('express');
-const userController = require('../controllers/userController');
+import express from 'express';
+import { getAllUsers, getUserById, createUser, updateUser, deleteUser } from '../controllers/userController.js';
 
 const router = express.Router();
 
 // 获取所有用户
-router.get('/', userController.getAllUsers);
+router.get('/', getAllUsers);
 
 // 获取单个用户
-router.get('/:id', userController.getUserById);
+router.get('/:id', getUserById);
 
 // 创建用户
-router.post('/', userController.createUser);
+router.post('/', createUser);
 
 // 更新用户
-router.put('/:id', userController.updateUser);
+router.put('/:id', updateUser);
 
 // 删除用户
-router.delete('/:id', userController.deleteUser);
+router.delete('/:id', deleteUser);
 
-module.exports = router; 
+export default router; 

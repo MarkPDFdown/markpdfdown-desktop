@@ -1,8 +1,8 @@
-const { PrismaClient } = require('@prisma/client');
-const { runMigrations } = require('./migrationManager');
-const path = require('path');
-const { app } = require('electron');
-const fs = require('fs');
+import { PrismaClient } from '@prisma/client';
+import { runMigrations } from './migrationManager.js';
+import path from 'path';
+import { app } from 'electron';
+import fs from 'fs';
 
 // 设置和获取数据库URL
 function getDatabaseUrl() {
@@ -61,7 +61,7 @@ const disconnect = async () => {
     console.log('Database connection has been closed');
 };
 
-module.exports = {
+export {
     prisma,
     disconnect,
     initDatabase

@@ -1,9 +1,9 @@
-const userDal = require('../dal/userDal');
+import { findAll, findById, findByEmail, create, update, remove } from '../dal/userDal.js';
 
 // 获取所有用户
 const getAllUsers = async (req, res, next) => {
   try {
-    const users = await userDal.findAll();
+    const users = await findAll();
     res.json(users);
   } catch (error) {
     next(error);
@@ -14,7 +14,7 @@ const getAllUsers = async (req, res, next) => {
 const getUserById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const user = await userDal.findById(Number(id));
+    const user = await findById(Number(id));
     
     if (!user) {
       return res.status(404).json({ message: '用户不存在' });
@@ -37,13 +37,13 @@ const createUser = async (req, res, next) => {
     }
     
     // 检查邮箱是否已存在
-    const existingUser = await userDal.findByEmail(email);
+    const existingUser = await findByEmail(email);
     if (existingUser) {
       return res.status(409).json({ message: '该邮箱已被注册' });
     }
     
     // 创建用户
-    const newUser = await userDal.create({
+    const newUser = await create({
       email,
       name,
       password
@@ -64,7 +64,7 @@ const updateUser = async (req, res, next) => {
     const { name, email, password } = req.body;
     
     // 验证用户存在
-    const existingUser = await userDal.findById(Number(id));
+    const existingUser = await findById(Number(id));
     if (!existingUser) {
       return res.status(404).json({ message: '用户不存在' });
     }
@@ -76,7 +76,7 @@ const updateUser = async (req, res, next) => {
     if (password) updateData.password = password;
     
     // 更新用户
-    const updatedUser = await userDal.update(Number(id), updateData);
+    const updatedUser = await update(Number(id), updateData);
     
     // 不要在响应中返回密码
     const { password: _, ...userWithoutPassword } = updatedUser;
@@ -92,20 +92,20 @@ const deleteUser = async (req, res, next) => {
     const { id } = req.params;
     
     // 验证用户存在
-    const existingUser = await userDal.findById(Number(id));
+    const existingUser = await findById(Number(id));
     if (!existingUser) {
       return res.status(404).json({ message: '用户不存在' });
     }
     
     // 删除用户
-    await userDal.remove(Number(id));
+    await remove(Number(id));
     res.status(204).send();
   } catch (error) {
     next(error);
   }
 };
 
-module.exports = {
+export {
   getAllUsers,
   getUserById,
   createUser,

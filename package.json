@@ -5,7 +5,6 @@
   "description": "A high-quality PDF to Markdown tool based on large language model visual recognition.",
   "author": "MarkPDFdown",
   "main": "dist/electron/main/index.js",
-  "type": "commonjs",
   "homepage": "https://github.com/markpdfdown/desktop",
   "scripts": {
     "lint": "eslint .",
