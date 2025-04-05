@@ -5,6 +5,7 @@
   "description": "A high-quality PDF to Markdown tool based on large language model visual recognition.",
   "author": "MarkPDFdown",
   "main": "electron/main.js",
+  "type": "commonjs",
   "homepage": "https://github.com/markpdfdown/desktop",
   "scripts": {
     "dev": "vite",
@@ -12,6 +13,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron:preview": "npm run build && electron .",
     "build:mac": "npm run build && electron-builder --mac",
     "build:win": "npm run build && electron-builder --win",
     "build:linux": "npm run build && electron-builder --linux",

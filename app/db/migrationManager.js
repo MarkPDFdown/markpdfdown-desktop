@@ -2,12 +2,23 @@ const path = require('path');
 const fs = require('fs');
 const { PrismaClient } = require('@prisma/client');
 const isDev = require('electron-is-dev');
+const { app } = require('electron');
 
 // 获取迁移文件目录
 const getMigrationsDir = () => {
-  return isDev
-    ? path.join(process.cwd(), 'app', 'db', 'migrations')
-    : path.join(__dirname, '..', 'migrations');
+  // 在开发环境使用项目目录
+  if (isDev) {
+    return path.join(process.cwd(), 'app', 'db', 'migrations');
+  }
+  
+  // 在打包环境中，确保使用正确的路径
+  // 使用app.getAppPath()获取应用根目录
+  if (app) {
+    return path.join(app.getAppPath(), 'app', 'db', 'migrations');
+  }
+  
+  // 回退到__dirname相对路径
+  return path.join(__dirname, 'migrations');
 };
 
 // 创建 _prisma_migrations 表的SQL

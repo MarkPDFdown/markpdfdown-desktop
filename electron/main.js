@@ -2,7 +2,15 @@ const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const isDev = require('electron-is-dev');
-const backend = require('../app/app');
+
+// 添加错误处理
+let backend;
+try {
+  backend = require('../app/app');
+} catch (error) {
+  console.error('Error loading backend:', error);
+  process.exit(1);
+}
 
 let mainWindow;
 let backendServer;
@@ -57,7 +65,7 @@ function createWindow(port) {
     },
   });
 
-  const startUrl = isDev
+  const startUrl = false
     ? 'http://localhost:5173'
     : `file://${path.join(__dirname, '../dist/index.html')}`;
 

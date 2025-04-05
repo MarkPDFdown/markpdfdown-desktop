@@ -1,6 +1,7 @@
 import React from 'react';
 import { Progress, Space, Table, Tooltip, Typography, Tag } from 'antd';
 import { FilePdfTwoTone } from '@ant-design/icons';
+import { Link } from 'react-router-dom';
 
 const { Text } = Typography;
 
@@ -38,6 +39,7 @@ const data = [
 ];
 
 const List: React.FC = () => {
+
   const columns = [
     {
       title: '文件',
@@ -66,7 +68,12 @@ const List: React.FC = () => {
       title: '操作',
       dataIndex: 'action',
       width: 160,
-      render: (text: string, record: any) => <Space size="small"><a href={`/list/preview/${record.id}`}>{text}</a><Text type="danger">删除</Text></Space>,
+      render: (text: string, record: any) => (
+        <Space size="small">
+          <Link to={`/list/preview/${record.id}`}>{text}</Link>
+          <Text type="danger" style={{ cursor: 'pointer' }}>删除</Text>
+        </Space>
+      ),
     },
   ];
   return (
