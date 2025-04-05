@@ -25,4 +25,13 @@ export default tseslint.config(
       ],
     },
   },
+  // 允许app目录使用CommonJS
+  {
+    files: ['app/**/*.js', 'electron/**/*.js'],
+    rules: {
+      'unicorn/prefer-module': 'off',
+      'node/no-unsupported-features/es-syntax': 'off',
+      '@typescript-eslint/no-var-requires': 'off'
+    }
+  }
 )

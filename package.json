@@ -1,23 +1,55 @@
 {
-  "name": "markpdfdown_desktop",
+  "name": "markpdfdown",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "A high-quality PDF to Markdown tool based on large language model visual recognition.",
+  "author": "MarkPDFdown",
   "main": "electron/main.js",
+  "homepage": "https://github.com/markpdfdown/desktop",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:build": "npm run build && electron-builder",
-    "electron:preview": "electron ."
+    "build:mac": "npm run build && electron-builder --mac",
+    "build:win": "npm run build && electron-builder --win",
+    "build:linux": "npm run build && electron-builder --linux",
+    "migrate:dev": "prisma migrate dev --schema=./app/db/schema.prisma",
+    "migrate:reset": "prisma migrate reset --schema=./app/db/schema.prisma"
+  },
+  "build": {
+    "appId": "com.markpdfdown.desktop",
+    "productName": "MarkPDFdown",
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "app/**/*"
+    ],
+    "directories": {
+      "buildResources": "assets",
+      "output": "release"
+    },
+    "mac": {
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   },
   "dependencies": {
     "@ant-design/icons": "^5.6.1",
+    "@prisma/client": "^6.5.0",
     "antd": "^5.24.4",
-    "electron": "^35.0.2",
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
     "electron-is-dev": "^3.0.1",
+    "express": "^5.1.0",
     "katex": "^0.16.21",
+    "prisma": "^6.5.0",
     "prismjs": "^1.30.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -34,11 +66,13 @@
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^4.3.4",
     "concurrently": "^9.1.2",
+    "electron": "^35.0.2",
     "electron-builder": "^25.1.8",
     "eslint": "^9.21.0",
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^15.15.0",
+    "nodemon": "^3.1.9",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.24.1",
     "vite": "^6.2.0",

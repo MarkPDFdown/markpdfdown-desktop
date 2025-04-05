@@ -1,5 +1,12 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+// 从命令行参数中提取端口号
+const getBackendPort = () => {
+  const args = process.argv || [];
+  const portArg = args.find(arg => arg.startsWith('--backend-port='));
+  return portArg ? portArg.split('=')[1] : null;
+};
+
 // 在window对象上暴露electron模块，允许渲染进程访问
 contextBridge.exposeInMainWorld('electron', {
   ipcRenderer: {
@@ -19,5 +26,6 @@ contextBridge.exposeInMainWorld('electron', {
         ipcRenderer.on(channel, (event, ...args) => func(...args));
       }
     }
-  }
-}); 
+  },
+  backendPort: getBackendPort()
+});

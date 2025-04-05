@@ -1,4 +1,4 @@
-import React, { useState, CSSProperties } from "react";
+import React, { CSSProperties } from "react";
 import { ConfigProvider, Layout, Menu, theme } from "antd";
 import {
   HomeOutlined,
@@ -10,18 +10,6 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import ImgLogo from "../assets/MarkPDFdown.png";
 
 const { Header, Sider, Content, Footer } = Layout;
-
-// 扩展window接口以包含electron
-declare global {
-  interface Window {
-    electron?: {
-      ipcRenderer: {
-        send: (channel: string, data: any) => void;
-        on: (channel: string, func: (...args: any[]) => void) => void;
-      }
-    }
-  }
-}
 
 type MenuItem = {
   key: string;

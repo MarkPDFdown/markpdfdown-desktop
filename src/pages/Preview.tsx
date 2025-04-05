@@ -145,7 +145,7 @@ const Preview: React.FC = () => {
         >
           <img
             src="https://iph.href.lu/840x1188?text=%E5%9B%BE%E7%89%87%E9%A2%84%E8%A7%88&fg=666666&bg=cccccc"
-            alt="preview"
+            alt={`preview-${id}`}
             draggable={false}
             style={{
               maxWidth: "100%",

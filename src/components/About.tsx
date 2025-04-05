@@ -4,7 +4,7 @@ import ImgLogo from "../assets/MarkPDFdown.png";
 
 const About: React.FC = () => {
   const { Text, Title } = Typography;
-
+  const backendPort = window.electron?.backendPort || 0;
   return (
     <div style={{ height: "calc(100vh - 180px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
       <Flex
@@ -36,6 +36,9 @@ const About: React.FC = () => {
           <Button>反馈意见</Button>
           <Button>联系邮件</Button>
         </Space>
+        <Text type="secondary" style={{ marginTop: 16 }}>
+          后端服务端口：http://localhost:{backendPort}
+        </Text>
       </Flex>
     </div>
   );

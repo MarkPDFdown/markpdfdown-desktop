@@ -1,10 +1,48 @@
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const isDev = require('electron-is-dev');
+const backend = require('../app/app');
 
 let mainWindow;
+let backendServer;
 
-function createWindow() {
+// 启动后端服务器并确保可以获取到端口
+async function startBackendServer() {
+  return new Promise(async (resolve) => {
+    // 确保数据库目录存在
+    if (!isDev) {
+      const userDataPath = app.getPath('userData');
+      const dbDir = path.join(userDataPath, 'db');
+      
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
+      }
+      
+      // 设置数据库URL环境变量
+      process.env.DATABASE_URL = `file:${path.join(dbDir, 'app.db')}`;
+      console.log('Setting database path to:', process.env.DATABASE_URL);
+    }
+    
+    backendServer = await backend.start();
+
+    // 检查服务器是否已成功监听
+    if (backendServer && backendServer.address()) {
+      const port = backendServer.address().port;
+      console.log(`Backend server is running at http://localhost:${port}`);
+      resolve(port);
+    } else {
+      // 等待服务器启动
+      backendServer.on('listening', () => {
+        const port = backendServer.address().port;
+        console.log(`Backend server is running at http://localhost:${port}`);
+        resolve(port);
+      });
+    }
+  });
+}
+
+function createWindow(port) {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -15,6 +53,7 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
+      additionalArguments: [`--backend-port=${port}`],
     },
   });
 
@@ -57,16 +96,38 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(createWindow);
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+app.whenReady().then(async () => {
+  try {
+    const port = await startBackendServer();
+    createWindow(port);
+  } catch (error) {
+    console.error('Error starting backend server:', error);
     app.quit();
   }
 });
 
-app.on('activate', () => {
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    if (backendServer) {
+      backendServer.close();
+    }
+    app.quit();
+  }
+});
+
+app.on('activate', async () => {
   if (mainWindow === null) {
-    createWindow();
+    try {
+      if (!backendServer || !backendServer.listening) {
+        const port = await startBackendServer();
+        createWindow(port);
+      } else {
+        const port = backendServer.address().port;
+        createWindow(port);
+      }
+    } catch (error) {
+      console.error('Error reactivating application:', error);
+      app.quit();
+    }
   }
 }); 
