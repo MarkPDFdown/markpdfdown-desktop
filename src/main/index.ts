@@ -12,10 +12,11 @@ async function loadBackend() {
   try {
     // 解决模块导入问题
     if (isDev) {
-      return await import(path.join(process.cwd(), 'app/app.js'));
+      // 使用file:协议来支持ESM规范的动态导入
+      return await import(`file://${path.join(process.cwd(), 'app/app.js')}`);
     } else {
-      // 在打包环境中使用绝对路径
-      return await import(path.join(app.getAppPath(), 'app/app.js'));
+      // 在打包环境中使用绝对路径，同样添加file:协议
+      return await import(`file://${path.join(app.getAppPath(), 'app/app.js')}`);
     }
   } catch (error) {
     console.error('Error loading backend:', error);

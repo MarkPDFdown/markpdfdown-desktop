@@ -1,11 +1,11 @@
-const js = require('@eslint/js')
-const globals = require('globals')
-const reactHooks = require('eslint-plugin-react-hooks')
-const reactRefresh = require('eslint-plugin-react-refresh')
-const tseslint = require('typescript-eslint')
+import js from '@eslint/js';
+import globals from 'globals';
+import reactHooks from 'eslint-plugin-react-hooks';
+import reactRefresh from 'eslint-plugin-react-refresh';
+import * as tseslint from 'typescript-eslint';
 
-module.exports = tseslint.config(
-  { ignores: ['dist'] },
+export default tseslint.config(
+  { ignores: ['dist/**/*', 'release/**/*'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],
@@ -23,15 +23,8 @@ module.exports = tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
+      '@typescript-eslint/no-explicit-any': 'off',
+      'no-async-promise-executor': 'off'
     },
-  },
-  // 允许app目录使用CommonJS
-  {
-    files: ['app/**/*.js', 'electron/**/*.js'],
-    rules: {
-      'unicorn/prefer-module': 'off',
-      'node/no-unsupported-features/es-syntax': 'off',
-      '@typescript-eslint/no-var-requires': 'off'
-    }
   }
-)
+);

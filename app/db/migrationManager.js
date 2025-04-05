@@ -91,9 +91,10 @@ const generateUUID = () => {
 };
 
 // 计算迁移文件的checksum
-const calculateChecksum = (content) => {
-  const crypto = require('crypto');
-  return crypto.createHash('sha256').update(content).digest('hex');
+const calculateChecksum = async (content) => {
+  // 使用ESM方式导入crypto
+  const crypto = await import('crypto');
+  return crypto.default.createHash('sha256').update(content).digest('hex');
 };
 
 // 应用单个迁移
@@ -117,7 +118,7 @@ const applyMigration = async (prisma, migrationDir, migrationName) => {
     }
     
     // 记录迁移
-    const checksum = calculateChecksum(sqlContent);
+    const checksum = await calculateChecksum(sqlContent);
     await recordMigration(prisma, migrationName, checksum);
     
     console.log(`Successfully applied migration: ${migrationName}`);
