@@ -1,37 +1,28 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
-const path = require('path');
-const fs = require('fs');
-const isDev = require('electron-is-dev');
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import path from 'path';
+import isDev from 'electron-is-dev';
 
 // 添加错误处理
-let backend;
+let backend: any;
 try {
-  backend = require('../app/app');
+  // 解决模块导入问题
+  if (isDev) {
+    backend = require(path.join(process.cwd(), 'app/app'));
+  } else {
+    // 在打包环境中使用绝对路径
+    backend = require(path.join(app.getAppPath(), 'app/app'));
+  }
 } catch (error) {
   console.error('Error loading backend:', error);
   process.exit(1);
 }
 
-let mainWindow;
-let backendServer;
+let mainWindow: BrowserWindow | null;
+let backendServer: any;
 
 // 启动后端服务器并确保可以获取到端口
-async function startBackendServer() {
+async function startBackendServer(): Promise<number> {
   return new Promise(async (resolve) => {
-    // 确保数据库目录存在
-    if (!isDev) {
-      const userDataPath = app.getPath('userData');
-      const dbDir = path.join(userDataPath, 'db');
-      
-      if (!fs.existsSync(dbDir)) {
-        fs.mkdirSync(dbDir, { recursive: true });
-      }
-      
-      // 设置数据库URL环境变量
-      process.env.DATABASE_URL = `file:${path.join(dbDir, 'app.db')}`;
-      console.log('Setting database path to:', process.env.DATABASE_URL);
-    }
-    
     backendServer = await backend.start();
 
     // 检查服务器是否已成功监听
@@ -50,7 +41,7 @@ async function startBackendServer() {
   });
 }
 
-function createWindow(port) {
+function createWindow(port: number) {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -60,16 +51,16 @@ function createWindow(port) {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, '../preload/index.js'),
       additionalArguments: [`--backend-port=${port}`],
     },
   });
 
-  const startUrl = false
-    ? 'http://localhost:5173'
-    : `file://${path.join(__dirname, '../dist/index.html')}`;
-
-  mainWindow.loadURL(startUrl);
+  if (process.env.ELECTRON_RENDERER_URL) {
+    mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
+  } else {
+    mainWindow.loadFile(path.join(__dirname, '../../renderer/index.html'));
+  }
 
   if (isDev) {
     mainWindow.webContents.openDevTools();
