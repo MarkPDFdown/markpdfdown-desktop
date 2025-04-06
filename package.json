@@ -9,14 +9,15 @@
   "homepage": "https://github.com/markpdfdown/desktop",
   "scripts": {
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
-    "dev": "electron-vite dev",
-    "build": "prisma generate --schema=./app/db/schema.prisma && electron-vite build",
-    "start": "electron-vite preview",
+    "dev": "npm run generate && electron-vite dev",
+    "build": "npm run generate && electron-vite build",
+    "start": "npm run generate && electron-vite preview",
     "build:mac": "npm run build && electron-builder --mac --x64 --arm64",
     "build:win": "npm run build && electron-builder --win --x64 --arm64 --ia32",
     "build:linux": "npm run build && electron-builder --linux --x64 --arm64 --ia32",
     "migrate:dev": "prisma migrate dev --schema=./app/db/schema.prisma",
-    "migrate:reset": "prisma migrate reset --schema=./app/db/schema.prisma"
+    "migrate:reset": "prisma migrate reset --schema=./app/db/schema.prisma",
+    "generate": "prisma generate --schema=./app/db/schema.prisma"
   },
   "build": {
     "appId": "com.markpdfdown.desktop",
