@@ -60,6 +60,15 @@ function createWindow(port: number) {
       preload: path.join(__dirname, '../preload/index.js'),
       additionalArguments: [`--backend-port=${port}`],
     },
+    icon: path.join(process.env.ELECTRON_RENDERER_URL ? 
+      process.cwd() : 
+      app.getAppPath(), 
+      process.platform === 'darwin' 
+        ? 'public/icons/mac/icon.icns' 
+        : process.platform === 'win32' 
+          ? 'public/icons/win/icon.ico' 
+          : 'public/icons/png/512x512.png'
+    ),
   });
 
   if (process.env.ELECTRON_RENDERER_URL) {
