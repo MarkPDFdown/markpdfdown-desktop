@@ -1,8 +1,0 @@
-# 构建输出目录
-dist/
-release/
-node_modules/
-
-# 其他可能不需要检查的文件
-*.min.js
-*.bundle.js
