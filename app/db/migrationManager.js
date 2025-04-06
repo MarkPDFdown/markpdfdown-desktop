@@ -1,8 +1,9 @@
 import path from 'path';
 import fs from 'fs';
-import { PrismaClient } from '@prisma/client';
+import dbClient from './client/index.js';
 import isDev from 'electron-is-dev';
 import { app } from 'electron';
+const PrismaClient = dbClient.PrismaClient;
 
 // 获取迁移文件目录
 const getMigrationsDir = () => {

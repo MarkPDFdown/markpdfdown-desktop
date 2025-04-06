@@ -1,8 +1,9 @@
-import { PrismaClient } from '@prisma/client';
+import dbClient from './client/index.js';
 import { runMigrations } from './migrationManager.js';
 import path from 'path';
 import { app } from 'electron';
 import fs from 'fs';
+const PrismaClient = dbClient.PrismaClient;
 
 // 设置和获取数据库URL
 function getDatabaseUrl() {

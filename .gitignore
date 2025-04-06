@@ -12,6 +12,7 @@ dist
 release
 dist-ssr
 *.local
+app/db/client
 app/db/*.db
 
 # Editor directories and files
