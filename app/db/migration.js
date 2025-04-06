@@ -1,9 +1,7 @@
 import path from 'path';
 import fs from 'fs';
-import dbClient from './client/index.js';
 import isDev from 'electron-is-dev';
 import { app } from 'electron';
-const PrismaClient = dbClient.PrismaClient;
 
 // 获取迁移文件目录
 const getMigrationsDir = () => {
@@ -11,13 +9,13 @@ const getMigrationsDir = () => {
   if (isDev) {
     return path.join(process.cwd(), 'app', 'db', 'migrations');
   }
-  
+
   // 在打包环境中，确保使用正确的路径
   // 使用app.getAppPath()获取应用根目录
   if (app) {
     return path.join(app.getAppPath(), 'app', 'db', 'migrations');
   }
-  
+
   // 回退到__dirname相对路径
   return path.join(__dirname, 'migrations');
 };
@@ -44,18 +42,18 @@ const isMigrationApplied = async (prisma, migrationName) => {
       SELECT name FROM sqlite_master 
       WHERE type='table' AND name='_prisma_migrations';
     `;
-    
+
     if (!tableExists || tableExists.length === 0) {
       return false;
     }
-    
+
     // 检查特定迁移是否已应用
     const migration = await prisma.$queryRaw`
       SELECT * FROM _prisma_migrations 
       WHERE migration_name = ${migrationName} 
       AND finished_at IS NOT NULL;
     `;
-    
+
     return migration && migration.length > 0;
   } catch (error) {
     console.error('Error checking migration status:', error);
@@ -67,7 +65,7 @@ const isMigrationApplied = async (prisma, migrationName) => {
 const recordMigration = async (prisma, migrationName, checksum) => {
   const id = generateUUID();
   const now = new Date().toISOString();
-  
+
   try {
     await prisma.$executeRaw`
       INSERT INTO _prisma_migrations (
@@ -101,27 +99,27 @@ const calculateChecksum = async (content) => {
 // 应用单个迁移
 const applyMigration = async (prisma, migrationDir, migrationName) => {
   const sqlFilePath = path.join(migrationDir, migrationName, 'migration.sql');
-  
+
   try {
     if (!fs.existsSync(sqlFilePath)) {
       console.error(`Migration SQL file not found: ${sqlFilePath}`);
       return false;
     }
-    
+
     const sqlContent = fs.readFileSync(sqlFilePath, 'utf8');
     const sqlStatements = sqlContent.split(';').filter(stmt => stmt.trim());
-    
+
     // 应用每条SQL语句
     for (const statement of sqlStatements) {
       if (statement.trim()) {
         await prisma.$executeRawUnsafe(statement.trim());
       }
     }
-    
+
     // 记录迁移
     const checksum = await calculateChecksum(sqlContent);
     await recordMigration(prisma, migrationName, checksum);
-    
+
     console.log(`Successfully applied migration: ${migrationName}`);
     return true;
   } catch (error) {
@@ -131,29 +129,20 @@ const applyMigration = async (prisma, migrationDir, migrationName) => {
 };
 
 // 主要的迁移函数
-const runMigrations = async (dbUrl) => {
+const runMigrations = async (prisma = null) => {
   console.log('Running database migrations...');
-  
-  // 创建一个新的PrismaClient实例用于迁移
-  const prisma = new PrismaClient({
-    datasources: {
-      db: {
-        url: dbUrl
-      }
-    }
-  });
-  
+
   try {
     // 确保_prisma_migrations表存在
     await prisma.$executeRawUnsafe(createMigrationsTableSQL);
-    
+
     const migrationsDir = getMigrationsDir();
     console.log('Migrations directory:', migrationsDir);
     if (!fs.existsSync(migrationsDir)) {
       console.error(`Migrations directory not found: ${migrationsDir}`);
       return false;
     }
-    
+
     // 读取所有迁移目录并按名称排序
     const migrationDirs = fs
       .readdirSync(migrationsDir)
@@ -162,13 +151,13 @@ const runMigrations = async (dbUrl) => {
         return stat.isDirectory() && dir !== 'migration_lock.toml';
       })
       .sort(); // 按名称排序，确保按正确顺序应用
-    
+
     let migrationsApplied = 0;
-    
+
     // 应用每个迁移
     for (const migrationName of migrationDirs) {
       const isApplied = await isMigrationApplied(prisma, migrationName);
-      
+
       if (!isApplied) {
         console.log(`Applying migration: ${migrationName}`);
         const success = await applyMigration(prisma, migrationsDir, migrationName);
@@ -177,14 +166,12 @@ const runMigrations = async (dbUrl) => {
         console.log(`Migration already applied: ${migrationName}`);
       }
     }
-    
+
     console.log(`Database migration complete. Applied ${migrationsApplied} migrations.`);
     return migrationsApplied > 0;
   } catch (error) {
     console.error('Migration error:', error);
     return false;
-  } finally {
-    await prisma.$disconnect();
   }
 };
 

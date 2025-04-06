@@ -1,5 +1,5 @@
 import dbClient from './client/index.js';
-import { runMigrations } from './migrationManager.js';
+import { runMigrations } from './migration.js';
 import path from 'path';
 import { app } from 'electron';
 import fs from 'fs';
@@ -39,13 +39,12 @@ const prisma = new PrismaClient({
 const initDatabase = async () => {
     try {
         console.log(`Initializing database(url:${dbUrl})...`);
-
-        // 运行迁移
-        await runMigrations(dbUrl);
-
         // 验证数据库连接
         await prisma.$queryRaw`SELECT 1`;
         console.log('Database connection established successfully.');
+
+        // 运行迁移，传递现有的prisma实例
+        await runMigrations(prisma);
 
         return true;
     } catch (error) {
