@@ -6,13 +6,13 @@ export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
     build: {
-      outDir: 'dist/electron/main'
+      outDir: 'dist/main'
     }
   },
   preload: {
     plugins: [externalizeDepsPlugin()],
     build: {
-      outDir: 'dist/electron/preload',
+      outDir: 'dist/preload',
       rollupOptions: {
         output: {
           format: 'cjs',
