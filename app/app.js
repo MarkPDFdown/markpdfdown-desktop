@@ -14,10 +14,10 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(requestLogger);
 
 // 导入路由
-import userRoutes from './routes/userRoutes.js';
+import routes from './routes/routes.js';
 
 // 使用路由
-app.use('/api/users', userRoutes);
+app.use('/api', routes);
 
 // 健康检查
 app.get('/health', (req, res) => {
