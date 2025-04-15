@@ -9,6 +9,6 @@ router.get('/providers/:id', providerController.getProviderById);
 router.post('/providers', providerController.createProvider);
 router.put('/providers/:id', providerController.updateProvider);
 router.delete('/providers/:id', providerController.deleteProvider);
-router.patch('/providers/:id/status', providerController.updateProviderStatus);
+router.put('/providers/:id/status', providerController.updateProviderStatus);
 
 export default router;

@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { Input, Select, Button, message, Form } from 'antd';
 
-const AddProvider: React.FC = () => {
+interface AddProviderProps {
+    onProviderAdded?: (providerId: string) => void;
+}
+
+const AddProvider: React.FC<AddProviderProps> = ({ onProviderAdded }) => {
     const [form] = Form.useForm();
     const [loading, setLoading] = useState<boolean>(false);
     const [messageApi, contextHolder] = message.useMessage();
@@ -28,6 +32,11 @@ const AddProvider: React.FC = () => {
 
             messageApi.success('服务商添加成功');
             form.resetFields();
+            
+            // 调用回调函数，传递新添加的服务商ID
+            if (onProviderAdded && data.id) {
+                onProviderAdded(data.id.toString());
+            }
         } catch (error) {
             if (error instanceof Error) {
                 messageApi.error(error.message);
