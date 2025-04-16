@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Input, Select, Button, message, Form } from 'antd';
+import { Input, Select, Button, Form, App } from 'antd';
 
 interface AddProviderProps {
     onProviderAdded?: (providerId: string) => void;
@@ -8,7 +8,7 @@ interface AddProviderProps {
 const AddProvider: React.FC<AddProviderProps> = ({ onProviderAdded }) => {
     const [form] = Form.useForm();
     const [loading, setLoading] = useState<boolean>(false);
-    const [messageApi, contextHolder] = message.useMessage();
+    const { message } = App.useApp();
 
     const handleAddProvider = async () => {
         try {
@@ -30,18 +30,18 @@ const AddProvider: React.FC<AddProviderProps> = ({ onProviderAdded }) => {
                 throw new Error(data.message || '添加服务商失败');
             }
 
-            messageApi.success('服务商添加成功');
+            message.success('服务商添加成功');
             form.resetFields();
-            
+
             // 调用回调函数，传递新添加的服务商ID
             if (onProviderAdded && data.id) {
                 onProviderAdded(data.id.toString());
             }
         } catch (error) {
             if (error instanceof Error) {
-                messageApi.error(error.message);
+                message.error(error.message);
             } else {
-                messageApi.error('添加服务商失败');
+                message.error('添加服务商失败');
             }
         } finally {
             setLoading(false);
@@ -49,42 +49,39 @@ const AddProvider: React.FC<AddProviderProps> = ({ onProviderAdded }) => {
     };
 
     return (
-        <>
-            {contextHolder}
-            <Form form={form} layout="vertical" style={{ padding: '16px' }}>
-                <Form.Item
-                    name="name"
-                    label="服务商名称"
-                    rules={[{ required: true, message: '请输入服务商名称' }]}
-                >
-                    <Input placeholder="请输入服务商名称" />
-                </Form.Item>
+        <Form form={form} layout="vertical" style={{ padding: '16px' }}>
+            <Form.Item
+                name="name"
+                label="服务商名称"
+                rules={[{ required: true, message: '请输入服务商名称' }]}
+            >
+                <Input placeholder="请输入服务商名称" />
+            </Form.Item>
 
-                <Form.Item
-                    name="type"
-                    label="协议类型"
-                    rules={[{ required: true, message: '请选择协议类型' }]}
-                >
-                    <Select placeholder="请选择协议类型">
-                        <Select.Option value="openai">OpenAI</Select.Option>
-                        <Select.Option value="anthropic">Anthropic</Select.Option>
-                        <Select.Option value="gemini">Gemini</Select.Option>
-                        <Select.Option value="azure-openai">Azure OpenAI</Select.Option>
-                        <Select.Option value="groq">Groq</Select.Option>
-                    </Select>
-                </Form.Item>
+            <Form.Item
+                name="type"
+                label="协议类型"
+                rules={[{ required: true, message: '请选择协议类型' }]}
+            >
+                <Select placeholder="请选择协议类型">
+                    <Select.Option value="openai">OpenAI</Select.Option>
+                    <Select.Option value="anthropic">Anthropic</Select.Option>
+                    <Select.Option value="gemini">Gemini</Select.Option>
+                    <Select.Option value="azure-openai">Azure OpenAI</Select.Option>
+                    <Select.Option value="groq">Groq</Select.Option>
+                </Select>
+            </Form.Item>
 
-                <Form.Item>
-                    <Button
-                        type="primary"
-                        onClick={handleAddProvider}
-                        loading={loading}
-                    >
-                        确认添加
-                    </Button>
-                </Form.Item>
-            </Form>
-        </>
+            <Form.Item>
+                <Button
+                    type="primary"
+                    onClick={handleAddProvider}
+                    loading={loading}
+                >
+                    确认添加
+                </Button>
+            </Form.Item>
+        </Form>
     );
 };
 

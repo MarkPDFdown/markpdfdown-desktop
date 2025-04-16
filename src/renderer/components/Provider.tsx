@@ -13,7 +13,6 @@ import {
   Divider,
   Select,
   List,
-  message,
   App,
 } from "antd";
 import React, { useEffect, useState } from "react";
@@ -28,7 +27,7 @@ const Provider: React.FC<ProviderProps> = ({
   onProviderDeleted,
 }) => {
   const [providerData, setProviderData] = useState<any>(null);
-  const { modal } = App.useApp();
+  const { modal, message } = App.useApp();
 
   useEffect(() => {
     // 如果有providerId，则获取该服务商的详细信息

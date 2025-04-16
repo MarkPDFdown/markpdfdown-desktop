@@ -17,9 +17,9 @@ function App() {
             <Route path="list" element={<List />} />
             <Route path="settings" element={<Settings />} />
             <Route path="list/preview/:id" element={<Preview />} />
-          </Route>
-        </Routes>
-      </Router>
+        </Route>
+      </Routes>
+    </Router>
     </AntdApp>
   )
 }
