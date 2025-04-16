@@ -22,6 +22,12 @@ interface ProviderProps {
   onProviderDeleted?: () => void;
 }
 
+interface ModelType {
+  id: string;
+  name: string;
+  provider: number;
+}
+
 const Provider: React.FC<ProviderProps> = ({
   providerId,
   onProviderDeleted,
@@ -33,6 +39,11 @@ const Provider: React.FC<ProviderProps> = ({
   const [apiKey, setApiKey] = useState<string>("");
   const [baseUrl, setBaseUrl] = useState<string>("");
   const [suffix, setSuffix] = useState<string>("");
+  
+  // 添加模型相关状态
+  const [models, setModels] = useState<ModelType[]>([]);
+  const [newModelName, setNewModelName] = useState<string>("");
+  const [newModelId, setNewModelId] = useState<string>("");
 
   useEffect(() => {
     // 如果有providerId，则获取该服务商的详细信息
@@ -61,8 +72,99 @@ const Provider: React.FC<ProviderProps> = ({
       };
 
       fetchProviderDetails();
+      
+      // 获取该服务商下的所有模型
+      fetchModels();
     }
   }, [providerId]);
+
+  // 获取服务商下的模型列表
+  const fetchModels = async () => {
+    if (!providerId) return;
+    
+    try {
+      const backendPort = window.electron?.backendPort || 3000;
+      const response = await fetch(
+        `http://localhost:${backendPort}/api/models/${providerId}`
+      );
+
+      if (!response.ok) {
+        throw new Error("获取模型列表失败");
+      }
+
+      const data = await response.json();
+      setModels(data);
+    } catch (error) {
+      console.error("获取模型列表出错:", error);
+      message.error("获取模型列表失败: " + (error instanceof Error ? error.message : String(error)));
+    }
+  };
+
+  // 删除模型
+  const deleteModel = async (modelId: string) => {
+    if (!providerId) return;
+
+    try {
+      const backendPort = window.electron?.backendPort || 3000;
+      const response = await fetch(
+        `http://localhost:${backendPort}/api/models/${encodeURIComponent(modelId)}/${providerId}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("删除模型失败");
+      }
+
+      message.success("模型已成功删除");
+      // 刷新模型列表
+      fetchModels();
+    } catch (error) {
+      console.error("删除模型出错:", error);
+      message.error("删除模型失败: " + (error instanceof Error ? error.message : String(error)));
+    }
+  };
+
+  // 添加模型
+  const addModel = async () => {
+    if (!providerId || !newModelName || !newModelId) {
+      message.warning("请填写完整的模型信息");
+      return;
+    }
+
+    try {
+      const backendPort = window.electron?.backendPort || 3000;
+      const response = await fetch(
+        `http://localhost:${backendPort}/api/models`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            id: newModelId,
+            name: newModelName,
+            provider: providerId,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("添加模型失败");
+      }
+
+      // 添加成功后清空输入框
+      setNewModelName("");
+      setNewModelId("");
+      message.success("模型添加成功");
+      // 刷新模型列表
+      fetchModels();
+    } catch (error) {
+      console.error("添加模型出错:", error);
+      message.error("添加模型失败: " + (error instanceof Error ? error.message : String(error)));
+    }
+  };
 
   // 更新服务商信息的函数
   const updateProvider = async (updateData: { api_key?: string; base_url?: string; suffix?: string }) => {
@@ -194,21 +296,12 @@ const Provider: React.FC<ProviderProps> = ({
       <List
         bordered={true}
         size="small"
-        dataSource={[
-          {
-            name: "GPT 4o Mini",
-            model: "gpt-4o-mini",
-          },
-          {
-            name: "GPT 4o",
-            model: "gpt-4o",
-          },
-        ]}
+        dataSource={models}
         renderItem={(item) => (
           <List.Item>
             <Space>
               <Typography.Text>{item.name}</Typography.Text>
-              <Typography.Text type="secondary">({item.model})</Typography.Text>
+              <Typography.Text type="secondary">({item.id})</Typography.Text>
               <Button
                 icon={<ThunderboltOutlined />}
                 shape="circle"
@@ -223,6 +316,16 @@ const Provider: React.FC<ProviderProps> = ({
                 danger
                 size="small"
                 title="删除"
+                onClick={() => {
+                  modal.confirm({
+                    title: "确认删除",
+                    content: `确定要删除模型"${item.name}"吗？`,
+                    okText: "删除",
+                    okType: "danger",
+                    cancelText: "取消",
+                    onOk: () => deleteModel(item.id),
+                  });
+                }}
               ></Button>
             </Space>
           </List.Item>
@@ -232,11 +335,25 @@ const Provider: React.FC<ProviderProps> = ({
       <div style={{ display: "flex", justifyContent: "space-between" }}>
         <Space>
           <Typography.Text>模型名称：</Typography.Text>
-          <Input placeholder="GPT 4o" style={{ width: "290px" }} />
+          <Input 
+            placeholder="GPT 4o" 
+            style={{ width: "290px" }} 
+            value={newModelName}
+            onChange={(e) => setNewModelName(e.target.value)}
+          />
           <Typography.Text>模型ID：</Typography.Text>
-          <Input placeholder="gpt-4o" style={{ width: "290px" }} />
+          <Input 
+            placeholder="gpt-4o" 
+            style={{ width: "290px" }} 
+            value={newModelId}
+            onChange={(e) => setNewModelId(e.target.value)}
+          />
         </Space>
-        <Button type="primary" icon={<PlusOutlined />}>
+        <Button 
+          type="primary" 
+          icon={<PlusOutlined />}
+          onClick={addModel}
+        >
           添加模型
         </Button>
       </div>
