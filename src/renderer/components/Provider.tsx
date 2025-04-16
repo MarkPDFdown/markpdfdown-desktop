@@ -28,6 +28,11 @@ const Provider: React.FC<ProviderProps> = ({
 }) => {
   const [providerData, setProviderData] = useState<any>(null);
   const { modal, message } = App.useApp();
+  
+  // 添加状态变量用于存储输入值
+  const [apiKey, setApiKey] = useState<string>("");
+  const [baseUrl, setBaseUrl] = useState<string>("");
+  const [suffix, setSuffix] = useState<string>("");
 
   useEffect(() => {
     // 如果有providerId，则获取该服务商的详细信息
@@ -45,6 +50,11 @@ const Provider: React.FC<ProviderProps> = ({
 
           const data = await response.json();
           setProviderData(data);
+          
+          // 设置初始值
+          setApiKey(data.api_key || "");
+          setBaseUrl(data.base_url || "");
+          setSuffix(data.suffix || "/chat/completions");
         } catch (error) {
           console.error("获取服务商详情出错:", error);
         }
@@ -53,6 +63,36 @@ const Provider: React.FC<ProviderProps> = ({
       fetchProviderDetails();
     }
   }, [providerId]);
+
+  // 更新服务商信息的函数
+  const updateProvider = async (updateData: { api_key?: string; base_url?: string; suffix?: string }) => {
+    if (!providerId) return;
+
+    try {
+      const backendPort = window.electron?.backendPort || 3000;
+      const response = await fetch(
+        `http://localhost:${backendPort}/api/providers/${providerId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updateData),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("更新服务商信息失败");
+      }
+
+      const updatedProvider = await response.json();
+      setProviderData(updatedProvider);
+      message.success("更新成功");
+    } catch (error) {
+      console.error("更新服务商信息出错:", error);
+      message.error("更新失败: " + (error instanceof Error ? error.message : String(error)));
+    }
+  };
 
   return (
     <Flex vertical gap={16} style={{ padding: "16px" }}>
@@ -101,7 +141,15 @@ const Provider: React.FC<ProviderProps> = ({
         <Typography.Text>API 密钥：</Typography.Text>
         <Input.Password
           placeholder="请输入API密钥"
-          defaultValue={providerData?.api_key || ""}
+          value={apiKey}
+          onChange={(e) => {
+            setApiKey(e.target.value);
+          }}
+          onBlur={() => {
+            if (apiKey !== providerData?.api_key) {
+              updateProvider({ api_key: apiKey });
+            }
+          }}
         />
       </div>
       <div>
@@ -109,11 +157,23 @@ const Provider: React.FC<ProviderProps> = ({
         <Space.Compact style={{ width: "100%" }}>
           <Input
             placeholder="请输入API地址"
-            defaultValue={providerData?.base_url || ""}
+            value={baseUrl}
+            onChange={(e) => {
+              setBaseUrl(e.target.value);
+            }}
+            onBlur={() => {
+              if (baseUrl !== providerData?.base_url) {
+                updateProvider({ base_url: baseUrl });
+              }
+            }}
             addonAfter={
               <Select
                 style={{ width: 180 }}
-                defaultValue={providerData?.suffix || "/chat/completions"}
+                value={suffix}
+                onChange={(value) => {
+                  setSuffix(value);
+                  updateProvider({ suffix: value });
+                }}
                 options={[
                   { label: "/chat/completions", value: "/chat/completions" },
                   {
