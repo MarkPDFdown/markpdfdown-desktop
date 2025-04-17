@@ -13,10 +13,10 @@ async function loadBackend() {
     // 解决模块导入问题
     if (isDev) {
       // 在开发环境中，导入编译后的JavaScript文件
-      return await import(`file://${path.join(process.cwd(), 'dist/app/app.js')}`);
+      return await import(`file://${path.join(process.cwd(), 'dist/server/index.js')}`);
     } else {
       // 在打包环境中使用绝对路径
-      return await import(`file://${path.join(app.getAppPath(), 'dist/app/app.js')}`);
+      return await import(`file://${path.join(app.getAppPath(), 'dist/server/index.js')}`);
     }
   } catch (error) {
     console.error('Error loading backend:', error);
