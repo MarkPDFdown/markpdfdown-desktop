@@ -1,4 +1,5 @@
 import { prisma } from "../db/index.js";
+import { ProviderData, PartialProviderData } from "../types/Provider.js";
 
 // 查找所有提供商
 const findAll = async () => {
@@ -19,7 +20,7 @@ const findAll = async () => {
 };
 
 // 根据ID查找提供商
-const findById = async (id) => {
+const findById = async (id: number) => {
   return await prisma.provider.findUnique({
     where: { id },
     select: {
@@ -37,14 +38,24 @@ const findById = async (id) => {
 };
 
 // 创建提供商
-const create = async (providerData) => {
+const create = async (providerData: Partial<ProviderData>) => {
+  // 设置默认值
+  const data: ProviderData = {
+    name: providerData.name || '',
+    type: providerData.type || '',
+    api_key: providerData.api_key || '',
+    base_url: providerData.base_url || '',
+    suffix: providerData.suffix || '',
+    status: providerData.status || 0
+  };
+  
   return await prisma.provider.create({
-    data: providerData,
+    data
   });
 };
 
 // 更新提供商
-const update = async (id, updateData) => {
+const update = async (id: number, updateData: PartialProviderData) => {
   return await prisma.provider.update({
     where: { id },
     data: updateData,
@@ -52,14 +63,14 @@ const update = async (id, updateData) => {
 };
 
 // 删除提供商
-const remove = async (id) => {
+const remove = async (id: number) => {
   return await prisma.provider.delete({
     where: { id },
   });
 };
 
 // 更新提供商状态
-const updateStatus = async (id, status) => {
+const updateStatus = async (id: number, status: number) => {
   return await prisma.provider.update({
     where: { id },
     data: { status },
@@ -73,4 +84,4 @@ export default {
   update,
   remove,
   updateStatus,
-};
+}; 

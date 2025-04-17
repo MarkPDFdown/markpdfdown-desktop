@@ -1,4 +1,4 @@
-import { LLMClientFactory, Message, ToolDefinition } from './LLMClient';
+import { LLMClientFactory, Message, ToolDefinition } from './LLMClient.js';
 
 /**
  * 高级功能示例：多轮对话、多角色和图片支持

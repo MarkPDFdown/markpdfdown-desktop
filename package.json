@@ -9,9 +9,10 @@
   "homepage": "https://github.com/markpdfdown/desktop",
   "scripts": {
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
-    "dev": "npm run generate && electron-vite dev",
-    "build": "npm run generate && electron-vite build",
-    "start": "npm run generate && electron-vite preview",
+    "dev": "npm run generate && npm run build:backend && electron-vite dev",
+    "build": "npm run generate && npm run build:backend && electron-vite build",
+    "start": "npm run generate && npm run build:backend && electron-vite preview",
+    "build:backend": "tsc -p tsconfig.backend.json",
     "build:mac": "npm run build && electron-builder --mac --x64 --arm64",
     "build:win": "npm run build && electron-builder --win --x64 --arm64",
     "build:linux": "npm run build && electron-builder --linux --x64 --arm64",
@@ -96,6 +97,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
+    "@types/body-parser": "^1.19.5",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.1",
     "@types/react": "^18.2.67",
     "@types/react-dom": "^18.2.22",
     "@vitejs/plugin-react": "^4.3.4",

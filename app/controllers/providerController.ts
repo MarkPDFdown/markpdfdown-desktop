@@ -1,7 +1,9 @@
+import { Request, Response, NextFunction } from 'express';
 import providerDal from '../dal/providerDal.js';
+import { PartialProviderData } from '../types/Provider.js';
 
 // 获取所有服务商
-const getAllProviders = async (req, res, next) => {
+const getAllProviders = async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const providers = await providerDal.findAll();
     res.json(providers);
@@ -11,7 +13,7 @@ const getAllProviders = async (req, res, next) => {
 };
 
 // 根据ID获取服务商
-const getProviderById = async (req, res, next) => {
+const getProviderById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const provider = await providerDal.findById(Number(id));
@@ -27,7 +29,7 @@ const getProviderById = async (req, res, next) => {
 };
 
 // 创建服务商
-const createProvider = async (req, res, next) => {
+const createProvider = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { name, type } = req.body;
     
@@ -39,7 +41,11 @@ const createProvider = async (req, res, next) => {
     // 创建服务商
     const newProvider = await providerDal.create({
       name,
-      type
+      type,
+      api_key: '',
+      base_url: '',
+      suffix: '',
+      status: 1 // 默认启用
     });
     
     res.status(201).json(newProvider);
@@ -49,7 +55,7 @@ const createProvider = async (req, res, next) => {
 };
 
 // 更新服务商
-const updateProvider = async (req, res, next) => {
+const updateProvider = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const { api_key, base_url, suffix } = req.body;
@@ -61,7 +67,7 @@ const updateProvider = async (req, res, next) => {
     }
     
     // 准备更新数据
-    const updateData = {};
+    const updateData: PartialProviderData = {};
     if (api_key !== undefined) updateData.api_key = api_key;
     if (base_url !== undefined) updateData.base_url = base_url;
     if (suffix !== undefined) updateData.suffix = suffix;
@@ -75,7 +81,7 @@ const updateProvider = async (req, res, next) => {
 };
 
 // 删除服务商
-const deleteProvider = async (req, res, next) => {
+const deleteProvider = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     
@@ -94,7 +100,7 @@ const deleteProvider = async (req, res, next) => {
 };
 
 // 更新服务商状态
-const updateProviderStatus = async (req, res, next) => {
+const updateProviderStatus = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -124,4 +130,4 @@ export default {
   updateProvider,
   deleteProvider,
   updateProviderStatus
-};
+}; 

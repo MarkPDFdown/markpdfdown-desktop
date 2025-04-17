@@ -1,7 +1,14 @@
+import { Request, Response, NextFunction } from 'express';
 import modelDal from '../dal/modelDal.js';
 
+interface ModelData {
+    id: string;
+    provider: number;
+    name: string;
+}
+
 // 获取指定服务商的模型列表
-const getModelsByProviderId = async (req, res, next) => {
+const getModelsByProviderId = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { provider } = req.params;
         const models = await modelDal.findByProviderId(Number(provider));
@@ -12,7 +19,7 @@ const getModelsByProviderId = async (req, res, next) => {
 };
 
 // 创建模型
-const createModel = async (req, res, next) => {
+const createModel = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id, provider, name } = req.body;
 
@@ -35,7 +42,7 @@ const createModel = async (req, res, next) => {
 };
 
 // 删除模型
-const deleteModel = async (req, res, next) => {
+const deleteModel = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id, provider } = req.params;
 
@@ -57,4 +64,4 @@ export default {
     getModelsByProviderId,
     createModel,
     deleteModel
-};
+}; 

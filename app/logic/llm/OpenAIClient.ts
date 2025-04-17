@@ -9,37 +9,29 @@ import {
   ToolCallContent,
   ToolResultContent,
   ToolCall
-} from './LLMClient';
+} from './LLMClient.js';
 
 /**
- * Azure OpenAI客户端实现
+ * OpenAI客户端实现
  */
-export class AzureOpenAIClient extends LLMClient {
-  private deploymentName: string;
-  private apiVersion: string;
-
-  constructor(apiKey: string, baseUrl: string, deploymentName: string = 'gpt-35-turbo', apiVersion: string = '2023-05-15') {
-    // Azure OpenAI需要完整的资源URL
-    super(apiKey, baseUrl);
-    this.deploymentName = deploymentName;
-    this.apiVersion = apiVersion;
+export class OpenAIClient extends LLMClient {
+  constructor(apiKey: string, baseUrl?: string) {
+    super(apiKey, baseUrl || 'https://api.openai.com/v1');
   }
 
   /**
-   * 执行Azure OpenAI文本补全
+   * 执行OpenAI文本补全
    */
   async completion(options: CompletionOptions & { prompt?: string }): Promise<CompletionResponse> {
     try {
       // 标准化选项，处理向后兼容
       const normalizedOptions = this.normalizeOptions(options);
       
-      // Azure OpenAI端点格式
-      const endpoint = `${this.baseUrl}/openai/deployments/${normalizedOptions.model || this.deploymentName}/chat/completions?api-version=${this.apiVersion}`;
-      
-      // 转换消息格式为OpenAI格式（Azure OpenAI API兼容OpenAI API）
+      // 转换消息格式为OpenAI格式
       const openaiMessages = this.convertMessagesToOpenAIFormat(normalizedOptions.messages);
       
       const requestBody: any = {
+        model: normalizedOptions.model || 'gpt-3.5-turbo',
         messages: openaiMessages,
         temperature: normalizedOptions.temperature ?? 0.7,
         max_tokens: normalizedOptions.maxTokens,
@@ -59,19 +51,19 @@ export class AzureOpenAIClient extends LLMClient {
       if (normalizedOptions.response_format) {
         requestBody.response_format = normalizedOptions.response_format;
       }
-      
-      const response = await fetch(endpoint, {
+
+      const response = await fetch(`${this.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'api-key': normalizedOptions.apiKey || this.apiKey
+          'Authorization': `Bearer ${normalizedOptions.apiKey || this.apiKey}`
         },
         body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(`Azure OpenAI API错误: ${error.error?.message || response.statusText}`);
+        throw new Error(`OpenAI API错误: ${error.error?.message || response.statusText}`);
       }
 
       if (normalizedOptions.stream && response.body && normalizedOptions.onUpdate) {
@@ -87,7 +79,7 @@ export class AzureOpenAIClient extends LLMClient {
           if (done) {
             return {
               content,
-              model: normalizedOptions.model || this.deploymentName,
+              model: normalizedOptions.model || 'gpt-3.5-turbo',
               finishReason: 'stop',
               toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
               responseFormat: normalizedOptions.response_format?.type
@@ -193,7 +185,7 @@ export class AzureOpenAIClient extends LLMClient {
         
         return {
           content: responseContent,
-          model: data.model || normalizedOptions.model || this.deploymentName,
+          model: data.model,
           finishReason: data.choices[0]?.finish_reason,
           toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
           responseFormat: normalizedOptions.response_format?.type,
@@ -202,7 +194,7 @@ export class AzureOpenAIClient extends LLMClient {
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new Error(`Azure OpenAI补全请求失败: ${errorMessage}`);
+      throw new Error(`OpenAI补全请求失败: ${errorMessage}`);
     }
   }
   

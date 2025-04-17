@@ -1,12 +1,11 @@
-import dbClient from './client/index.js';
+import { PrismaClient } from '@prisma/client';
 import { runMigrations } from './migration.js';
 import path from 'path';
 import { app } from 'electron';
 import fs from 'fs';
-const PrismaClient = dbClient.PrismaClient;
 
 // 设置和获取数据库URL
-function getDatabaseUrl() {
+function getDatabaseUrl(): string {
     // 否则，为打包应用生成一个默认路径
     if (app) {
         const userDataPath = app.getPath('userData');
@@ -24,7 +23,7 @@ function getDatabaseUrl() {
 }
 
 // 获取数据库URL
-const dbUrl = getDatabaseUrl();
+const dbUrl: string = getDatabaseUrl();
 
 // 创建Prisma实例，使用环境变量中的数据库URL
 const prisma = new PrismaClient({
@@ -36,7 +35,7 @@ const prisma = new PrismaClient({
 });
 
 // 初始化数据库，包括运行迁移
-const initDatabase = async () => {
+const initDatabase = async (): Promise<boolean> => {
     try {
         console.log(`Initializing database(url:${dbUrl})...`);
         // 验证数据库连接
@@ -56,7 +55,7 @@ const initDatabase = async () => {
 /**
  * 关闭数据库连接
  */
-const disconnect = async () => {
+const disconnect = async (): Promise<void> => {
     await prisma.$disconnect();
     console.log('Database connection has been closed');
 };

@@ -4,7 +4,7 @@ import isDev from 'electron-is-dev';
 import { app } from 'electron';
 
 // 获取迁移文件目录
-const getMigrationsDir = () => {
+const getMigrationsDir = (): string => {
   // 在开发环境使用项目目录
   if (isDev) {
     return path.join(process.cwd(), 'app', 'db', 'migrations');
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS _prisma_migrations (
 `;
 
 // 检查迁移是否已应用
-const isMigrationApplied = async (prisma, migrationName) => {
+const isMigrationApplied = async (prisma: any, migrationName: string): Promise<boolean> => {
   try {
     // 检查 _prisma_migrations 表是否存在
     const tableExists = await prisma.$queryRaw`
@@ -62,7 +62,7 @@ const isMigrationApplied = async (prisma, migrationName) => {
 };
 
 // 记录已应用的迁移
-const recordMigration = async (prisma, migrationName, checksum) => {
+const recordMigration = async (prisma: any, migrationName: string, checksum: string): Promise<void> => {
   const id = generateUUID();
   const now = new Date().toISOString();
 
@@ -81,7 +81,7 @@ const recordMigration = async (prisma, migrationName, checksum) => {
 };
 
 // 生成UUID
-const generateUUID = () => {
+const generateUUID = (): string => {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = Math.random() * 16 | 0;
     const v = c === 'x' ? r : (r & 0x3 | 0x8);
@@ -90,14 +90,14 @@ const generateUUID = () => {
 };
 
 // 计算迁移文件的checksum
-const calculateChecksum = async (content) => {
+const calculateChecksum = async (content: string): Promise<string> => {
   // 使用ESM方式导入crypto
   const crypto = await import('crypto');
   return crypto.default.createHash('sha256').update(content).digest('hex');
 };
 
 // 应用单个迁移
-const applyMigration = async (prisma, migrationDir, migrationName) => {
+const applyMigration = async (prisma: any, migrationDir: string, migrationName: string): Promise<boolean> => {
   const sqlFilePath = path.join(migrationDir, migrationName, 'migration.sql');
 
   try {
@@ -129,7 +129,7 @@ const applyMigration = async (prisma, migrationDir, migrationName) => {
 };
 
 // 主要的迁移函数
-const runMigrations = async (prisma = null) => {
+const runMigrations = async (prisma: any = null): Promise<boolean> => {
   console.log('Running database migrations...');
 
   try {

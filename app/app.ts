@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import { requestLogger, errorLogger } from './middleware/logger.js';
@@ -20,7 +20,7 @@ import routes from './routes/routes.js';
 app.use('/api', routes);
 
 // 健康检查
-app.get('/health', (req, res) => {
+app.get('/health', (_req: Request, res: Response) => {
     res.status(200).json({ status: 'ok' });
 });
 
@@ -28,7 +28,7 @@ app.get('/health', (req, res) => {
 app.use(errorLogger);
 
 // 错误处理中间件
-app.use((err, req, res, next) => {
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     res.status(500).json({
         message: 'Internal Server Error',
         error: process.env.NODE_ENV === 'development' ? err.message : undefined
@@ -42,10 +42,10 @@ process.on('SIGINT', async () => {
     process.exit(0);
 });
 
-let server = null;
+let server: any = null;
 
 export { app };
-export const start = async () => {
+export const start = async (): Promise<any> => {
     // 确保不会重复启动服务器
     if (server) {
         return server;
@@ -59,4 +59,4 @@ export const start = async () => {
     return server;
 };
 
-export const getServer = () => server; 
+export const getServer = (): any => server; 

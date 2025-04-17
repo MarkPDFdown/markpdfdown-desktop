@@ -6,7 +6,7 @@ import {
   MessageContent, 
   TextContent,
   ImageContent
-} from './LLMClient';
+} from './LLMClient.js';
 
 /**
  * Google Gemini客户端实现

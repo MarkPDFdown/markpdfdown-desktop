@@ -6,7 +6,7 @@ import {
   MessageContent, 
   TextContent,
   ImageContent
-} from './LLMClient';
+} from './LLMClient.js';
 
 /**
  * Anthropic客户端实现

@@ -191,19 +191,19 @@ export class LLMClientFactory {
    * @param apiKey API密钥
    * @param baseUrl 基础URL，某些服务需要自定义
    */
-  static async createClient(type: 'openai' | 'azure-openai' | 'gemini' | 'anthropic', apiKey: string, baseUrl?: string): Promise<LLMClient> {
+  static async createClient(type: string, apiKey: string, baseUrl?: string): Promise<LLMClient> {
     switch (type) {
       case 'openai':
-        const OpenAIModule = await import('./OpenAIClient');
+        const OpenAIModule = await import('./OpenAIClient.js');
         return new OpenAIModule.OpenAIClient(apiKey, baseUrl || '');
       case 'azure-openai':
-        const AzureOpenAIModule = await import('./AzureOpenAIClient');
+        const AzureOpenAIModule = await import('./AzureOpenAIClient.js');
         return new AzureOpenAIModule.AzureOpenAIClient(apiKey, baseUrl || '');
       case 'gemini':
-        const GeminiModule = await import('./GeminiClient');
+        const GeminiModule = await import('./GeminiClient.js');
         return new GeminiModule.GeminiClient(apiKey, baseUrl || '');
       case 'anthropic':
-        const AnthropicModule = await import('./AnthropicClient');
+        const AnthropicModule = await import('./AnthropicClient.js');
         return new AnthropicModule.AnthropicClient(apiKey, baseUrl || '');
       default:
         throw new Error(`不支持的LLM客户端类型: ${type}`);
