@@ -12,9 +12,8 @@ dist
 release
 dist-ssr
 *.local
-app/db/client
-app/db/*.db
-app/db/*.db-journal
+src/server/db/*.db
+src/server/db/*.db-journal
 
 # Editor directories and files
 .vscode/*
