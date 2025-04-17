@@ -1,6 +1,7 @@
 import express, { RequestHandler } from 'express';
 import providerController from '../controllers/providerController.js';
 import modelController from '../controllers/modelController.js';
+import completionController from '../controllers/completionController.js';
 const router = express.Router();
 
 // 服务商路由
@@ -15,5 +16,9 @@ router.put('/providers/:id/status', providerController.updateProviderStatus as R
 router.get('/models/:provider', modelController.getModelsByProviderId as RequestHandler);
 router.post('/models', modelController.createModel as RequestHandler);
 router.delete('/models/:id/:provider', modelController.deleteModel as RequestHandler);
+
+// 对话接口路由
+router.post('/completion', completionController.completion as RequestHandler);
+router.post('/try', completionController.testConnection as RequestHandler);
 
 export default router; 

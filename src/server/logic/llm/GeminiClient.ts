@@ -166,12 +166,12 @@ export class GeminiClient extends LLMClient {
           text: (content as TextContent).text
         };
         
-      case 'image':
+      case 'image_url':
         const imageContent = content as ImageContent;
         return {
           inline_data: {
-            mime_type: this.getMimeTypeFromUrl(imageContent.image_url),
-            data: this.extractBase64FromUrl(imageContent.image_url)
+            mime_type: this.getMimeTypeFromUrl(imageContent.image_url.url),
+            data: this.extractBase64FromUrl(imageContent.image_url.url)
           }
         };
         

@@ -44,6 +44,9 @@ const Provider: React.FC<ProviderProps> = ({
   const [models, setModels] = useState<ModelType[]>([]);
   const [newModelName, setNewModelName] = useState<string>("");
   const [newModelId, setNewModelId] = useState<string>("");
+  
+  // 添加测试状态
+  const [testingModelId, setTestingModelId] = useState<string>("");
 
   useEffect(() => {
     // 如果有providerId，则获取该服务商的详细信息
@@ -196,6 +199,42 @@ const Provider: React.FC<ProviderProps> = ({
     }
   };
 
+  // 测试模型连接
+  const testModelConnection = async (modelId: string) => {
+    if (!providerId) return;
+    
+    setTestingModelId(modelId);
+    
+    try {
+      const backendPort = window.electron?.backendPort || 3000;
+      const response = await fetch(
+        `http://localhost:${backendPort}/api/try`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            providerId: providerId,
+            modelId: modelId,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("连接测试失败");
+      }
+
+      // 测试成功
+      message.success("模型连接测试成功");
+    } catch (error) {
+      console.error("测试模型连接出错:", error);
+      message.error("连接测试失败: " + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      setTestingModelId("");
+    }
+  };
+
   return (
     <Flex vertical gap={16} style={{ padding: "16px" }}>
       <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -307,6 +346,8 @@ const Provider: React.FC<ProviderProps> = ({
                 shape="circle"
                 size="small"
                 title="检查"
+                onClick={() => testModelConnection(item.id)}
+                loading={testingModelId === item.id}
               ></Button>
             </Space>
             <Space>

@@ -214,13 +214,13 @@ export class AnthropicClient extends LLMClient {
           text: (content as TextContent).text
         }];
         
-      case 'image':
+      case 'image_url':
         const imageContent = content as ImageContent;
         
         let source: any;
-        if (imageContent.image_url.startsWith('data:')) {
+        if (imageContent.image_url.url.startsWith('data:')) {
           // 处理Base64数据URI
-          const parts = imageContent.image_url.split(';base64,');
+          const parts = imageContent.image_url.url.split(';base64,');
           if (parts.length === 2) {
             const mediaType = parts[0].replace('data:', '');
             source = {
@@ -233,7 +233,7 @@ export class AnthropicClient extends LLMClient {
           // 处理URL
           source = {
             type: 'url',
-            url: imageContent.image_url
+            url: imageContent.image_url.url
           };
         }
         

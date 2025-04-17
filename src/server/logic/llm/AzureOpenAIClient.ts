@@ -79,7 +79,7 @@ export class AzureOpenAIClient extends LLMClient {
         const reader = response.body.getReader();
         const decoder = new TextDecoder('utf-8');
         let content = '';
-        let toolCalls: ToolCall[] = [];
+        const toolCalls: ToolCall[] = [];
 
         const processStream = async (): Promise<CompletionResponse> => {
           const { done, value } = await reader.read();
@@ -251,13 +251,12 @@ export class AzureOpenAIClient extends LLMClient {
           text: (content as TextContent).text
         };
         
-      case 'image':
+      case 'image_url':
         const imageContent = content as ImageContent;
         return {
           type: 'image_url',
           image_url: {
-            url: imageContent.image_url,
-            detail: imageContent.detail || 'auto'
+            url: imageContent.image_url.url,
           }
         };
         

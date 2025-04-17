@@ -59,9 +59,8 @@ async function advancedExample() {
             text: '这张图片是什么？请详细描述一下。'
           },
           {
-            type: 'image',
-            image_url: 'https://example.com/sample-image.jpg', // 请替换为实际图片URL
-            detail: 'high'
+            type: 'image_url',
+            image_url: { url: 'https://example.com/sample-image.jpg' }, // 请替换为实际图片URL
           }
         ]
       }

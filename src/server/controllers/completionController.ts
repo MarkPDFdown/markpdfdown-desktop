@@ -17,6 +17,22 @@ const completion = async (req: Request, res: Response, next: NextFunction) => {
     }
 }
 
+// 测试模型连接
+const testConnection = async (req: Request, res: Response, next: NextFunction) => {
+    // 验证请求
+    if (!req.body.providerId || !req.body.modelId) {
+        return res.status(400).json({ message: 'providerId, modelId 为必填项' });
+    }
+    try {
+        const { providerId, modelId } = req.body;
+        const test = await model.testConnection(Number(providerId), modelId);
+        res.json(test);
+    } catch (error) {
+        next(error);
+    }
+}
+
 export default {
-    completion
+    completion,
+    testConnection
 } 

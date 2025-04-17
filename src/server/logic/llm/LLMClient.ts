@@ -5,7 +5,7 @@
 /**
  * 消息内容类型
  */
-export type ContentType = 'text' | 'image' | 'tool_call' | 'tool_result';
+export type ContentType = 'text' | 'image_url' | 'tool_call' | 'tool_result';
 
 /**
  * 消息角色
@@ -24,9 +24,8 @@ export interface TextContent {
  * 图片内容
  */
 export interface ImageContent {
-  type: 'image';
-  image_url: string; // 可以是URL或base64编码的数据URI
-  detail?: 'low' | 'high' | 'auto'; // 图片处理细节级别
+  type: 'image_url';
+  image_url: { url: string }; // 可以是URL或base64编码的数据URI
 }
 
 /**
