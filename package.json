@@ -26,11 +26,14 @@
     "productName": "MarkPDFdown",
     "files": [
       "dist/**/*",
-      "app/**/*",
       "!**/*.db",
       "!**/*.d.ts",
       "!**/*.min.*.map",
       "!**/{.DS_Store,Thumbs.db}"
+    ],
+    "extraResources": [
+      "node_modules/.prisma/**/*",
+      "node_modules/@prisma/client/**/*"
     ],
     "asarUnpack": [
       "**/*.{node,dll,metal,exp,lib}"
@@ -63,7 +66,7 @@
       "icon": "public/icons/png"
     },
     "electronDownload": {
-      "mirror": "https://npmmirror.com/mirrors/electron/"
+      "mirror": "https://github.com/electron/electron/releases/download/"
     },
     "asar": true
   },

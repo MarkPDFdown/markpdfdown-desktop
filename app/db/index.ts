@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import pkg from '@prisma/client';
+const { PrismaClient } = pkg;
 import { runMigrations } from './migration.js';
 import path from 'path';
 import { app } from 'electron';
