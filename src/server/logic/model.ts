@@ -19,9 +19,15 @@ const getLLMClient = async (providerId: number) => {
     );
 }
 
+// 补全请求
+const completion = async (providerId: number, options: CompletionOptions) => {
+    const llmClient = await getLLMClient(providerId);
+    return llmClient.completion(options);
+}
+
 // 输入图片文件路径，返回图片的base64编码
 const getImageBase64 = async (imagePath: string) => {
-    const image = await sharp(imagePath);
+    const image = sharp(imagePath);
     return image.toBuffer();
 }
 
@@ -60,42 +66,9 @@ Output Example:
     return message;
 }
 
-// 补全请求
-const completion = async (providerId: number, modelId: string, messages: Message[], options: CompletionOptions | undefined) => {
-    const llmClient = await getLLMClient(providerId);
-    // 从options中提取除messages外的其他选项
-    const { messages: _messages, model: _model, ...otherOptions } = options || {};
 
-    // 按CompletionOptions格式转换messages
-    const completionOptions: CompletionOptions = {
-        messages: messages,
-        model: modelId,
-        ...otherOptions
-    }
-
-    return llmClient.completion(completionOptions);
-}
-
-// 测试模型连接
-const testConnection = async (providerId: number, modelId: string) => {
-    const llmClient = await getLLMClient(providerId);
-    const message: Message[] = [{
-        role: 'user',
-        content: {
-            type: 'text',
-            text: 'Hi!'
-        }
-    }];
-    const completionOptions: CompletionOptions = {
-        messages: message,
-        model: modelId
-    }
-    const response = await llmClient.completion(completionOptions);
-    return response;
-}
 
 export default {
     completion,
-    transformImageMessage,
-    testConnection
+    transformImageMessage
 }

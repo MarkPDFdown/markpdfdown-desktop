@@ -45,7 +45,7 @@ const createProvider = async (req: Request, res: Response, next: NextFunction) =
       api_key: '',
       base_url: '',
       suffix: '',
-      status: 1 // 默认启用
+      status: 0 // 默认启用
     });
     
     res.status(201).json(newProvider);

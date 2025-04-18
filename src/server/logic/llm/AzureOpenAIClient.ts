@@ -34,7 +34,7 @@ export class AzureOpenAIClient extends LLMClient {
       const normalizedOptions = this.normalizeOptions(options);
       
       // Azure OpenAI端点格式
-      const endpoint = `${this.baseUrl}/openai/deployments/${normalizedOptions.model || this.deploymentName}/chat/completions?api-version=${this.apiVersion}`;
+      const endpoint = `${this.baseUrl}${normalizedOptions.model || this.deploymentName}/chat/completions?api-version=${this.apiVersion}`;
       
       // 转换消息格式为OpenAI格式（Azure OpenAI API兼容OpenAI API）
       const openaiMessages = this.convertMessagesToOpenAIFormat(normalizedOptions.messages);
@@ -68,6 +68,7 @@ export class AzureOpenAIClient extends LLMClient {
         },
         body: JSON.stringify(requestBody)
       });
+      console.log(`[${new Date().toISOString()}] POST ${endpoint} ${response.status} - ${response.statusText}`);
 
       if (!response.ok) {
         const error = await response.json();

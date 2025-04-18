@@ -18,7 +18,7 @@ router.post('/models', modelController.createModel as RequestHandler);
 router.delete('/models/:id/:provider', modelController.deleteModel as RequestHandler);
 
 // 对话接口路由
-router.post('/completion', completionController.completion as RequestHandler);
+router.post('/markimagedown', completionController.markImagedown as RequestHandler);
 router.post('/try', completionController.testConnection as RequestHandler);
 
 export default router; 

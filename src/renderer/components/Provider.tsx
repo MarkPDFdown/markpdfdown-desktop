@@ -68,7 +68,28 @@ const Provider: React.FC<ProviderProps> = ({
           // 设置初始值
           setApiKey(data.api_key || "");
           setBaseUrl(data.base_url || "");
-          setSuffix(data.suffix || "/chat/completions");
+          
+          // 根据 provider 类型设置默认后缀
+          if (!data.suffix) {
+            switch (data.type) {
+              case 'openai':
+                setSuffix("/chat/completions");
+                break;
+              case 'gemini':
+                setSuffix("/models");
+                break;
+              case 'anthropic':
+                setSuffix("/messages");
+                break;
+              case 'azure-openai':
+                setSuffix("/openai/deployments/");
+                break;
+              default:
+                setSuffix("");
+            }
+          } else {
+            setSuffix(data.suffix);
+          }
         } catch (error) {
           console.error("获取服务商详情出错:", error);
         }
@@ -294,7 +315,7 @@ const Provider: React.FC<ProviderProps> = ({
         />
       </div>
       <div>
-        <Typography.Text>API 地址：</Typography.Text>
+        <Typography.Text>API 地址：</Typography.Text><Typography.Text type="secondary">{baseUrl}{suffix}</Typography.Text>
         <Space.Compact style={{ width: "100%" }}>
           <Input
             placeholder="请输入API地址"
@@ -304,7 +325,7 @@ const Provider: React.FC<ProviderProps> = ({
             }}
             onBlur={() => {
               if (baseUrl !== providerData?.base_url) {
-                updateProvider({ base_url: baseUrl });
+                updateProvider({ base_url: baseUrl, suffix: suffix });
               }
             }}
             addonAfter={
@@ -315,14 +336,33 @@ const Provider: React.FC<ProviderProps> = ({
                   setSuffix(value);
                   updateProvider({ suffix: value });
                 }}
-                options={[
-                  { label: "/chat/completions", value: "/chat/completions" },
-                  {
-                    label: "/v1/chat/completions",
-                    value: "/v1/chat/completions",
-                  },
-                  { label: "无需后缀", value: "" },
-                ]}
+                options={(() => {
+                  const type = providerData?.type;
+                  switch (type) {
+                    case 'openai':
+                      return [
+                        { label: "/chat/completions", value: "/chat/completions" },
+                        { label: "/v1/chat/completions", value: "/v1/chat/completions" },
+                      ];
+                    case 'gemini':
+                      return [
+                        { label: "/models", value: "/models" },
+                        { label: "/v1/models", value: "/v1/models" },
+                      ];
+                    case 'anthropic':
+                      return [
+                        { label: "/messages", value: "/messages" },
+                        { label: "/v1/messages", value: "/v1/messages" },
+                      ];
+                    case 'azure-openai':
+                      return [
+                        { label: "/openai/deployments/", value: "/openai/deployments/" },
+                        { label: "/v1/openai/deployments/", value: "/v1/openai/deployments/" },
+                      ];
+                    default:
+                      return [];
+                  }
+                })()}
               />
             }
           />

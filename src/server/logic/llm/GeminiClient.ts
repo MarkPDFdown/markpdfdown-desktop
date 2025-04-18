@@ -13,7 +13,7 @@ import {
  */
 export class GeminiClient extends LLMClient {
   constructor(apiKey: string, baseUrl?: string) {
-    super(apiKey, baseUrl || 'https://generativelanguage.googleapis.com/v1');
+    super(apiKey, baseUrl || 'https://generativelanguage.googleapis.com/v1/models');
   }
 
   /**
@@ -25,7 +25,7 @@ export class GeminiClient extends LLMClient {
       const normalizedOptions = this.normalizeOptions(options);
       
       const modelName = normalizedOptions.model || 'gemini-1.5-pro';
-      const endpoint = `${this.baseUrl}/models/${modelName}:generateContent?key=${normalizedOptions.apiKey || this.apiKey}`;
+      const endpoint = `${this.baseUrl}/${modelName}:generateContent?key=${normalizedOptions.apiKey || this.apiKey}`;
       
       // 将消息转换为Gemini格式
       const geminiContents = this.convertMessagesToGeminiFormat(normalizedOptions.messages);
@@ -52,6 +52,7 @@ export class GeminiClient extends LLMClient {
         },
         body: JSON.stringify(requestBody)
       });
+      console.log(`[${new Date().toISOString()}] POST ${endpoint} ${response.status} - ${response.statusText}`);
 
       if (!response.ok) {
         const error = await response.json();

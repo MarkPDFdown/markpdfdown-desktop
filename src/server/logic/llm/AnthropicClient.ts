@@ -15,7 +15,7 @@ export class AnthropicClient extends LLMClient {
   private apiVersion: string;
 
   constructor(apiKey: string, baseUrl?: string, apiVersion: string = '2023-06-01') {
-    super(apiKey, baseUrl || 'https://api.anthropic.com/v1');
+    super(apiKey, baseUrl || 'https://api.anthropic.com/v1/messages');
     this.apiVersion = apiVersion;
   }
 
@@ -27,7 +27,7 @@ export class AnthropicClient extends LLMClient {
       // 标准化选项，处理向后兼容
       const normalizedOptions = this.normalizeOptions(options);
       
-      const endpoint = `${this.baseUrl}/messages`;
+      const endpoint = `${this.baseUrl}`;
       const modelName = normalizedOptions.model || 'claude-3-opus-20240229';
       
       // 将消息转换为Anthropic格式
@@ -69,6 +69,7 @@ export class AnthropicClient extends LLMClient {
         },
         body: JSON.stringify(requestBody)
       });
+      console.log(`[${new Date().toISOString()}] POST ${endpoint} ${response.status} - ${response.statusText}`);
 
       if (!response.ok) {
         const error = await response.json();
