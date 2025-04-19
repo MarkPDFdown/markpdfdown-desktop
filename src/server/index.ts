@@ -1,7 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
-import { requestLogger, errorLogger } from './middleware/logger.js';
+import { requestLogger, errorLogger } from './middleware/Logger.js';
 import { initDatabase, disconnect } from './db/index.js';
 
 // 初始化Express应用
@@ -14,7 +14,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(requestLogger);
 
 // 导入路由
-import routes from './routes/routes.js';
+import routes from './routes/Routes.js';
 
 // 使用路由
 app.use('/api', routes);

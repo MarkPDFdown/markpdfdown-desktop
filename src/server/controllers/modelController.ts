@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import modelDal from '../dal/modelDal.js';
-import providerDal from '../dal/providerDal.js';
+import modelDal from '../dal/ModelDal.js';
+import providerDal from '../dal/ProviderDal.js';
 // 获取所有启用的模型
 const getAllModels = async (_req: Request, res: Response, next: NextFunction) => {
     try {

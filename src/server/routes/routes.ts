@@ -1,7 +1,7 @@
 import express, { RequestHandler } from 'express';
-import providerController from '../controllers/providerController.js';
-import modelController from '../controllers/modelController.js';
-import completionController from '../controllers/completionController.js';
+import providerController from '../controllers/ProviderController.js';
+import modelController from '../controllers/ModelController.js';
+import completionController from '../controllers/CompletionController.js';
 const router = express.Router();
 
 // 服务商路由

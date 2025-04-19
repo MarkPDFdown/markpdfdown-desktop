@@ -1,5 +1,5 @@
 // @ts-ignore
-import providerDal from '../dal/providerDal.js';
+import providerDal from '../dal/ProviderDal.js';
 import { LLMClientFactory, CompletionOptions, Message } from './llm/LLMClient.js';
 import sharp from 'sharp';
 

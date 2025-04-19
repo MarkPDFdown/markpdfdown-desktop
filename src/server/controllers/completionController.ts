@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import model from '../logic/model.js';
+import model from '../logic/Model.js';
 import { CompletionOptions, Message } from '../logic/llm/LLMClient.js';
 
 // 转换图片为markdown

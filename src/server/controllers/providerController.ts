@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import providerDal from '../dal/providerDal.js';
+import providerDal from '../dal/ProviderDal.js';
 import { PartialProviderData } from '../types/Provider.js';
 
 // 获取所有服务商
