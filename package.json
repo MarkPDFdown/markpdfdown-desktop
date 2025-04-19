@@ -33,7 +33,14 @@
     ],
     "extraResources": [
       "node_modules/.prisma/**/*",
-      "node_modules/@prisma/client/**/*"
+      "node_modules/@prisma/client/**/*",
+      {
+        "from": "src/server/db/migrations",
+        "to": "migrations",
+        "filter": [
+          "**/*.sql"
+        ]
+      }
     ],
     "asarUnpack": [
       "**/*.{node,dll,metal,exp,lib}"

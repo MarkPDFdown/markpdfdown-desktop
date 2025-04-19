@@ -7,13 +7,13 @@ import { app } from 'electron';
 const getMigrationsDir = (): string => {
   // 在开发环境使用项目目录
   if (isDev) {
-    return path.join(process.cwd(), 'app', 'db', 'migrations');
+    return path.join(process.cwd(), 'src', 'server', 'db', 'migrations');
   }
 
   // 在打包环境中，确保使用正确的路径
   // 使用app.getAppPath()获取应用根目录
   if (app) {
-    return path.join(app.getAppPath(), 'app', 'db', 'migrations');
+    return path.join(app.getAppPath(), '..', 'migrations');
   }
 
   // 回退到__dirname相对路径
