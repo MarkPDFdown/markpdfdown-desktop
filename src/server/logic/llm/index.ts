@@ -11,6 +11,7 @@ export { OpenAIClient } from './OpenAIClient.js';
 export { AzureOpenAIClient } from './AzureOpenAIClient.js';
 export { GeminiClient } from './GeminiClient.js';
 export { AnthropicClient } from './AnthropicClient.js';
+export { OllamaClient } from './OllamaClient.js';
 
 // 导入工厂类以供默认导出
 import { LLMClientFactory } from './LLMClient.js';

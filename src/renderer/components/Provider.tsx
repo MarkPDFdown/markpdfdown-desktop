@@ -84,6 +84,9 @@ const Provider: React.FC<ProviderProps> = ({
               case 'azure-openai':
                 setSuffix("/openai/deployments/");
                 break;
+              case 'ollama':
+                setSuffix("/chat");
+                break;
               default:
                 setSuffix("");
             }
@@ -358,6 +361,11 @@ const Provider: React.FC<ProviderProps> = ({
                       return [
                         { label: "/openai/deployments/", value: "/openai/deployments/" },
                         { label: "/v1/openai/deployments/", value: "/v1/openai/deployments/" },
+                      ];
+                    case 'ollama':
+                      return [
+                        { label: "/chat", value: "/chat" },
+                        { label: "/api/chat", value: "/api/chat" },
                       ];
                     default:
                       return [];

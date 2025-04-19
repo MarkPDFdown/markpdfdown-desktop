@@ -204,8 +204,11 @@ export class LLMClientFactory {
       case 'anthropic':
         const AnthropicModule = await import('./AnthropicClient.js');
         return new AnthropicModule.AnthropicClient(apiKey, baseUrl || '');
+      case 'ollama':
+        const OllamaModule = await import('./OllamaClient.js');
+        return new OllamaModule.OllamaClient(apiKey, baseUrl || '');
       default:
         throw new Error(`不支持的LLM客户端类型: ${type}`);
     }
   }
-} 
+}

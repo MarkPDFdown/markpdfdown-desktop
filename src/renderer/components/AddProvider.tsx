@@ -68,6 +68,7 @@ const AddProvider: React.FC<AddProviderProps> = ({ onProviderAdded }) => {
                     <Select.Option value="anthropic">Anthropic</Select.Option>
                     <Select.Option value="gemini">Gemini</Select.Option>
                     <Select.Option value="azure-openai">Azure OpenAI</Select.Option>
+                    <Select.Option value="ollama">Ollama</Select.Option>
                 </Select>
             </Form.Item>
 
