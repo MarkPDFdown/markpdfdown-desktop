@@ -34,6 +34,9 @@ const UploadPanel: React.FC = () => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [modelGroups, setModelGroups] = useState<ModelGroupType[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [uploading, setUploading] = useState<boolean>(false);
+  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [pageRange, setPageRange] = useState<string>("");
   const { Dragger } = Upload;
   const props: UploadProps = {
     onRemove: (file) => {
@@ -101,6 +104,96 @@ const UploadPanel: React.FC = () => {
     return options;
   };
 
+  // 处理开始转换按钮点击
+  const handleConvert = async () => {
+    if (fileList.length === 0) {
+      message.error("请先上传文件");
+      return;
+    }
+
+    if (!selectedModel) {
+      message.error("请选择一个模型");
+      return;
+    }
+
+    try {
+      setUploading(true);
+      
+      // 解析选中的模型ID和提供商ID
+      const [modelId, providerIdStr] = selectedModel.split('@');
+      const providerId = parseInt(providerIdStr, 10);
+      
+      // 获取选中的模型名称，模型名称为 模型name@提供商name
+      const selectedModelGroup = modelGroups.find(group => group.provider === providerId);
+      const providerName = selectedModelGroup?.providerName || "";
+      const modelName = selectedModelGroup?.models.find(model => model.id === modelId)?.name + ' | ' + providerName;
+      
+      // 创建任务列表
+      const tasks = fileList.map(file => {
+        // 确定文件类型
+        const fileType = file.name.split('.').pop()?.toLowerCase() || '';
+        
+        return {
+          filename: file.name,
+          type: fileType,
+          page_range: pageRange || "",
+          pages: 0, // 页数将在后端处理
+          provider: providerId,
+          model: modelId,
+          model_name: modelName
+        };
+      });
+      
+      // 发送请求创建任务
+      const backendPort = window.electron?.backendPort || 3000;
+      const response = await fetch(`http://localhost:${backendPort}/api/tasks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(tasks),
+      });
+      
+      if (!response.ok) {
+        throw new Error("创建任务失败");
+      }
+      
+      // 获取创建的任务列表
+      const createdTasks = await response.json();
+      
+      // 逐个上传文件，使用任务ID作为文件名
+      for (let i = 0; i < fileList.length; i++) {
+        const file = fileList[i];
+        const task = createdTasks[i];
+        
+        if (file.originFileObj && task.id) {
+          const formData = new FormData();
+          formData.append('files', file.originFileObj);
+          
+          // 使用任务ID作为查询参数
+          const uploadResponse = await fetch(`http://localhost:${backendPort}/api/upload?taskId=${task.id}`, {
+            method: 'POST',
+            body: formData,
+          });
+          
+          if (!uploadResponse.ok) {
+            throw new Error(`上传文件 ${file.name} 失败`);
+          }
+        }
+      }
+      
+      message.success("文件上传成功，已创建转换任务");
+      // 清空文件列表
+      setFileList([]);
+      
+    } catch (error) {
+      console.error("上传文件出错:", error);
+      message.error("上传失败: " + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <>
       <Row style={{ display: "block", marginTop: "32px" }}>
@@ -110,7 +203,6 @@ const UploadPanel: React.FC = () => {
             multiple={true}
             maxCount={10}
             listType="picture"
-            action="/api/upload"
             accept=".pdf,.jpg,.png,.bmp"
             {...props}
             style={{ minWidth: "760px" }}
@@ -132,10 +224,22 @@ const UploadPanel: React.FC = () => {
               options={getModelOptions()}
               loading={loading}
               placeholder="请选择模型"
+              onChange={(value) => setSelectedModel(value)}
             />
             <Text>页码范围：</Text>
-            <Input style={{ width: 240 }} placeholder="例如：1-10,12（默认全部页面）" />
-            <Button type="primary" icon={<FileMarkdownOutlined />}>
+            <Input 
+              style={{ width: 240 }} 
+              placeholder="例如：1-10,12（默认全部页面）" 
+              value={pageRange}
+              onChange={(e) => setPageRange(e.target.value)}
+            />
+            <Button 
+              type="primary" 
+              icon={<FileMarkdownOutlined />}
+              onClick={handleConvert}
+              loading={uploading}
+              disabled={uploading || fileList.length === 0 || !selectedModel}
+            >
               开始转换
             </Button>
           </Space>

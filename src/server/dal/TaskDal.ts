@@ -30,9 +30,18 @@ const create = async (task: Task) => {
   });
 };
 
-
+// 批量创建任务
+const createTasks = async (tasks: Task[]) => {
+  const createdTasks = [];
+  for (const task of tasks) {
+    const createdTask = await create(task);
+    createdTasks.push(createdTask);
+  }
+  return createdTasks;
+};
 
 export default {
   findAll,
   create,
+  createTasks,
 };

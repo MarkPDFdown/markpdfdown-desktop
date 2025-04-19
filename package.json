@@ -89,6 +89,7 @@
   "dependencies": {
     "@ant-design/icons": "^5.6.1",
     "@prisma/client": "^6.5.0",
+    "@types/multer": "^1.4.12",
     "@types/sharp": "^0.31.1",
     "antd": "^5.24.4",
     "body-parser": "^2.2.0",
@@ -96,6 +97,7 @@
     "electron-is-dev": "^3.0.1",
     "express": "^5.1.0",
     "katex": "^0.16.21",
+    "multer": "^1.4.5-lts.2",
     "prismjs": "^1.30.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

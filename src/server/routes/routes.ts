@@ -2,6 +2,8 @@ import express, { RequestHandler } from 'express';
 import providerController from '../controllers/ProviderController.js';
 import modelController from '../controllers/ModelController.js';
 import completionController from '../controllers/CompletionController.js';
+import taskController from '../controllers/TaskController.js';
+import fileController from '../controllers/FileController.js';
 const router = express.Router();
 
 // 服务商路由
@@ -18,6 +20,11 @@ router.get('/models/:provider', modelController.getModelsByProviderId as Request
 router.post('/models', modelController.createModel as RequestHandler);
 router.delete('/models/:id/:provider', modelController.deleteModel as RequestHandler);
 
+// 任务路由
+router.post('/tasks', taskController.createTasks as RequestHandler);
+
+// 文件上传路由
+router.post('/upload', fileController.uploadFiles as RequestHandler);
 
 // 对话接口路由
 router.post('/markimagedown', completionController.markImagedown as RequestHandler);
