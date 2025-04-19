@@ -22,6 +22,7 @@ router.delete('/models/:id/:provider', modelController.deleteModel as RequestHan
 
 // 任务路由
 router.post('/tasks', taskController.createTasks as RequestHandler);
+router.get('/tasks', taskController.getAllTasks as RequestHandler);
 
 // 文件上传路由
 router.post('/upload', fileController.uploadFiles as RequestHandler);

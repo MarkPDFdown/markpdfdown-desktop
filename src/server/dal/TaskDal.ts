@@ -12,6 +12,11 @@ const findAll = async (page: number, pageSize: number) => {
   });
 };
 
+// 查询任务总数
+const getTotal = async () => {
+  return await prisma.task.count();
+};
+
 // 创建任务
 const create = async (task: Task) => {
   return await prisma.task.create({
@@ -44,4 +49,5 @@ export default {
   findAll,
   create,
   createTasks,
+  getTotal,
 };
