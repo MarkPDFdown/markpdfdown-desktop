@@ -1,9 +1,12 @@
 import { prisma } from "../db/index.js";
 import { ProviderData, PartialProviderData } from "../types/Provider.js";
 
-// 查找所有提供商
+// 查找所有启用的提供商
 const findAll = async () => {
   return await prisma.provider.findMany({
+    where: {
+      status: 0
+    },
     select: {
       id: true,
       name: true,

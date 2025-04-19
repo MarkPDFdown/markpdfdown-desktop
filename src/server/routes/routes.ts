@@ -13,9 +13,11 @@ router.delete('/providers/:id', providerController.deleteProvider as RequestHand
 router.put('/providers/:id/status', providerController.updateProviderStatus as RequestHandler);
 
 // 模型路由
+router.get('/models', modelController.getAllModels as RequestHandler);
 router.get('/models/:provider', modelController.getModelsByProviderId as RequestHandler);
 router.post('/models', modelController.createModel as RequestHandler);
 router.delete('/models/:id/:provider', modelController.deleteModel as RequestHandler);
+
 
 // 对话接口路由
 router.post('/markimagedown', completionController.markImagedown as RequestHandler);

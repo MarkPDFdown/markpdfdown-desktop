@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Button,
   Col,
   Input,
   Row,
+  App,
   Select,
   Space,
   Typography,
@@ -15,8 +16,24 @@ import { FileMarkdownOutlined, InboxOutlined } from "@ant-design/icons";
 
 const { Text } = Typography;
 
+// 定义模型数据接口
+interface ModelType {
+  id: string;
+  name: string;
+  provider: number;
+}
+
+interface ModelGroupType {
+  provider: number;
+  providerName: string;
+  models: ModelType[];
+}
+
 const UploadPanel: React.FC = () => {
+  const { message } = App.useApp();
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [modelGroups, setModelGroups] = useState<ModelGroupType[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
   const { Dragger } = Upload;
   const props: UploadProps = {
     onRemove: (file) => {
@@ -32,6 +49,56 @@ const UploadPanel: React.FC = () => {
       setFileList(info.fileList);
     },
     fileList,
+  };
+
+  // 获取所有模型数据
+  useEffect(() => {
+    const fetchAllModels = async () => {
+      try {
+        setLoading(true);
+        const backendPort = window.electron?.backendPort || 3000;
+        const response = await fetch(`http://localhost:${backendPort}/api/models`);
+
+        if (!response.ok) {
+          throw new Error("获取模型列表失败");
+        }
+
+        const data = await response.json();
+        setModelGroups(data);
+      } catch (error) {
+        console.error("获取模型列表出错:", error);
+        message.error("获取模型列表失败: " + (error instanceof Error ? error.message : String(error)));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAllModels();
+  }, []);
+
+  // 将模型数据转换为Select选项格式
+  const getModelOptions = () => {
+    const options = modelGroups.map((group) => ({
+      label: <span>{group.providerName}</span>,
+      title: group.providerName,
+      options: group.models.map((model) => ({
+        label: <span>{model.name}</span>,
+        value: model.id + '@' + model.provider,
+      })),
+    }));
+
+    // 如果没有数据，提供默认选项
+    if (options.length === 0) {
+      return [
+        {
+          label: <span>无可用模型，请在设置中配置模型</span>,
+          title: "",
+          options: [],
+        }
+      ];
+    }
+
+    return options;
   };
 
   return (
@@ -61,36 +128,10 @@ const UploadPanel: React.FC = () => {
           <Space>
             <Text>选择模型：</Text>
             <Select
-              defaultValue="anthropic/claude-3.7-sonnet"
               style={{ width: 240 }}
-              options={[
-                {
-                  label: <span>OpenAI</span>,
-                  title: "OpenAI",
-                  options: [
-                    { label: <span>gpt-4o</span>, value: "gpt-4o" },
-                    { label: <span>o1-mini</span>, value: "o1-mini" },
-                  ],
-                },
-                {
-                  label: <span>OpenRouter</span>,
-                  title: "OpenRouter",
-                  options: [
-                    {
-                      label: <span>anthropic/claude-3.7-sonnet</span>,
-                      value: "anthropic/claude-3.7-sonnet",
-                    },
-                    {
-                      label: <span>google/gemini-2.0-flash-001</span>,
-                      value: "google/gemini-2.0-flash-001",
-                    },
-                    {
-                      label: <span>google/gemma-3-27b-it</span>,
-                      value: "google/gemma-3-27b-it",
-                    },
-                  ],
-                },
-              ]}
+              options={getModelOptions()}
+              loading={loading}
+              placeholder="请选择模型"
             />
             <Text>页码范围：</Text>
             <Input style={{ width: 240 }} placeholder="例如：1-10,12（默认全部页面）" />
