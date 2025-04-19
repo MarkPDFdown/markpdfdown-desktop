@@ -39,7 +39,8 @@ model Task {
   id         String  @unique
   filename   String
   type       String
-  pages      String
+  page_range String
+  pages      Int
   provider   Int
   model      String
   model_name String
@@ -52,12 +53,14 @@ model Task {
 }
 
 model TaskDetail {
-  id         Int      @id @default(autoincrement())
-  task       String
-  page       Int
-  status     Int      @default(0)
-  provider   Int
-  model      String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id          Int      @id @default(autoincrement())
+  task        String
+  page        Int
+  page_source Int
+  status      Int      @default(0)
+  provider    Int
+  model       String
+  content     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

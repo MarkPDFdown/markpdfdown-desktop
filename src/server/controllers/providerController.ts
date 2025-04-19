@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import providerDal from '../dal/ProviderDal.js';
-import { PartialProviderData } from '../types/Provider.js';
+import { Provider } from '../types/Provider.js';
 
 // 获取所有服务商
 const getAllProviders = async (_req: Request, res: Response, next: NextFunction) => {
@@ -67,7 +67,7 @@ const updateProvider = async (req: Request, res: Response, next: NextFunction) =
     }
     
     // 准备更新数据
-    const updateData: PartialProviderData = {};
+    const updateData: Provider = {};
     if (api_key !== undefined) updateData.api_key = api_key;
     if (base_url !== undefined) updateData.base_url = base_url;
     if (suffix !== undefined) updateData.suffix = suffix;

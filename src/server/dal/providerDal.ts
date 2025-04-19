@@ -1,5 +1,5 @@
 import { prisma } from "../db/index.js";
-import { ProviderData, PartialProviderData } from "../types/Provider.js";
+import { Provider } from "../types/Provider.js";
 
 // 查找所有启用的提供商
 const findAll = async () => {
@@ -41,32 +41,33 @@ const findById = async (id: number) => {
 };
 
 // 创建提供商
-const create = async (providerData: Partial<ProviderData>) => {
-  // 设置默认值
-  const data: ProviderData = {
-    name: providerData.name || '',
-    type: providerData.type || '',
-    api_key: providerData.api_key || '',
-    base_url: providerData.base_url || '',
-    suffix: providerData.suffix || '',
-    status: providerData.status || 0
-  };
-  
+const create = async (data: Provider) => {  
   return await prisma.provider.create({
-    data
+    data: {
+      name: data?.name || '',
+      type: data?.type || '',
+      api_key: data?.api_key || '',
+      base_url: data?.base_url || '',
+      suffix: data?.suffix || '',
+      status: data?.status || 0,
+    }
   });
 };
 
 // 更新提供商
-const update = async (id: number, updateData: PartialProviderData) => {
+const update = async (id: number, data: Provider) => {
   return await prisma.provider.update({
     where: { id },
-    data: updateData,
+    data: data,
   });
 };
 
 // 删除提供商
 const remove = async (id: number) => {
+  // 同时删除关联的model
+  await prisma.model.deleteMany({
+    where: { provider: id },
+  });
   return await prisma.provider.delete({
     where: { id },
   });
