@@ -55,8 +55,12 @@ const update = async (id: string, task: Task) => {
 
 // 删除任务
 const remove = async (id: string) => {
-  return await prisma.task.delete({
+  await prisma.task.delete({
     where: { id },
+  });
+  // 删除任务对应detail
+  return await prisma.taskDetail.deleteMany({
+    where: { task: id },
   });
 };
 

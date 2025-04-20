@@ -4,11 +4,11 @@ import { runMigrations } from './Migration.js';
 import path from 'path';
 import { app } from 'electron';
 import fs from 'fs';
-
+import isDev from 'electron-is-dev';
 // 设置和获取数据库URL
 function getDatabaseUrl(): string {
     // 否则，为打包应用生成一个默认路径
-    if (app) {
+    if (!isDev) {
         const userDataPath = app.getPath('userData');
         const dbDir = path.join(userDataPath, 'db');
         if (!fs.existsSync(dbDir)) {
@@ -19,8 +19,8 @@ function getDatabaseUrl(): string {
     }
 
     // 开发环境回退路径
-    console.log('Using default development database path:', 'file:./dev.db');
-    return 'file:./dev.db';
+    console.log('Using default development database path:', `file:${path.join(process.cwd(), 'src', 'server', 'db', 'dev.db')}`);
+    return `file:${path.join(process.cwd(), 'src', 'server', 'db', 'dev.db')}`;
 }
 
 // 获取数据库URL

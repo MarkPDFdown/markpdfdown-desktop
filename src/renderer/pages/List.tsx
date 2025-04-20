@@ -27,14 +27,7 @@ const List: React.FC = () => {
         params: { page, pageSize }
       });
 
-      // 格式化任务数据
-      const formattedData = response.data.list.map((task: any) => ({
-        ...task,
-        model: `${task.model_name} | ${task.model}`,
-        action: task.progress === 100 ? '查看' : '取消',
-      }));
-
-      setData(formattedData);
+      setData(response.data.list);
       setPagination({
         ...pagination,
         current: page,
@@ -113,17 +106,18 @@ const List: React.FC = () => {
 
   // 取消任务
   const handleCancelTask = (id: string) => {
-    handleUpdateTaskStatus(id, 6, '取消');
+    handleUpdateTaskStatus(id, 7, '取消');
   };
 
   const getStatusText = (status: number) => {
     switch (status) {
       case 1: return '待处理'; // action: 取消
-      case 2: return '处理中'; // action: 查看，取消
-      case 3: return '待合并'; // action: 查看，取消
-      case 4: return '合并中'; // action: 查看，取消
-      case 5: return '已完成'; // action: 查看，删除
-      case 6: return '已取消'; // action: 删除
+      case 2: return '初始化'; // action: 查看，取消
+      case 3: return '进行中'; // action: 查看，取消
+      case 4: return '待合并'; // action: 查看，取消
+      case 5: return '合并中'; // action: 查看，取消
+      case 6: return '已完成'; // action: 查看，删除
+      case 7: return '已取消'; // action: 删除
       case 0: return '失败'; // action: 重试，删除
       default: return '未知'; // action: 删除
     }
@@ -135,8 +129,9 @@ const List: React.FC = () => {
       case 2: return 'processing';
       case 3: return 'processing';
       case 4: return 'processing';
-      case 5: return 'success';
-      case 6: return 'default';
+      case 5: return 'processing';
+      case 6: return 'success';
+      case 7: return 'default';
       case 0: return 'error';
       default: return 'default';
     }
@@ -212,12 +207,12 @@ const List: React.FC = () => {
       render: (_text: string, record: Task) => (
         <Space size="small">
           {(() => {
-            if (record.status && record.status > 1 && record.status < 6) {
+            if (record.status && record.status > 1 && record.status < 7) {
               return <Link type="success" to={`/list/preview/${record.id}`}>查看</Link>;
             }
           })()}
           {(() => {
-            if (record.status && record.status > 0 && record.status < 5) {
+            if (record.status && record.status > 0 && record.status < 6) {
               return <Text type="secondary" style={{ cursor: 'pointer' }} onClick={() => record.id && handleCancelTask(record.id)}>取消</Text>
             }
           })()}
@@ -227,7 +222,7 @@ const List: React.FC = () => {
             }
           })()}
           {(() => {
-            if ((record.status === 0) || (record.status && record.status >= 5)) {
+            if ((record.status === 0) || (record.status && record.status >= 6)) {
               return <Text type="danger" style={{ cursor: 'pointer' }} onClick={() => record.id && handleDeleteTask(record.id)}>
                 删除
               </Text>

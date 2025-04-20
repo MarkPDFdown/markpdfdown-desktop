@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import taskDal from '../dal/TaskDal.js';
-
+import fileLogic from '../logic/File.js';
 
 // 批量创建任务
 const createTasks = async (req: Request, res: Response, next: NextFunction) => {
@@ -43,6 +43,8 @@ const deleteTask = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const deletedTask = await taskDal.remove(id);
+    // 删除任务后，删除任务对应的文件
+    fileLogic.deleteTaskFiles(id);
     res.status(200).json(deletedTask);
   } catch (error) {
     next(error);

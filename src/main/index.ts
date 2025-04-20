@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import path from 'path';
 import isDev from 'electron-is-dev';
-
+import taskLogic from '../server/logic/Task.js';
 // 添加错误处理
 let backend: any;
 let mainWindow: BrowserWindow | null;
@@ -45,6 +45,16 @@ async function startBackendServer(): Promise<number> {
       });
     }
   });
+}
+
+// 启动任务
+async function startTask() {
+  await taskLogic.start();
+}
+
+// 停止任务
+async function stopTask() {
+  await taskLogic.stop();
 }
 
 function createWindow(port: number) {
@@ -114,6 +124,7 @@ app.whenReady().then(async () => {
   try {
     const port = await startBackendServer();
     createWindow(port);
+    await startTask();
   } catch (error) {
     console.error('Error starting backend server:', error);
     app.quit();
@@ -124,6 +135,9 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     if (backendServer) {
       backendServer.close();
+    }
+    if (taskLogic.getStatus()) {
+      stopTask();
     }
     app.quit();
   }
@@ -138,6 +152,9 @@ app.on('activate', async () => {
       } else {
         const port = backendServer.address().port;
         createWindow(port);
+      }
+      if (!taskLogic.getStatus()) {
+        await startTask();
       }
     } catch (error) {
       console.error('Error reactivating application:', error);

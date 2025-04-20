@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import model from '../logic/Model.js';
+import modelLogic from '../logic/Model.js';
 import { CompletionOptions, Message } from '../logic/llm/LLMClient.js';
 
 // 转换图片为markdown
@@ -10,7 +10,7 @@ const markImagedown = async (req: Request, res: Response, next: NextFunction) =>
     }
 
     try {
-        const message = await model.transformImageMessage(req.body.url);
+        const message = await modelLogic.transformImageMessage(req.body.url);
         const completionOptions: CompletionOptions = {
             messages: message,
             model: req.body.modelId,
@@ -18,7 +18,7 @@ const markImagedown = async (req: Request, res: Response, next: NextFunction) =>
             temperature: 0.3,
             stream: false
         }
-        const completion = await model.completion(Number(req.body.providerId), completionOptions);
+        const completion = await modelLogic.completion(Number(req.body.providerId), completionOptions);
         res.json(completion);
     } catch (error) {
         next(error);
@@ -56,7 +56,7 @@ const testConnection = async (req: Request, res: Response, next: NextFunction) =
             temperature: 0.7,
             stream: false
         }
-        const test = await model.completion(Number(providerId), completionOptions);
+        const test = await modelLogic.completion(Number(providerId), completionOptions);
         res.json(test);
     } catch (error) {
         next(error);

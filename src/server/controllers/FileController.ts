@@ -2,24 +2,13 @@ import { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import fs from 'fs';
 import multer from 'multer';
-import isDev from 'electron-is-dev';
-import { app } from 'electron';
-
+import fileLogic from '../logic/File.js';
 // 扩展Request接口以适配multer
 interface MulterRequest extends Request {
   files: Express.Multer.File[];
 }
 
-// 获取上传目录
-const getUploadDir = () => {
-  // DEV目录
-  if (isDev) {
-    return path.join(process.cwd(), 'files');
-  }
-  // 打包目录
-  const userDataPath = app.getPath('userData');
-  return path.join(userDataPath, 'files');
-};
+
 
 // 文件上传处理
 const uploadFiles = (req: Request, res: Response, next: NextFunction) => {
@@ -34,7 +23,7 @@ const uploadFiles = (req: Request, res: Response, next: NextFunction) => {
   const storage = multer.diskStorage({
     destination: (_req, _file, cb) => {
       // 获取基础上传目录
-      const baseUploadDir = getUploadDir();
+      const baseUploadDir = fileLogic.getUploadDir();
       
       // 创建任务ID对应的目录
       const uploadDir = path.join(baseUploadDir, taskId);
