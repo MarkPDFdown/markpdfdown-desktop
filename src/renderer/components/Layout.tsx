@@ -53,7 +53,13 @@ const AppLayout: React.FC = () => {
 
   // 根据当前路径确定选中的菜单项
   const getSelectedKey = () => {
-    const currentPath = location.pathname;
+    // 在使用HashRouter时，location.pathname 可能不会正确更新
+    // 手动从location.hash中获取实际路径
+    const hash = location.hash;
+    const hashPath = hash.startsWith('#') ? hash.substring(1) : '';
+    const currentPath = hashPath || location.pathname;
+    
+    // console.log('Current path:', currentPath); // 调试用
     
     // 检查是否为子路径
     for (const item of menuItems) {
@@ -136,7 +142,7 @@ const AppLayout: React.FC = () => {
 
           <Menu
             theme="dark"
-            defaultSelectedKeys={[getSelectedKey()]}
+            selectedKeys={[getSelectedKey()]}
             mode="inline"
             items={menuItems.map((item) => ({
               key: item.key,

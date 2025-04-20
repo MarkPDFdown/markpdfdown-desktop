@@ -13,7 +13,7 @@ import {
   UploadProps,
 } from "antd";
 import { FileMarkdownOutlined, InboxOutlined } from "@ant-design/icons";
-
+import { useNavigate } from "react-router-dom";
 const { Text } = Typography;
 
 // 定义模型数据接口
@@ -30,6 +30,7 @@ interface ModelGroupType {
 }
 
 const UploadPanel: React.FC = () => {
+  const navigate = useNavigate();
   const { message } = App.useApp();
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [modelGroups, setModelGroups] = useState<ModelGroupType[]>([]);
@@ -161,6 +162,7 @@ const UploadPanel: React.FC = () => {
       // 获取创建的任务列表
       const createdTasks = await response.json();
       
+      let successCount = 0;
       // 逐个上传文件，使用任务ID作为文件名
       for (let i = 0; i < fileList.length; i++) {
         const file = fileList[i];
@@ -176,13 +178,32 @@ const UploadPanel: React.FC = () => {
             body: formData,
           });
           
-          if (!uploadResponse.ok) {
-            throw new Error(`上传文件 ${file.name} 失败`);
+          if (uploadResponse.ok) {
+            // 修改任务状态
+            await fetch(`http://localhost:${backendPort}/api/tasks/${task.id}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ status: 1 }),
+            });
+            successCount++;
+          }else{
+            message.error(`上传文件 ${file.name} 失败`);
+            // 删除任务
+            await fetch(`http://localhost:${backendPort}/api/tasks/${task.id}`, {
+              method: 'DELETE',
+            });
           }
         }
       }
       
-      message.success("文件上传成功，已创建转换任务");
+      if(successCount>0){
+        message.success(`已创建${successCount}个任务`);
+        navigate('/list', { replace: true });
+      }else{
+        message.error("文件上传失败");
+      }
       // 清空文件列表
       setFileList([]);
       

@@ -26,7 +26,33 @@ const getAllTasks = async (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
+// 更新任务
+const updateTask = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const task = req.body;
+    const updatedTask = await taskDal.update(id, task);
+    res.status(200).json(updatedTask);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 删除任务
+const deleteTask = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const deletedTask = await taskDal.remove(id);
+    res.status(200).json(deletedTask);
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 export default {
   createTasks,
   getAllTasks,
+  updateTask,
+  deleteTask,
 };

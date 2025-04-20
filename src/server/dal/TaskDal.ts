@@ -45,9 +45,26 @@ const createTasks = async (tasks: Task[]) => {
   return createdTasks;
 };
 
+// 更新任务
+const update = async (id: string, task: Task) => {
+  return await prisma.task.update({
+    where: { id },
+    data: task,
+  });
+};
+
+// 删除任务
+const remove = async (id: string) => {
+  return await prisma.task.delete({
+    where: { id },
+  });
+};
+
 export default {
   findAll,
   create,
   createTasks,
   getTotal,
+  update,
+  remove,
 };
