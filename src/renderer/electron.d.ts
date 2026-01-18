@@ -1,11 +1,188 @@
-interface ElectronAPI {
-  ipcRenderer: {
-    send: (channel: string, data: any) => void;
-    on: (channel: string, func: (...args: any[]) => void) => void;
-  };
-  backendPort: number | null;
+/**
+ * Electron API 类型定义
+ * 为渲染进程提供类型安全的 window.api 接口
+ */
+
+// IPC 响应类型
+interface IpcResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
 }
 
-declare interface Window {
-  electron: ElectronAPI;
-} 
+// Provider 相关类型
+interface Provider {
+  id: number;
+  name: string;
+  type: string;
+  api_key: string | null;
+  base_url: string | null;
+  suffix: string | null;
+  status: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface CreateProviderDTO {
+  name: string;
+  type: string;
+}
+
+interface UpdateProviderDTO {
+  api_key?: string;
+  base_url?: string;
+  suffix?: string;
+}
+
+// Model 相关类型
+interface Model {
+  id: string;
+  provider: number;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface ModelGroup {
+  provider: number;
+  providerName: string;
+  models: Model[];
+}
+
+interface CreateModelDTO {
+  id: string;
+  provider: number;
+  name: string;
+}
+
+// Task 相关类型
+interface Task {
+  id: string;
+  filename: string;
+  type: string;
+  page_range: string;
+  pages: number;
+  provider: number;
+  model: string;
+  model_name: string;
+  progress: number;
+  status: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface CreateTaskDTO {
+  filename: string;
+  type: string;
+  page_range?: string;
+  pages?: number;
+  provider: number;
+  model: string;
+  model_name: string;
+}
+
+interface UpdateTaskDTO {
+  status?: number;
+  progress?: number;
+  [key: string]: any;
+}
+
+interface TaskListResponse {
+  list: Task[];
+  total: number;
+}
+
+// File 相关类型
+interface FileUploadResult {
+  originalName: string;
+  savedName: string;
+  path: string;
+  size: number;
+  taskId: string;
+}
+
+interface FileDialogResult {
+  filePaths: string[];
+  canceled: boolean;
+}
+
+// Electron API 接口定义
+interface ElectronAPI {
+  provider: {
+    getAll: () => Promise<IpcResponse<Provider[]>>;
+    getById: (id: number) => Promise<IpcResponse<Provider>>;
+    create: (data: CreateProviderDTO) => Promise<IpcResponse<Provider>>;
+    update: (
+      id: number,
+      data: UpdateProviderDTO,
+    ) => Promise<IpcResponse<Provider>>;
+    delete: (id: number) => Promise<IpcResponse<void>>;
+    updateStatus: (
+      id: number,
+      status: number,
+    ) => Promise<IpcResponse<Provider>>;
+  };
+
+  model: {
+    getAll: () => Promise<IpcResponse<ModelGroup[]>>;
+    getByProvider: (providerId: number) => Promise<IpcResponse<Model[]>>;
+    create: (data: CreateModelDTO) => Promise<IpcResponse<Model>>;
+    delete: (
+      id: string,
+      provider: number,
+    ) => Promise<IpcResponse<{ message: string }>>;
+  };
+
+  task: {
+    create: (tasks: CreateTaskDTO[]) => Promise<IpcResponse<Task[]>>;
+    getAll: (params: {
+      page: number;
+      pageSize: number;
+    }) => Promise<IpcResponse<TaskListResponse>>;
+    update: (id: string, data: UpdateTaskDTO) => Promise<IpcResponse<Task>>;
+    delete: (id: string) => Promise<IpcResponse<Task>>;
+  };
+
+  file: {
+    selectDialog: () => Promise<IpcResponse<FileDialogResult>>;
+    upload: (
+      taskId: string,
+      filePath: string,
+    ) => Promise<IpcResponse<FileUploadResult>>;
+    uploadMultiple: (
+      taskId: string,
+      filePaths: string[],
+    ) => Promise<IpcResponse<{ message: string; files: FileUploadResult[] }>>;
+  };
+
+  completion: {
+    markImagedown: (
+      providerId: number,
+      modelId: string,
+      url: string,
+    ) => Promise<IpcResponse<string>>;
+    testConnection: (
+      providerId: number,
+      modelId: string,
+    ) => Promise<IpcResponse<string>>;
+  };
+
+  shell: {
+    openExternal: (url: string) => void;
+  };
+}
+
+// 扩展 Window 接口
+declare global {
+  interface Window {
+    api: ElectronAPI;
+    // 保留旧的 electron 对象（用于兼容）
+    electron?: {
+      ipcRenderer: {
+        send: (channel: string, data: any) => void;
+      };
+    };
+  }
+}
+
+export {};

@@ -1,31 +1,75 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer } from "electron";
 
-// 从命令行参数中提取端口号
-const getBackendPort = (): string | null => {
-  const args = process.argv || [];
-  const portArg = args.find(arg => arg.startsWith('--backend-port='));
-  return portArg ? portArg.split('=')[1] : null;
-};
+/**
+ * Preload script - 在渲染进程中暴露安全的 API
+ * 使用 contextBridge 确保安全的 IPC 通信
+ */
 
-// 在window对象上暴露electron模块，允许渲染进程访问
-contextBridge.exposeInMainWorld('electron', {
+// 暴露新的 IPC API
+contextBridge.exposeInMainWorld("api", {
+  // ==================== Provider APIs ====================
+  provider: {
+    getAll: () => ipcRenderer.invoke("provider:getAll"),
+    getById: (id: number) => ipcRenderer.invoke("provider:getById", id),
+    create: (data: any) => ipcRenderer.invoke("provider:create", data),
+    update: (id: number, data: any) =>
+      ipcRenderer.invoke("provider:update", id, data),
+    delete: (id: number) => ipcRenderer.invoke("provider:delete", id),
+    updateStatus: (id: number, status: number) =>
+      ipcRenderer.invoke("provider:updateStatus", id, status),
+  },
+
+  // ==================== Model APIs ====================
+  model: {
+    getAll: () => ipcRenderer.invoke("model:getAll"),
+    getByProvider: (providerId: number) =>
+      ipcRenderer.invoke("model:getByProvider", providerId),
+    create: (data: any) => ipcRenderer.invoke("model:create", data),
+    delete: (id: string, provider: number) =>
+      ipcRenderer.invoke("model:delete", id, provider),
+  },
+
+  // ==================== Task APIs ====================
+  task: {
+    create: (tasks: any[]) => ipcRenderer.invoke("task:create", tasks),
+    getAll: (params: { page: number; pageSize: number }) =>
+      ipcRenderer.invoke("task:getAll", params),
+    update: (id: string, data: any) =>
+      ipcRenderer.invoke("task:update", id, data),
+    delete: (id: string) => ipcRenderer.invoke("task:delete", id),
+  },
+
+  // ==================== File APIs ====================
+  file: {
+    selectDialog: () => ipcRenderer.invoke("file:selectDialog"),
+    upload: (taskId: string, filePath: string) =>
+      ipcRenderer.invoke("file:upload", taskId, filePath),
+    uploadMultiple: (taskId: string, filePaths: string[]) =>
+      ipcRenderer.invoke("file:uploadMultiple", taskId, filePaths),
+  },
+
+  // ==================== Completion APIs ====================
+  completion: {
+    markImagedown: (providerId: number, modelId: string, url: string) =>
+      ipcRenderer.invoke("completion:markImagedown", providerId, modelId, url),
+    testConnection: (providerId: number, modelId: string) =>
+      ipcRenderer.invoke("completion:testConnection", providerId, modelId),
+  },
+
+  // ==================== Shell APIs ====================
+  shell: {
+    openExternal: (url: string) => ipcRenderer.send("open-external-link", url),
+  },
+});
+
+// 保留旧的 electron 对象以兼容 Layout.tsx（仅用于 shell.openExternal）
+contextBridge.exposeInMainWorld("electron", {
   ipcRenderer: {
     send: (channel: string, data: any) => {
-      // 白名单频道
-      const validChannels = ['open-external-link'];
+      const validChannels = ["open-external-link"];
       if (validChannels.includes(channel)) {
         ipcRenderer.send(channel, data);
       }
     },
-    on: (channel: string, func: (...args: any[]) => void) => {
-      const validChannels: string[] = [];
-      if (validChannels.includes(channel)) {
-        // 删除所有现有的监听器，避免重复监听
-        ipcRenderer.removeAllListeners(channel);
-        // 添加新的监听器
-        ipcRenderer.on(channel, (event, ...args) => func(...args));
-      }
-    }
   },
-  backendPort: getBackendPort()
-}); 
+});

@@ -15,7 +15,7 @@ import {
   List,
   App,
 } from "antd";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 
 interface ProviderProps {
   providerId?: number;
@@ -34,17 +34,17 @@ const Provider: React.FC<ProviderProps> = ({
 }) => {
   const [providerData, setProviderData] = useState<any>(null);
   const { modal, message } = App.useApp();
-  
+
   // 添加状态变量用于存储输入值
   const [apiKey, setApiKey] = useState<string>("");
   const [baseUrl, setBaseUrl] = useState<string>("");
   const [suffix, setSuffix] = useState<string>("");
-  
+
   // 添加模型相关状态
   const [models, setModels] = useState<ModelType[]>([]);
   const [newModelName, setNewModelName] = useState<string>("");
   const [newModelId, setNewModelId] = useState<string>("");
-  
+
   // 添加测试状态
   const [testingModelId, setTestingModelId] = useState<string>("");
 
@@ -53,38 +53,35 @@ const Provider: React.FC<ProviderProps> = ({
     if (providerId) {
       const fetchProviderDetails = async () => {
         try {
-          const backendPort = window.electron?.backendPort || 3000;
-          const response = await fetch(
-            `http://localhost:${backendPort}/api/providers/${providerId}`
-          );
+          const result = await window.api.provider.getById(providerId);
 
-          if (!response.ok) {
-            throw new Error("获取服务商详情失败");
+          if (!result.success) {
+            throw new Error(result.error || "获取服务商详情失败");
           }
 
-          const data = await response.json();
+          const data = result.data;
           setProviderData(data);
-          
+
           // 设置初始值
           setApiKey(data.api_key || "");
           setBaseUrl(data.base_url || "");
-          
+
           // 根据 provider 类型设置默认后缀
           if (!data.suffix) {
             switch (data.type) {
-              case 'openai':
+              case "openai":
                 setSuffix("/chat/completions");
                 break;
-              case 'gemini':
+              case "gemini":
                 setSuffix("/models");
                 break;
-              case 'anthropic':
+              case "anthropic":
                 setSuffix("/messages");
                 break;
-              case 'azure-openai':
+              case "azure-openai":
                 setSuffix("/openai/deployments/");
                 break;
-              case 'ollama':
+              case "ollama":
                 setSuffix("/chat");
                 break;
               default:
@@ -99,49 +96,42 @@ const Provider: React.FC<ProviderProps> = ({
       };
 
       fetchProviderDetails();
-      
+
       // 获取该服务商下的所有模型
       fetchModels();
     }
-  }, [providerId]);
+  }, [providerId, fetchModels]);
 
   // 获取服务商下的模型列表
-  const fetchModels = async () => {
+  const fetchModels = useCallback(async () => {
     if (!providerId) return;
-    
-    try {
-      const backendPort = window.electron?.backendPort || 3000;
-      const response = await fetch(
-        `http://localhost:${backendPort}/api/models/${providerId}`
-      );
 
-      if (!response.ok) {
-        throw new Error("获取模型列表失败");
+    try {
+      const result = await window.api.model.getByProvider(providerId);
+
+      if (!result.success) {
+        throw new Error(result.error || "获取模型列表失败");
       }
 
-      const data = await response.json();
-      setModels(data);
+      setModels(result.data);
     } catch (error) {
       console.error("获取模型列表出错:", error);
-      message.error("获取模型列表失败: " + (error instanceof Error ? error.message : String(error)));
+      message.error(
+        "获取模型列表失败: " +
+          (error instanceof Error ? error.message : String(error)),
+      );
     }
-  };
+  }, [providerId, message]);
 
   // 删除模型
   const deleteModel = async (modelId: string) => {
     if (!providerId) return;
 
     try {
-      const backendPort = window.electron?.backendPort || 3000;
-      const response = await fetch(
-        `http://localhost:${backendPort}/api/models/${encodeURIComponent(modelId)}/${providerId}`,
-        {
-          method: "DELETE",
-        }
-      );
+      const result = await window.api.model.delete(modelId, providerId);
 
-      if (!response.ok) {
-        throw new Error("删除模型失败");
+      if (!result.success) {
+        throw new Error(result.error || "删除模型失败");
       }
 
       message.success("模型已成功删除");
@@ -149,7 +139,10 @@ const Provider: React.FC<ProviderProps> = ({
       fetchModels();
     } catch (error) {
       console.error("删除模型出错:", error);
-      message.error("删除模型失败: " + (error instanceof Error ? error.message : String(error)));
+      message.error(
+        "删除模型失败: " +
+          (error instanceof Error ? error.message : String(error)),
+      );
     }
   };
 
@@ -161,24 +154,14 @@ const Provider: React.FC<ProviderProps> = ({
     }
 
     try {
-      const backendPort = window.electron?.backendPort || 3000;
-      const response = await fetch(
-        `http://localhost:${backendPort}/api/models`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            id: newModelId,
-            name: newModelName,
-            provider: providerId,
-          }),
-        }
-      );
+      const result = await window.api.model.create({
+        id: newModelId,
+        name: newModelName,
+        provider: providerId,
+      });
 
-      if (!response.ok) {
-        throw new Error("添加模型失败");
+      if (!result.success) {
+        throw new Error(result.error || "添加模型失败");
       }
 
       // 添加成功后清空输入框
@@ -189,71 +172,62 @@ const Provider: React.FC<ProviderProps> = ({
       fetchModels();
     } catch (error) {
       console.error("添加模型出错:", error);
-      message.error("添加模型失败: " + (error instanceof Error ? error.message : String(error)));
+      message.error(
+        "添加模型失败: " +
+          (error instanceof Error ? error.message : String(error)),
+      );
     }
   };
 
   // 更新服务商信息的函数
-  const updateProvider = async (updateData: { api_key?: string; base_url?: string; suffix?: string }) => {
+  const updateProvider = async (updateData: {
+    api_key?: string;
+    base_url?: string;
+    suffix?: string;
+  }) => {
     if (!providerId) return;
 
     try {
-      const backendPort = window.electron?.backendPort || 3000;
-      const response = await fetch(
-        `http://localhost:${backendPort}/api/providers/${providerId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(updateData),
-        }
-      );
+      const result = await window.api.provider.update(providerId, updateData);
 
-      if (!response.ok) {
-        throw new Error("更新服务商信息失败");
+      if (!result.success) {
+        throw new Error(result.error || "更新服务商信息失败");
       }
 
-      const updatedProvider = await response.json();
-      setProviderData(updatedProvider);
+      setProviderData(result.data);
       message.success("更新成功");
     } catch (error) {
       console.error("更新服务商信息出错:", error);
-      message.error("更新失败: " + (error instanceof Error ? error.message : String(error)));
+      message.error(
+        "更新失败: " + (error instanceof Error ? error.message : String(error)),
+      );
     }
   };
 
   // 测试模型连接
   const testModelConnection = async (modelId: string) => {
     if (!providerId) return;
-    
+
     setTestingModelId(modelId);
-    
+
     try {
-      const backendPort = window.electron?.backendPort || 3000;
-      const response = await fetch(
-        `http://localhost:${backendPort}/api/try`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            providerId: providerId,
-            modelId: modelId,
-          }),
-        }
+      const result = await window.api.completion.testConnection(
+        providerId,
+        modelId,
       );
 
-      if (!response.ok) {
-        throw new Error("连接测试失败");
+      if (!result.success) {
+        throw new Error(result.error || "连接测试失败");
       }
 
       // 测试成功
       message.success("模型连接测试成功");
     } catch (error) {
       console.error("测试模型连接出错:", error);
-      message.error("连接测试失败: " + (error instanceof Error ? error.message : String(error)));
+      message.error(
+        "连接测试失败: " +
+          (error instanceof Error ? error.message : String(error)),
+      );
     } finally {
       setTestingModelId("");
     }
@@ -278,24 +252,16 @@ const Provider: React.FC<ProviderProps> = ({
             if (!providerId) return;
 
             try {
-              const backendPort = window.electron?.backendPort || 3000;
-              const response = await fetch(
-                `http://localhost:${backendPort}/api/providers/${providerId}/status`,
-                {
-                  method: "PUT",
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify({ status: checked ? 0 : -1 }),
-                }
+              const result = await window.api.provider.updateStatus(
+                providerId,
+                checked ? 0 : -1,
               );
 
-              if (!response.ok) {
-                throw new Error("更新服务商状态失败");
+              if (!result.success) {
+                throw new Error(result.error || "更新服务商状态失败");
               }
 
-              const updatedProvider = await response.json();
-              setProviderData(updatedProvider);
+              setProviderData(result.data);
             } catch (error) {
               console.error("更新服务商状态出错:", error);
             }
@@ -318,7 +284,11 @@ const Provider: React.FC<ProviderProps> = ({
         />
       </div>
       <div>
-        <Typography.Text>API 地址：</Typography.Text><Typography.Text type="secondary">{baseUrl}{suffix}</Typography.Text>
+        <Typography.Text>API 地址：</Typography.Text>
+        <Typography.Text type="secondary">
+          {baseUrl}
+          {suffix}
+        </Typography.Text>
         <Space.Compact style={{ width: "100%" }}>
           <Input
             placeholder="请输入API地址"
@@ -342,27 +312,39 @@ const Provider: React.FC<ProviderProps> = ({
                 options={(() => {
                   const type = providerData?.type;
                   switch (type) {
-                    case 'openai':
+                    case "openai":
                       return [
-                        { label: "/chat/completions", value: "/chat/completions" },
-                        { label: "/v1/chat/completions", value: "/v1/chat/completions" },
+                        {
+                          label: "/chat/completions",
+                          value: "/chat/completions",
+                        },
+                        {
+                          label: "/v1/chat/completions",
+                          value: "/v1/chat/completions",
+                        },
                       ];
-                    case 'gemini':
+                    case "gemini":
                       return [
                         { label: "/models", value: "/models" },
                         { label: "/v1/models", value: "/v1/models" },
                       ];
-                    case 'anthropic':
+                    case "anthropic":
                       return [
                         { label: "/messages", value: "/messages" },
                         { label: "/v1/messages", value: "/v1/messages" },
                       ];
-                    case 'azure-openai':
+                    case "azure-openai":
                       return [
-                        { label: "/openai/deployments/", value: "/openai/deployments/" },
-                        { label: "/v1/openai/deployments/", value: "/v1/openai/deployments/" },
+                        {
+                          label: "/openai/deployments/",
+                          value: "/openai/deployments/",
+                        },
+                        {
+                          label: "/v1/openai/deployments/",
+                          value: "/v1/openai/deployments/",
+                        },
                       ];
-                    case 'ollama':
+                    case "ollama":
                       return [
                         { label: "/chat", value: "/chat" },
                         { label: "/api/chat", value: "/api/chat" },
@@ -424,25 +406,21 @@ const Provider: React.FC<ProviderProps> = ({
       <div style={{ display: "flex", justifyContent: "space-between" }}>
         <Space>
           <Typography.Text>模型名称：</Typography.Text>
-          <Input 
-            placeholder="GPT 4o" 
-            style={{ width: "290px" }} 
+          <Input
+            placeholder="GPT 4o"
+            style={{ width: "290px" }}
             value={newModelName}
             onChange={(e) => setNewModelName(e.target.value)}
           />
           <Typography.Text>模型ID：</Typography.Text>
-          <Input 
-            placeholder="gpt-4o" 
-            style={{ width: "290px" }} 
+          <Input
+            placeholder="gpt-4o"
+            style={{ width: "290px" }}
             value={newModelId}
             onChange={(e) => setNewModelId(e.target.value)}
           />
         </Space>
-        <Button 
-          type="primary" 
-          icon={<PlusOutlined />}
-          onClick={addModel}
-        >
+        <Button type="primary" icon={<PlusOutlined />} onClick={addModel}>
           添加模型
         </Button>
       </div>
@@ -464,16 +442,10 @@ const Provider: React.FC<ProviderProps> = ({
             cancelText: "取消",
             onOk: async () => {
               try {
-                const backendPort = window.electron?.backendPort || 3000;
-                const response = await fetch(
-                  `http://localhost:${backendPort}/api/providers/${providerId}`,
-                  {
-                    method: "DELETE",
-                  }
-                );
+                const result = await window.api.provider.delete(providerId);
 
-                if (!response.ok) {
-                  throw new Error("删除服务商失败");
+                if (!result.success) {
+                  throw new Error(result.error || "删除服务商失败");
                 }
 
                 // 删除成功后，提示用户
@@ -487,7 +459,7 @@ const Provider: React.FC<ProviderProps> = ({
                 console.error("删除服务商出错:", error);
                 message.error(
                   "删除服务商失败: " +
-                    (error instanceof Error ? error.message : String(error))
+                    (error instanceof Error ? error.message : String(error)),
                 );
               }
             },

@@ -39,46 +39,32 @@ const UploadPanel: React.FC = () => {
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [pageRange, setPageRange] = useState<string>("");
   const { Dragger } = Upload;
-  const props: UploadProps = {
-    onRemove: (file) => {
-      const index = fileList.indexOf(file);
-      const newFileList = fileList.slice();
-      newFileList.splice(index, 1);
-      setFileList(newFileList);
-    },
-    beforeUpload: () => {
-      return false;
-    },
-    onChange: (info) => {
-      setFileList(info.fileList);
-    },
-    fileList,
-  };
 
   // 获取所有模型数据
   useEffect(() => {
     const fetchAllModels = async () => {
       try {
         setLoading(true);
-        const backendPort = window.electron?.backendPort || 3000;
-        const response = await fetch(`http://localhost:${backendPort}/api/models`);
+        const result = await window.api.model.getAll();
 
-        if (!response.ok) {
-          throw new Error("获取模型列表失败");
+        if (result.success && result.data) {
+          setModelGroups(result.data);
+        } else {
+          message.error(result.error || "获取模型列表失败");
         }
-
-        const data = await response.json();
-        setModelGroups(data);
       } catch (error) {
         console.error("获取模型列表出错:", error);
-        message.error("获取模型列表失败: " + (error instanceof Error ? error.message : String(error)));
+        message.error(
+          "获取模型列表失败: " +
+            (error instanceof Error ? error.message : String(error)),
+        );
       } finally {
         setLoading(false);
       }
     };
 
     fetchAllModels();
-  }, []);
+  }, [message]);
 
   // 将模型数据转换为Select选项格式
   const getModelOptions = () => {
@@ -87,7 +73,7 @@ const UploadPanel: React.FC = () => {
       title: group.providerName,
       options: group.models.map((model) => ({
         label: <span>{model.name}</span>,
-        value: model.id + '@' + model.provider,
+        value: model.id + "@" + model.provider,
       })),
     }));
 
@@ -98,11 +84,66 @@ const UploadPanel: React.FC = () => {
           label: <span>无可用模型，请在设置中配置模型</span>,
           title: "",
           options: [],
-        }
+        },
       ];
     }
 
     return options;
+  };
+
+  // 处理文件选择（使用文件对话框）
+  const handleFileSelect = async () => {
+    try {
+      const dialogResult = await window.api.file.selectDialog();
+
+      if (
+        dialogResult.success &&
+        dialogResult.data &&
+        !dialogResult.data.canceled &&
+        dialogResult.data.filePaths.length > 0
+      ) {
+        // 将选中的文件路径转换为 UploadFile 格式
+        const newFiles: UploadFile[] = dialogResult.data.filePaths.map(
+          (filePath, index) => {
+            // 从文件路径中提取文件名
+            const fileName = filePath.split(/[\\/]/).pop() || filePath;
+
+            return {
+              uid: `${Date.now()}-${index}`,
+              name: fileName,
+              status: "done",
+              // 存储原始文件路径，用于后续上传
+              url: filePath,
+            };
+          },
+        );
+
+        setFileList([...fileList, ...newFiles]);
+      }
+    } catch (error) {
+      console.error("选择文件失败:", error);
+      message.error(
+        "选择文件失败: " +
+          (error instanceof Error ? error.message : String(error)),
+      );
+    }
+  };
+
+  const props: UploadProps = {
+    onRemove: (file) => {
+      const index = fileList.indexOf(file);
+      const newFileList = fileList.slice();
+      newFileList.splice(index, 1);
+      setFileList(newFileList);
+    },
+    beforeUpload: () => {
+      // 阻止默认上传行为，使用自定义文件对话框
+      return false;
+    },
+    fileList,
+    showUploadList: true,
+    // 禁用拖拽和点击上传，使用自定义按钮触发文件对话框
+    openFileDialogOnClick: false,
   };
 
   // 处理开始转换按钮点击
@@ -119,21 +160,26 @@ const UploadPanel: React.FC = () => {
 
     try {
       setUploading(true);
-      
+
       // 解析选中的模型ID和提供商ID
-      const [modelId, providerIdStr] = selectedModel.split('@');
+      const [modelId, providerIdStr] = selectedModel.split("@");
       const providerId = parseInt(providerIdStr, 10);
-      
+
       // 获取选中的模型名称，模型名称为 模型name@提供商name
-      const selectedModelGroup = modelGroups.find(group => group.provider === providerId);
+      const selectedModelGroup = modelGroups.find(
+        (group) => group.provider === providerId,
+      );
       const providerName = selectedModelGroup?.providerName || "";
-      const modelName = selectedModelGroup?.models.find(model => model.id === modelId)?.name + ' | ' + providerName;
-      
+      const modelName =
+        selectedModelGroup?.models.find((model) => model.id === modelId)?.name +
+        " | " +
+        providerName;
+
       // 创建任务列表
-      const tasks = fileList.map(file => {
-        // 确定文件类型
-        const fileType = file.name.split('.').pop()?.toLowerCase() || '';
-        
+      const tasks = fileList.map((file) => {
+        // 确定文件类型（从文件名中提取扩展名）
+        const fileType = file.name.split(".").pop()?.toLowerCase() || "";
+
         return {
           filename: file.name,
           type: fileType,
@@ -141,75 +187,76 @@ const UploadPanel: React.FC = () => {
           pages: 0, // 页数将在后端处理
           provider: providerId,
           model: modelId,
-          model_name: modelName
+          model_name: modelName,
         };
       });
-      
-      // 发送请求创建任务
-      const backendPort = window.electron?.backendPort || 3000;
-      const response = await fetch(`http://localhost:${backendPort}/api/tasks`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(tasks),
-      });
-      
-      if (!response.ok) {
-        throw new Error("创建任务失败");
+
+      // 使用新的 IPC API 创建任务
+      const createResult = await window.api.task.create(tasks);
+
+      if (!createResult.success || !createResult.data) {
+        throw new Error(createResult.error || "创建任务失败");
       }
-      
+
       // 获取创建的任务列表
-      const createdTasks = await response.json();
-      
+      const createdTasks = createResult.data;
+
       let successCount = 0;
-      // 逐个上传文件，使用任务ID作为文件名
+      // 逐个上传文件，使用任务ID和文件路径
       for (let i = 0; i < fileList.length; i++) {
         const file = fileList[i];
         const task = createdTasks[i];
-        
-        if (file.originFileObj && task.id) {
-          const formData = new FormData();
-          formData.append('files', file.originFileObj);
-          
-          // 使用任务ID作为查询参数
-          const uploadResponse = await fetch(`http://localhost:${backendPort}/api/upload?taskId=${task.id}`, {
-            method: 'POST',
-            body: formData,
-          });
-          
-          if (uploadResponse.ok) {
-            // 修改任务状态
-            await fetch(`http://localhost:${backendPort}/api/tasks/${task.id}`, {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ status: 1 }),
-            });
-            successCount++;
-          }else{
+
+        if (file.url && task.id) {
+          try {
+            // 使用新的 IPC API 上传文件
+            const uploadResult = await window.api.file.upload(
+              task.id,
+              file.url,
+            );
+
+            if (uploadResult.success) {
+              // 修改任务状态为待处理
+              const updateResult = await window.api.task.update(task.id, {
+                status: 1,
+              });
+
+              if (updateResult.success) {
+                successCount++;
+              } else {
+                message.error(`更新任务状态失败: ${file.name}`);
+                // 删除任务
+                await window.api.task.delete(task.id);
+              }
+            } else {
+              message.error(
+                `上传文件 ${file.name} 失败: ${uploadResult.error || "未知错误"}`,
+              );
+              // 删除任务
+              await window.api.task.delete(task.id);
+            }
+          } catch (error) {
+            console.error(`上传文件 ${file.name} 出错:`, error);
             message.error(`上传文件 ${file.name} 失败`);
             // 删除任务
-            await fetch(`http://localhost:${backendPort}/api/tasks/${task.id}`, {
-              method: 'DELETE',
-            });
+            await window.api.task.delete(task.id);
           }
         }
       }
-      
-      if(successCount>0){
+
+      if (successCount > 0) {
         message.success(`已创建${successCount}个任务`);
-        navigate('/list', { replace: true });
-      }else{
+        // 清空文件列表
+        setFileList([]);
+        navigate("/list", { replace: true });
+      } else {
         message.error("文件上传失败");
       }
-      // 清空文件列表
-      setFileList([]);
-      
     } catch (error) {
       console.error("上传文件出错:", error);
-      message.error("上传失败: " + (error instanceof Error ? error.message : String(error)));
+      message.error(
+        "上传失败: " + (error instanceof Error ? error.message : String(error)),
+      );
     } finally {
       setUploading(false);
     }
@@ -219,20 +266,21 @@ const UploadPanel: React.FC = () => {
     <>
       <Row style={{ display: "block", marginTop: "32px" }}>
         <Col span={24}>
-          <Dragger
-            name="files"
-            multiple={true}
-            maxCount={10}
-            listType="picture"
-            accept=".pdf,.jpg,.png,.bmp"
-            {...props}
-            style={{ minWidth: "760px" }}
-          >
+          <Dragger {...props} style={{ minWidth: "760px" }}>
             <p className="ant-upload-drag-icon">
               <InboxOutlined />
             </p>
-            <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
-            <p className="ant-upload-hint">支持单个或批量上传 PDF/JPG/PNG/BMP 文件</p>
+            <p className="ant-upload-text">点击下方按钮选择文件</p>
+            <p className="ant-upload-hint">
+              支持单个或批量上传 PDF/JPG/PNG/BMP 文件
+            </p>
+            <Button
+              type="primary"
+              onClick={handleFileSelect}
+              style={{ marginTop: 16 }}
+            >
+              选择文件
+            </Button>
           </Dragger>
         </Col>
       </Row>
@@ -248,14 +296,14 @@ const UploadPanel: React.FC = () => {
               onChange={(value) => setSelectedModel(value)}
             />
             <Text>页码范围：</Text>
-            <Input 
-              style={{ width: 240 }} 
-              placeholder="例如：1-10,12（默认全部页面）" 
+            <Input
+              style={{ width: 240 }}
+              placeholder="例如：1-10,12（默认全部页面）"
               value={pageRange}
               onChange={(e) => setPageRange(e.target.value)}
             />
-            <Button 
-              type="primary" 
+            <Button
+              type="primary"
               icon={<FileMarkdownOutlined />}
               onClick={handleConvert}
               loading={uploading}
