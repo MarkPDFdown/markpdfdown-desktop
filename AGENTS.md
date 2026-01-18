@@ -137,7 +137,7 @@ import './styles.css';
   - `File.ts`: File handling logic (upload directory management, file deletion)
   - `Task.ts`: Task-related business logic (background task runner)
   - `model.ts`: Model-related business logic (LLM client factory)
-  - `llm/`: LLM client implementations (OpenAI, Anthropic, Gemini, Azure OpenAI, Ollama)
+  - `llm/`: LLM client implementations (OpenAI, Anthropic, Gemini, Ollama)
 - **No HTTP Server**: All communication via Electron IPC (no Express, no ports, no HTTP)
 
 ### Frontend Architecture (React)
@@ -234,7 +234,7 @@ src/
 └── server/         # Backend logic (no HTTP server)
     ├── dal/        # Data access layer (TaskDal, providerDal, modelDal)
     ├── logic/      # Business logic
-    │   ├── llm/    # LLM client implementations (OpenAIClient, AnthropicClient, GeminiClient, AzureOpenAIClient, OllamaClient)
+    │   ├── llm/    # LLM client implementations (OpenAIClient, AnthropicClient, GeminiClient, OllamaClient)
     │   ├── File.ts # File handling logic
     │   ├── Task.ts # Task business logic
     │   └── model.ts # Model business logic

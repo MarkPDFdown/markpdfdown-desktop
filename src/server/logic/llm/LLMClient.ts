@@ -196,10 +196,6 @@ export class LLMClientFactory {
         const OpenAIModule = await import('./OpenAIClient.js');
         return new OpenAIModule.OpenAIClient(apiKey, baseUrl || '');
       }
-      case 'azure-openai': {
-        const AzureOpenAIModule = await import('./AzureOpenAIClient.js');
-        return new AzureOpenAIModule.AzureOpenAIClient(apiKey, baseUrl || '');
-      }
       case 'gemini': {
         const GeminiModule = await import('./GeminiClient.js');
         return new GeminiModule.GeminiClient(apiKey, baseUrl || '');
