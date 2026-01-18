@@ -21,9 +21,10 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    titleBarStyle: "hidden",
-    // expose window controlls in Windows/Linux
-    ...(process.platform !== "darwin" ? { titleBarOverlay: true } : {}),
+    // macOS: 使用隐藏标题栏，Windows/Linux: 使用无边框窗口
+    ...(process.platform === "darwin"
+      ? { titleBarStyle: "hidden" }
+      : { frame: false }),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -70,6 +71,29 @@ function createWindow() {
   ipcMain.on("open-external-link", (_, url) => {
     if (url && typeof url === "string") {
       shell.openExternal(url);
+    }
+  });
+
+  // 窗口控制 IPC 处理程序
+  ipcMain.on("window:minimize", () => {
+    if (mainWindow) {
+      mainWindow.minimize();
+    }
+  });
+
+  ipcMain.on("window:maximize", () => {
+    if (mainWindow) {
+      if (mainWindow.isMaximized()) {
+        mainWindow.unmaximize();
+      } else {
+        mainWindow.maximize();
+      }
+    }
+  });
+
+  ipcMain.on("window:close", () => {
+    if (mainWindow) {
+      mainWindow.close();
     }
   });
 

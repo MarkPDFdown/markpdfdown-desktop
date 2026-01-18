@@ -60,6 +60,16 @@ contextBridge.exposeInMainWorld("api", {
   shell: {
     openExternal: (url: string) => ipcRenderer.send("open-external-link", url),
   },
+
+  // ==================== Window APIs ====================
+  window: {
+    minimize: () => ipcRenderer.send("window:minimize"),
+    maximize: () => ipcRenderer.send("window:maximize"),
+    close: () => ipcRenderer.send("window:close"),
+  },
+
+  // ==================== Platform APIs ====================
+  platform: process.platform,
 });
 
 // 保留旧的 electron 对象以兼容 Layout.tsx（仅用于 shell.openExternal）

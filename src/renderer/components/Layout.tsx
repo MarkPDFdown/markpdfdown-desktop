@@ -1,10 +1,13 @@
-import React, { CSSProperties } from "react";
+import React, { CSSProperties, useState } from "react";
 import { ConfigProvider, Layout, Menu, theme } from "antd";
 import {
   HomeOutlined,
   UnorderedListOutlined,
   SettingOutlined,
-  GithubOutlined
+  GithubOutlined,
+  CloseOutlined,
+  MinusOutlined,
+  BorderOutlined
 } from "@ant-design/icons";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import ImgLogo from "../assets/MarkPDFdown.png";
@@ -23,12 +26,101 @@ interface CustomCSSProperties extends CSSProperties {
   WebkitAppRegion?: 'drag' | 'no-drag';
 }
 
+// macOS 风格的窗口控制按钮组件
+const WindowControls: React.FC = () => {
+  const [hoveredButton, setHoveredButton] = useState<string | null>(null);
+
+  const buttonBaseStyle: CSSProperties = {
+    width: '12px',
+    height: '12px',
+    borderRadius: '50%',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '8px',
+    color: 'rgba(0, 0, 0, 0.6)',
+    transition: 'all 0.2s',
+  };
+
+  const handleClose = () => {
+    if (window.api?.window) {
+      window.api.window.close();
+    }
+  };
+
+  const handleMinimize = () => {
+    if (window.api?.window) {
+      window.api.window.minimize();
+    }
+  };
+
+  const handleMaximize = () => {
+    if (window.api?.window) {
+      window.api.window.maximize();
+    }
+  };
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        gap: '8px',
+        padding: '12px',
+        WebkitAppRegion: 'no-drag',
+      }}
+    >
+      {/* 关闭按钮 */}
+      <div
+        style={{
+          ...buttonBaseStyle,
+          backgroundColor: '#ff5f57',
+        }}
+        onMouseEnter={() => setHoveredButton('close')}
+        onMouseLeave={() => setHoveredButton(null)}
+        onClick={handleClose}
+      >
+        {hoveredButton === 'close' && <CloseOutlined />}
+      </div>
+
+      {/* 最小化按钮 */}
+      <div
+        style={{
+          ...buttonBaseStyle,
+          backgroundColor: '#ffbd2e',
+        }}
+        onMouseEnter={() => setHoveredButton('minimize')}
+        onMouseLeave={() => setHoveredButton(null)}
+        onClick={handleMinimize}
+      >
+        {hoveredButton === 'minimize' && <MinusOutlined />}
+      </div>
+
+      {/* 最大化按钮 */}
+      <div
+        style={{
+          ...buttonBaseStyle,
+          backgroundColor: '#28c840',
+        }}
+        onMouseEnter={() => setHoveredButton('maximize')}
+        onMouseLeave={() => setHoveredButton(null)}
+        onClick={handleMaximize}
+      >
+        {hoveredButton === 'maximize' && <BorderOutlined />}
+      </div>
+    </div>
+  );
+};
+
 const AppLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const {
     token: { colorBgContainer, borderRadiusLG, colorBgLayout },
   } = theme.useToken();
+
+  // 检测平台，非 macOS 平台显示自定义窗口控制按钮
+  const isNotMac = window.api?.platform !== 'darwin';
 
   const menuItems: MenuItem[] = [
     {
@@ -112,19 +204,22 @@ const AppLayout: React.FC = () => {
           flexDirection: "row",
         }}
       >
-        <Sider collapsed={true} defaultCollapsed={true} style={{ 
-          display: 'flex', 
+        <Sider collapsed={true} defaultCollapsed={true} style={{
+          display: 'flex',
           flexDirection: 'column',
           height: '100vh',
-          position: 'fixed',  
+          position: 'fixed',
           left: 0,
           top: 0,
           bottom: 0,
           zIndex: 10
         }}>
+          {/* Windows/Linux 显示自定义窗口控制按钮 */}
+          {isNotMac && <WindowControls />}
+
           <div
             style={{
-              margin: "48px 16px 16px",
+              margin: isNotMac ? "12px 16px 16px" : "48px 16px 16px",
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
@@ -193,7 +288,9 @@ const AppLayout: React.FC = () => {
             top: 0,
             right: 0,
             zIndex: 9,
-            background: colorBgLayout
+            background: colorBgLayout,
+            // Windows/Linux 平台启用拖拽功能
+            ...(isNotMac ? { WebkitAppRegion: 'drag' as const } : {})
           }}></Header>
           <Content
             style={{
