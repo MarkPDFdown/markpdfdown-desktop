@@ -12,10 +12,40 @@ const getLLMClient = async (providerId: number) => {
         throw new Error('服务商不存在');
     }
 
+    // 获取 base_url 和 suffix
+    let baseUrl = provider.base_url || '';
+    let suffix = provider.suffix || '';
+
+    // 根据 provider 类型设置默认值
+    if (!baseUrl) {
+        switch (provider.type) {
+            case 'ollama':
+                baseUrl = 'http://localhost:11434/api';
+                break;
+        }
+    }
+
+    if (!suffix) {
+        switch (provider.type) {
+            case 'openai':
+                suffix = '/chat/completions';
+                break;
+            case 'gemini':
+                suffix = '/models';
+                break;
+            case 'anthropic':
+                suffix = '/messages';
+                break;
+            case 'ollama':
+                suffix = '/generate';
+                break;
+        }
+    }
+
     return LLMClientFactory.createClient(
         provider.type || '',
         provider.api_key || '',
-        `${provider.base_url || ''}${provider.suffix || ''}`
+        `${baseUrl}${suffix}`
     );
 }
 

@@ -15,7 +15,7 @@ import {
  */
 export class OllamaClient extends LLMClient {
   constructor(apiKey: string, baseUrl?: string) {
-    super(apiKey, baseUrl || 'http://localhost:11434/api/chat');
+    super(apiKey, baseUrl || 'http://localhost:11434/api');
   }
 
   /**

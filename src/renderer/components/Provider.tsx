@@ -72,6 +72,17 @@ const Provider: React.FC<ProviderProps> = ({
           setApiKey(data.api_key || "");
           setBaseUrl(data.base_url || "");
 
+          // 根据 provider 类型设置默认值
+          if (!data.base_url) {
+            switch (data.type) {
+              case "ollama":
+                setBaseUrl("http://localhost:11434/api");
+                break;
+              default:
+                setBaseUrl("");
+            }
+          }
+
           // 根据 provider 类型设置默认后缀
           if (!data.suffix) {
             switch (data.type) {
@@ -85,7 +96,7 @@ const Provider: React.FC<ProviderProps> = ({
                 setSuffix("/messages");
                 break;
               case "ollama":
-                setSuffix("/chat");
+                setSuffix("/generate");
                 break;
               default:
                 setSuffix("");
@@ -343,8 +354,8 @@ const Provider: React.FC<ProviderProps> = ({
                       ];
                     case "ollama":
                       return [
-                        { label: "/chat", value: "/chat" },
-                        { label: "/api/chat", value: "/api/chat" },
+                        { label: "/generate", value: "/generate" },
+                        { label: "/api/generate", value: "/api/generate" },
                       ];
                     default:
                       return [];
