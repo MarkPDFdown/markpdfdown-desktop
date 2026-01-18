@@ -30,6 +30,9 @@ const getLLMClient = async (providerId: number) => {
             case 'openai':
                 suffix = '/chat/completions';
                 break;
+            case 'openai-responses':
+                suffix = '/responses';
+                break;
             case 'gemini':
                 suffix = '/models';
                 break;

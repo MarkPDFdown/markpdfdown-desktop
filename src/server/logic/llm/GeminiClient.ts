@@ -50,7 +50,9 @@ export class GeminiClient extends LLMClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-goog-api-key': normalizedOptions.apiKey || this.apiKey
+          'x-goog-api-key': normalizedOptions.apiKey || this.apiKey,
+          'X-Title': 'MarkPDFdown',
+          'HTTP-Referer': 'https://github.com/MarkPDFdown'
         },
         body: JSON.stringify(requestBody)
       });

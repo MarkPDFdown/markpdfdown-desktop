@@ -8,6 +8,7 @@ export type { CompletionOptions, CompletionResponse } from './LLMClient.js';
 
 // 导出具体实现类
 export { OpenAIClient } from './OpenAIClient.js';
+export { OpenAIResponsesClient } from './OpenAIResponsesClient.js';
 export { GeminiClient } from './GeminiClient.js';
 export { AnthropicClient } from './AnthropicClient.js';
 export { OllamaClient } from './OllamaClient.js';

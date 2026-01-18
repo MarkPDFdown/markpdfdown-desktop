@@ -56,7 +56,9 @@ export class OpenAIClient extends LLMClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${normalizedOptions.apiKey || this.apiKey}`
+          'Authorization': `Bearer ${normalizedOptions.apiKey || this.apiKey}`,
+          'X-Title': 'MarkPDFdown',
+          'HTTP-Referer': 'https://github.com/MarkPDFdown'
         },
         body: JSON.stringify(requestBody)
       });

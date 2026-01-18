@@ -65,7 +65,9 @@ export class AnthropicClient extends LLMClient {
         headers: {
           'Content-Type': 'application/json',
           'x-api-key': normalizedOptions.apiKey || this.apiKey,
-          'anthropic-version': this.apiVersion
+          'anthropic-version': this.apiVersion,
+          'X-Title': 'MarkPDFdown',
+          'HTTP-Referer': 'https://github.com/MarkPDFdown'
         },
         body: JSON.stringify(requestBody)
       });

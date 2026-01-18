@@ -57,7 +57,8 @@ const AddProvider: React.FC<AddProviderProps> = ({ onProviderAdded }) => {
         rules={[{ required: true, message: t('add_provider.type_required') }]}
       >
         <Select placeholder={t('add_provider.type_placeholder')}>
-          <Select.Option value="openai">OpenAI</Select.Option>
+          <Select.Option value="openai">OpenAI (Chat Completions)</Select.Option>
+          <Select.Option value="openai-responses">OpenAI (Responses API)</Select.Option>
           <Select.Option value="anthropic">Anthropic</Select.Option>
           <Select.Option value="gemini">Gemini</Select.Option>
           <Select.Option value="ollama">Ollama</Select.Option>

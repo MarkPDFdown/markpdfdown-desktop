@@ -89,6 +89,9 @@ const Provider: React.FC<ProviderProps> = ({
               case "openai":
                 setSuffix("/chat/completions");
                 break;
+              case "openai-responses":
+                setSuffix("/responses");
+                break;
               case "gemini":
                 setSuffix("/models");
                 break;
@@ -340,6 +343,17 @@ const Provider: React.FC<ProviderProps> = ({
                         {
                           label: "/v1/chat/completions",
                           value: "/v1/chat/completions",
+                        },
+                      ];
+                    case "openai-responses":
+                      return [
+                        {
+                          label: "/responses",
+                          value: "/responses",
+                        },
+                        {
+                          label: "/v1/responses",
+                          value: "/v1/responses",
                         },
                       ];
                     case "gemini":

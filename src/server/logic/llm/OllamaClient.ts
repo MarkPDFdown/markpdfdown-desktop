@@ -58,7 +58,9 @@ export class OllamaClient extends LLMClient {
       const response = await fetch(`${this.baseUrl}`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-Title': 'MarkPDFdown',
+          'HTTP-Referer': 'https://github.com/MarkPDFdown'
         },
         body: JSON.stringify(requestBody)
       });
