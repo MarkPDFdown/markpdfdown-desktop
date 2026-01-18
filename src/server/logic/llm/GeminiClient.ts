@@ -13,7 +13,7 @@ import {
  */
 export class GeminiClient extends LLMClient {
   constructor(apiKey: string, baseUrl?: string) {
-    super(apiKey, baseUrl || 'https://generativelanguage.googleapis.com/v1/models');
+    super(apiKey, baseUrl || 'https://generativelanguage.googleapis.com/v1beta/models');
   }
 
   /**
@@ -23,13 +23,14 @@ export class GeminiClient extends LLMClient {
     try {
       // 标准化选项，处理向后兼容
       const normalizedOptions = this.normalizeOptions(options);
-      
+
       const modelName = normalizedOptions.model || 'gemini-1.5-pro';
-      const endpoint = `${this.baseUrl}/${modelName}:generateContent?key=${normalizedOptions.apiKey || this.apiKey}`;
-      
+      // 使用 v1beta 端点，key 通过 header 传递
+      const endpoint = `${this.baseUrl}/${modelName}:generateContent`;
+
       // 将消息转换为Gemini格式
       const geminiContents = this.convertMessagesToGeminiFormat(normalizedOptions.messages);
-      
+
       const requestBody: any = {
         contents: geminiContents,
         generationConfig: {
@@ -38,17 +39,18 @@ export class GeminiClient extends LLMClient {
           topP: 0.95
         }
       };
-      
+
       // 添加响应格式（如果指定）
       if (normalizedOptions.response_format?.type === 'json_object') {
         // Gemini使用不同的键来指定JSON输出
         requestBody.generationConfig.response_mime_type = 'application/json';
       }
-      
+
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-goog-api-key': normalizedOptions.apiKey || this.apiKey
         },
         body: JSON.stringify(requestBody)
       });

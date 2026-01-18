@@ -334,7 +334,7 @@ const Provider: React.FC<ProviderProps> = ({
                     case "gemini":
                       return [
                         { label: "/models", value: "/models" },
-                        { label: "/v1/models", value: "/v1/models" },
+                        { label: "/v1beta/models", value: "/v1beta/models" },
                       ];
                     case "anthropic":
                       return [
