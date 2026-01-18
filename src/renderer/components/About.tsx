@@ -7,6 +7,10 @@ const About: React.FC = () => {
   const { Text, Title } = Typography;
   const { t } = useTranslation('settings');
 
+  const handleOpenLink = (url: string) => {
+    window.open(url, '_blank');
+  };
+
   return (
     <div
       style={{
@@ -40,10 +44,18 @@ const About: React.FC = () => {
           {t('about.subtitle')}
         </Text>
         <Space style={{ marginTop: 16 }}>
-          <Button>{t('about.buttons.website')}</Button>
-          <Button>{t('about.buttons.license')}</Button>
-          <Button>{t('about.buttons.feedback')}</Button>
-          <Button>{t('about.buttons.contact')}</Button>
+          <Button onClick={() => handleOpenLink('https://github.com/MarkPDFdown')}>
+            {t('about.buttons.website')}
+          </Button>
+          <Button onClick={() => handleOpenLink('https://github.com/MarkPDFdown/desktop/blob/master/LICENSE')}>
+            {t('about.buttons.license')}
+          </Button>
+          <Button onClick={() => handleOpenLink('https://github.com/MarkPDFdown/desktop/issues')}>
+            {t('about.buttons.feedback')}
+          </Button>
+          <Button onClick={() => handleOpenLink('mailto:jorben@aix.me')}>
+            {t('about.buttons.contact')}
+          </Button>
         </Space>
       </Flex>
     </div>
