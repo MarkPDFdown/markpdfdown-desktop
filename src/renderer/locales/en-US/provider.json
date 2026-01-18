@@ -1,6 +1,6 @@
 {
   "details": {
-    "protocol_type": "Protocol Type:",
+    "protocol_type": "Protocol:",
     "api_key_label": "API Key:",
     "api_key_placeholder": "Enter API key",
     "api_url_label": "API URL:",
@@ -45,13 +45,14 @@
     "update_status_failed": "Failed to update provider status"
   },
   "add_provider": {
+    "tab_label": "Add Provider",
     "name_label": "Provider Name",
     "name_placeholder": "Enter provider name",
     "name_required": "Please enter provider name",
     "type_label": "Protocol Type",
     "type_placeholder": "Select protocol type",
     "type_required": "Please select protocol type",
-    "submit_button": "Confirm Add",
+    "submit_button": "Add Provider",
     "success": "Provider added successfully",
     "failed": "Failed to add provider"
   }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { ConfigProvider, Tabs } from "antd";
+import { useTranslation } from "react-i18next";
 import AddProvider from "./AddProvider";
 import { PlusSquareOutlined, CloudOutlined } from "@ant-design/icons";
 import Provider from "./Provider";
@@ -22,12 +23,13 @@ interface TabItem {
 }
 
 const ModelService: React.FC = () => {
+  const { t } = useTranslation("provider");
   const [activeKey, setActiveKey] = useState<string>("add provider");
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [items, setItems] = useState<TabItem[]>([
     {
       key: "add provider",
-      label: "添加服务商",
+      label: t("add_provider.tab_label"),
       icon: <PlusSquareOutlined />,
       children: <AddProvider onProviderAdded={() => {}} />,
     },
@@ -67,7 +69,7 @@ const ModelService: React.FC = () => {
       // 更新添加服务商的选项卡
       const addProviderTab = {
         key: "add provider",
-        label: "添加服务商",
+        label: t("add_provider.tab_label"),
         icon: <PlusSquareOutlined />,
         children: <AddProvider onProviderAdded={handleProviderAddedRef.current} />,
       };

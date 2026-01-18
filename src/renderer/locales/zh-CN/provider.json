@@ -45,6 +45,7 @@
     "update_status_failed": "更新服务商状态失败"
   },
   "add_provider": {
+    "tab_label": "添加服务商",
     "name_label": "服务商名称",
     "name_placeholder": "请输入服务商名称",
     "name_required": "请输入服务商名称",
