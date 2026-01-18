@@ -12,7 +12,6 @@ import {
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "../hooks/useLanguage";
-import LanguageSwitcher from "./LanguageSwitcher";
 import ImgLogo from "../assets/MarkPDFdown.png";
 
 const { Header, Sider, Content, Footer } = Layout;
@@ -295,16 +294,9 @@ const AppLayout: React.FC = () => {
             right: 0,
             zIndex: 9,
             background: colorBgLayout,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            paddingRight: '16px',
             // Windows/Linux 平台启用拖拽功能
             ...(isNotMac ? { WebkitAppRegion: 'drag' as const } : {})
           }}>
-            <div style={{ WebkitAppRegion: 'no-drag' as const }}>
-              <LanguageSwitcher />
-            </div>
           </Header>
           <Content
             style={{
