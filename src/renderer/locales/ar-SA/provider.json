@@ -1,0 +1,59 @@
+{
+  "details": {
+    "protocol_type": "بروتوكول:",
+    "api_key_label": "مفتاح API:",
+    "api_key_placeholder": "أدخل مفتاح API",
+    "api_url_label": "API URL:",
+    "api_url_placeholder": "أدخل API URL"
+  },
+  "model_config": {
+    "title": "تكوين النموذج",
+    "name_label": "اسم النموذج:",
+    "name_placeholder": "GPT 4o",
+    "id_label": "معرف النموذج:",
+    "id_placeholder": "gpt-4o",
+    "add_button": "إضافة نموذج",
+    "warning": "ملاحظة: يرجى إضافة نماذج تدعم التعرف على الرؤية والتأكد من صحة معرف النموذج، وإلا لن يعمل النموذج بشكل صحيح!"
+  },
+  "actions": {
+    "delete_provider": "حذف المزود",
+    "delete_model_title": "حذف",
+    "test_connection": "اختبار الاتصال"
+  },
+  "confirmations": {
+    "delete_model_title": "تأكيد الحذف",
+    "delete_model_content": "هل أنت متأكد من حذف النموذج \"{{name}}\"؟",
+    "delete_provider_title": "تأكيد الحذف",
+    "delete_provider_content": "هل أنت متأكد من حذف هذا المزود؟ لا يمكن التراجع عن هذا الإجراء.",
+    "ok": "حذف",
+    "cancel": "إلغاء"
+  },
+  "messages": {
+    "fetch_details_failed": "فشل في جلب تفاصيل المزود",
+    "fetch_models_failed": "فشل في جلب قائمة النماذج",
+    "delete_model_success": "تم حذف النموذج بنجاح",
+    "delete_model_failed": "فشل في حذف النموذج",
+    "add_model_warning": "الرجاء ملء معلومات النموذج الكاملة",
+    "add_model_success": "تم إضافة النموذج بنجاح",
+    "add_model_failed": "فشل في إضافة النموذج",
+    "update_success": "تم التحديث بنجاح",
+    "update_failed": "فشل التحديث",
+    "test_success": "نجاح اختبار اتصال النموذج",
+    "test_failed": "فشل اختبار الاتصال",
+    "delete_provider_success": "تم حذف المزود بنجاح",
+    "delete_provider_failed": "فشل في حذف المزود",
+    "update_status_failed": "فشل في تحديث حالة المزود"
+  },
+  "add_provider": {
+    "tab_label": "إضافة مزود",
+    "name_label": "اسم المزود",
+    "name_placeholder": "أدخل اسم المزود",
+    "name_required": "الرجاء إدخال اسم المزود",
+    "type_label": "نوع البروتوكول",
+    "type_placeholder": "اختر نوع البروتوكول",
+    "type_required": "الرجاء اختيار نوع البروتوكول",
+    "submit_button": "إضافة مزود",
+    "success": "تم إضافة المزود بنجاح",
+    "failed": "فشل في إضافة المزود"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "dragger": {
+    "text": "انقر على الزر أدناه لتحديد الملفات",
+    "hint": "يدعم التحميل الفردي أو الدفعي لملفات PDF/JPG/PNG/BMP",
+    "button": "تحديد الملفات"
+  },
+  "form": {
+    "model_label": "اختر نموذج:",
+    "model_placeholder": "الرجاء اختيار نموذج",
+    "model_empty": "لا توجد نماذج متاحة، يرجى تكوين النماذج في الإعدادات",
+    "page_range_label": "نطاق الصفحات:",
+    "page_range_placeholder": "مثلاً 1-10,12 (الافتراضي: جميع الصفحات)",
+    "convert_button": "بدء التحويل"
+  },
+  "messages": {
+    "no_files": "يرجى تحميل الملفات أولاً",
+    "no_model": "الرجاء اختيار نموذج",
+    "select_failed": "فشل في تحديد الملف",
+    "fetch_models_failed": "فشل في جلب قائمة النماذج",
+    "create_task_failed": "فشل في إنشاء المهمة",
+    "upload_failed": "فشل التحميل: {{filename}}",
+    "update_status_failed": "فشل في تحديث حالة المهمة: {{filename}}",
+    "tasks_created": "تم إنشاء {{count}} مهمة(ات)",
+    "upload_error": "فشل التحميل"
+  }
+}

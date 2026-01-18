@@ -1,0 +1,26 @@
+{
+  "dragger": {
+    "text": "برای انتخاب فایل‌ها روی دکمه زیر کلیک کنید",
+    "hint": "پشتیبانی از بارگذاری تکی یا دسته‌ای فایل‌های PDF/JPG/PNG/BMP",
+    "button": "انتخاب فایل‌ها"
+  },
+  "form": {
+    "model_label": "انتخاب مدل:",
+    "model_placeholder": "لطفاً یک مدل انتخاب کنید",
+    "model_empty": "مدلی موجود نیست، لطفاً مدل‌ها را در تنظیمات پیکربندی کنید",
+    "page_range_label": "محدوده صفحه:",
+    "page_range_placeholder": "مثلاً 1-10,12 (پیش‌فرض: تمام صفحات)",
+    "convert_button": "شروع تبدیل"
+  },
+  "messages": {
+    "no_files": "ابتدا فایل‌ها را بارگذاری کنید",
+    "no_model": "لطفاً یک مدل انتخاب کنید",
+    "select_failed": "انتخاب فایل ناموفق بود",
+    "fetch_models_failed": "دریافت لیست مدل‌ها ناموفق بود",
+    "create_task_failed": "ایجاد تسک ناموفق بود",
+    "upload_failed": "بارگذاری ناموفق بود: {{filename}}",
+    "update_status_failed": "به‌روزرسانی وضعیت تسک ناموفق بود: {{filename}}",
+    "tasks_created": "{{count}} تسک ایجاد شد",
+    "upload_error": "خطا در بارگذاری"
+  }
+}

@@ -16,13 +16,46 @@ const LanguageSwitcher: React.FC = () => {
       key: 'zh-CN',
       label: '🇨🇳 简体中文',
     },
+    {
+      key: 'ja-JP',
+      label: '🇯🇵 日本語',
+    },
+    {
+      key: 'ru-RU',
+      label: '🇷🇺 Русский',
+    },
+    {
+      key: 'fa-IR',
+      label: '🇮🇷 فارسی',
+    },
+    {
+      key: 'ar-SA',
+      label: '🇸🇦 العربية',
+    },
   ];
 
   const handleMenuClick: MenuProps['onClick'] = (e) => {
     changeLanguage(e.key);
   };
 
-  const currentLabel = language === 'zh-CN' ? '简体中文' : 'English';
+  const getCurrentLabel = (lang: string) => {
+    switch (lang) {
+      case 'zh-CN':
+        return '简体中文';
+      case 'ja-JP':
+        return '日本語';
+      case 'ru-RU':
+        return 'Русский';
+      case 'fa-IR':
+        return 'فارسی';
+      case 'ar-SA':
+        return 'العربية';
+      default:
+        return 'English';
+    }
+  };
+
+  const currentLabel = getCurrentLabel(language);
 
   return (
     <Dropdown menu={{ items, onClick: handleMenuClick }} placement="bottomRight">

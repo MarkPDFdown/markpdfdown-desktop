@@ -1,7 +1,7 @@
 import { createContext } from 'react';
 import type { Locale } from 'antd/es/locale';
 
-type Language = 'en-US' | 'zh-CN';
+type Language = 'en-US' | 'zh-CN' | 'ja-JP' | 'ru-RU' | 'fa-IR' | 'ar-SA';
 
 export interface I18nContextType {
   language: Language;

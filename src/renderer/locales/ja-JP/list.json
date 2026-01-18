@@ -1,0 +1,41 @@
+{
+  "columns": {
+    "file": "ファイル",
+    "model": "モデル",
+    "progress": "進捗",
+    "status": "ステータス",
+    "action": "アクション"
+  },
+  "status": {
+    "pending": "待機中",
+    "initializing": "初期化中",
+    "processing": "処理中",
+    "merging_pending": "マージ待機中",
+    "merging": "マージ中",
+    "completed": "完了",
+    "cancelled": "キャンセル済み",
+    "failed": "失敗",
+    "unknown": "不明"
+  },
+  "actions": {
+    "view": "表示",
+    "cancel": "キャンセル",
+    "retry": "再試行",
+    "delete": "削除"
+  },
+  "confirmations": {
+    "delete_title": "削除の確認",
+    "delete_content": "このタスクを削除してもよろしいですか？この操作は元に戻せません。",
+    "cancel_title": "{{action}}の確認",
+    "cancel_content": "このタスクを{{action}}してもよろしいですか？",
+    "ok": "確認",
+    "cancel": "キャンセル"
+  },
+  "messages": {
+    "fetch_failed": "タスクリストの取得に失敗しました",
+    "delete_success": "削除が完了しました",
+    "delete_failed": "タスクの削除に失敗しました",
+    "action_success": "{{action}}が完了しました",
+    "action_failed": "{{action}}に失敗しました"
+  }
+}

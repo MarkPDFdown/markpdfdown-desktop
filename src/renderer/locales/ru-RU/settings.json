@@ -1,0 +1,21 @@
+{
+  "tabs": {
+    "model_service": "Модельный сервис",
+    "about": "О приложении"
+  },
+  "about": {
+    "version": "v1.0.6",
+    "subtitle": "Высококачественный конвертер PDF в Markdown на основе больших визуальных моделей",
+    "buttons": {
+      "website": "Официальный сайт",
+      "license": "Лицензия",
+      "feedback": "Обратная связь",
+      "contact": "Контактный email"
+    }
+  },
+  "preview": {
+    "back": "Назад",
+    "download": "Скачать .md",
+    "delete": "Удалить"
+  }
+}

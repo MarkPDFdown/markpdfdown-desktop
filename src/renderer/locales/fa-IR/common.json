@@ -1,0 +1,27 @@
+{
+  "navigation": {
+    "home": "خانه",
+    "list": "لیست",
+    "settings": "تنظیمات"
+  },
+  "actions": {
+    "save": "ذخیره",
+    "cancel": "لغو",
+    "delete": "حذف",
+    "confirm": "تأیید",
+    "retry": "تلاش مجدد",
+    "view": "مشاهده",
+    "back": "بازگشت",
+    "add": "افزودن",
+    "check": "بررسی"
+  },
+  "status": {
+    "enabled": "فعال",
+    "disabled": "غیرفعال",
+    "loading": "در حال بارگذاری..."
+  },
+  "common": {
+    "copyright": "کپی‌رایت © {{year}} MarkPDFdown تمامی حقوق محفوظ است.",
+    "pages": "{{count}} صفحه"
+  }
+}

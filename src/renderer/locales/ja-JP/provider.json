@@ -1,0 +1,59 @@
+{
+  "details": {
+    "protocol_type": "プロトコル:",
+    "api_key_label": "APIキー:",
+    "api_key_placeholder": "APIキーを入力してください",
+    "api_url_label": "API URL:",
+    "api_url_placeholder": "API URLを入力してください"
+  },
+  "model_config": {
+    "title": "モデル設定",
+    "name_label": "モデル名:",
+    "name_placeholder": "GPT 4o",
+    "id_label": "モデルID:",
+    "id_placeholder": "gpt-4o",
+    "add_button": "モデルを追加",
+    "warning": "注意: 視覚認識に対応しているモデルを追加し、モデルIDが正確であることを確認してください。さもなければモデルは正常に動作しません！"
+  },
+  "actions": {
+    "delete_provider": "プロバイダーを削除",
+    "delete_model_title": "削除",
+    "test_connection": "接続をテスト"
+  },
+  "confirmations": {
+    "delete_model_title": "削除の確認",
+    "delete_model_content": "モデル「{{name}}」を削除してもよろしいですか？",
+    "delete_provider_title": "削除の確認",
+    "delete_provider_content": "このプロバイダーを削除してもよろしいですか？この操作は元に戻せません。",
+    "ok": "削除",
+    "cancel": "キャンセル"
+  },
+  "messages": {
+    "fetch_details_failed": "プロバイダーの詳細取得に失敗しました",
+    "fetch_models_failed": "モデルリストの取得に失敗しました",
+    "delete_model_success": "モデルの削除が完了しました",
+    "delete_model_failed": "モデルの削除に失敗しました",
+    "add_model_warning": "モデル情報をすべて入力してください",
+    "add_model_success": "モデルの追加が完了しました",
+    "add_model_failed": "モデルの追加に失敗しました",
+    "update_success": "更新が完了しました",
+    "update_failed": "更新に失敗しました",
+    "test_success": "モデルの接続テストが成功しました",
+    "test_failed": "接続テストに失敗しました",
+    "delete_provider_success": "プロバイダーの削除が完了しました",
+    "delete_provider_failed": "プロバイダーの削除に失敗しました",
+    "update_status_failed": "プロバイダーのステータス更新に失敗しました"
+  },
+  "add_provider": {
+    "tab_label": "プロバイダーを追加",
+    "name_label": "プロバイダー名",
+    "name_placeholder": "プロバイダー名を入力してください",
+    "name_required": "プロバイダー名を入力してください",
+    "type_label": "プロトコルタイプ",
+    "type_placeholder": "プロトコルタイプを選択してください",
+    "type_required": "プロトコルタイプを選択してください",
+    "submit_button": "プロバイダーを追加",
+    "success": "プロバイダーの追加が完了しました",
+    "failed": "プロバイダーの追加に失敗しました"
+  }
+}

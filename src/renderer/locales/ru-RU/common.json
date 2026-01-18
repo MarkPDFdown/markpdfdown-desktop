@@ -1,0 +1,27 @@
+{
+  "navigation": {
+    "home": "Главная",
+    "list": "Список",
+    "settings": "Настройки"
+  },
+  "actions": {
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "delete": "Удалить",
+    "confirm": "Подтвердить",
+    "retry": "Повторить",
+    "view": "Просмотр",
+    "back": "Назад",
+    "add": "Добавить",
+    "check": "Проверить"
+  },
+  "status": {
+    "enabled": "Включено",
+    "disabled": "Отключено",
+    "loading": "Загрузка..."
+  },
+  "common": {
+    "copyright": "Copyright © {{year}} MarkPDFdown All Rights Reserved.",
+    "pages": "{{count}} страниц"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "tabs": {
+    "model_service": "خدمة النماذج",
+    "about": "من نحن"
+  },
+  "about": {
+    "version": "v1.0.6",
+    "subtitle": "محول PDF إلى Markdown عالي الجودة مدعوم بنماذج الرؤية الكبيرة",
+    "buttons": {
+      "website": "الموقع الرسمي",
+      "license": "الرخصة",
+      "feedback": "الملاحظات",
+      "contact": "البريد الإلكتروني للتواصل"
+    }
+  },
+  "preview": {
+    "back": "رجوع",
+    "download": "تحميل .md",
+    "delete": "حذف"
+  }
+}

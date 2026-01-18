@@ -85,7 +85,7 @@ const ModelService: React.FC = () => {
     } catch (error) {
       console.error("获取服务商列表出错:", error);
     }
-  }, [activeKey, isInitialLoad]);
+  }, [activeKey, isInitialLoad, t]);
 
   // 处理添加服务商成功的函数
   const handleProviderAdded = useCallback((providerId: string) => {

@@ -1,0 +1,41 @@
+{
+  "columns": {
+    "file": "Файл",
+    "model": "Модель",
+    "progress": "Прогресс",
+    "status": "Статус",
+    "action": "Действие"
+  },
+  "status": {
+    "pending": "Ожидание",
+    "initializing": "Инициализация",
+    "processing": "Обработка",
+    "merging_pending": "Ожидание объединения",
+    "merging": "Объединение",
+    "completed": "Завершено",
+    "cancelled": "Отменено",
+    "failed": "Ошибка",
+    "unknown": "Неизвестно"
+  },
+  "actions": {
+    "view": "Просмотр",
+    "cancel": "Отмена",
+    "retry": "Повторить",
+    "delete": "Удалить"
+  },
+  "confirmations": {
+    "delete_title": "Подтверждение удаления",
+    "delete_content": "Вы уверены, что хотите удалить эту задачу? Это действие нельзя отменить.",
+    "cancel_title": "Подтверждение {{action}}",
+    "cancel_content": "Вы уверены, что хотите {{action}} эту задачу?",
+    "ok": "Подтвердить",
+    "cancel": "Отмена"
+  },
+  "messages": {
+    "fetch_failed": "Не удалось получить список задач",
+    "delete_success": "Успешно удалено",
+    "delete_failed": "Не удалось удалить задачу",
+    "action_success": "{{action}} успешно выполнено",
+    "action_failed": "Ошибка выполнения {{action}}"
+  }
+}

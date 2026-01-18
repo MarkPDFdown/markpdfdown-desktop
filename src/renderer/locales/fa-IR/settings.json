@@ -1,0 +1,21 @@
+{
+  "tabs": {
+    "model_service": "سرویس مدل",
+    "about": "درباره ما"
+  },
+  "about": {
+    "version": "v1.0.6",
+    "subtitle": "مبدل با کیفیت بالای PDF به Markdown با قدرت مدل‌های بینایی بزرگ",
+    "buttons": {
+      "website": "سایت رسمی",
+      "license": "مجوز",
+      "feedback": "بازخورد",
+      "contact": "ایمیل تماس"
+    }
+  },
+  "preview": {
+    "back": "بازگشت",
+    "download": "دانلود .md",
+    "delete": "حذف"
+  }
+}

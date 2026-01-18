@@ -1,0 +1,59 @@
+{
+  "details": {
+    "protocol_type": "Протокол:",
+    "api_key_label": "API-ключ:",
+    "api_key_placeholder": "Введите API-ключ",
+    "api_url_label": "API URL:",
+    "api_url_placeholder": "Введите API URL"
+  },
+  "model_config": {
+    "title": "Конфигурация модели",
+    "name_label": "Название модели:",
+    "name_placeholder": "GPT 4o",
+    "id_label": "ID модели:",
+    "id_placeholder": "gpt-4o",
+    "add_button": "Добавить модель",
+    "warning": "Примечание: Пожалуйста, добавьте модели, поддерживающие визуальное распознавание, и убедитесь, что ID модели указан правильно. В противном случае модель не будет работать должным образом!"
+  },
+  "actions": {
+    "delete_provider": "Удалить провайдера",
+    "delete_model_title": "Удалить",
+    "test_connection": "Проверить подключение"
+  },
+  "confirmations": {
+    "delete_model_title": "Подтверждение удаления",
+    "delete_model_content": "Вы уверены, что хотите удалить модель \"{{name}}\"?",
+    "delete_provider_title": "Подтверждение удаления",
+    "delete_provider_content": "Вы уверены, что хотите удалить этого провайдера? Это действие нельзя отменить.",
+    "ok": "Удалить",
+    "cancel": "Отмена"
+  },
+  "messages": {
+    "fetch_details_failed": "Не удалось получить данные провайдера",
+    "fetch_models_failed": "Не удалось получить список моделей",
+    "delete_model_success": "Модель успешно удалена",
+    "delete_model_failed": "Не удалось удалить модель",
+    "add_model_warning": "Пожалуйста, заполните полную информацию о модели",
+    "add_model_success": "Модель успешно добавлена",
+    "add_model_failed": "Не удалось добавить модель",
+    "update_success": "Успешно обновлено",
+    "update_failed": "Ошибка обновления",
+    "test_success": "Проверка подключения модели успешна",
+    "test_failed": "Ошибка проверки подключения",
+    "delete_provider_success": "Провайдер успешно удалён",
+    "delete_provider_failed": "Не удалось удалить провайдера",
+    "update_status_failed": "Не удалось обновить статус провайдера"
+  },
+  "add_provider": {
+    "tab_label": "Добавить провайдера",
+    "name_label": "Название провайдера",
+    "name_placeholder": "Введите название провайдера",
+    "name_required": "Пожалуйста, введите название провайдера",
+    "type_label": "Тип протокола",
+    "type_placeholder": "Выберите тип протокола",
+    "type_required": "Пожалуйста, выберите тип протокола",
+    "submit_button": "Добавить провайдера",
+    "success": "Провайдер успешно добавлен",
+    "failed": "Не удалось добавить провайдера"
+  }
+}

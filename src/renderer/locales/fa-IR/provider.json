@@ -1,0 +1,59 @@
+{
+  "details": {
+    "protocol_type": "پروتکل:",
+    "api_key_label": "کلید API:",
+    "api_key_placeholder": "کلید API را وارد کنید",
+    "api_url_label": "API URL:",
+    "api_url_placeholder": "API URL را وارد کنید"
+  },
+  "model_config": {
+    "title": "پیکربندی مدل",
+    "name_label": "نام مدل:",
+    "name_placeholder": "GPT 4o",
+    "id_label": "شناسه مدل:",
+    "id_placeholder": "gpt-4o",
+    "add_button": "افزودن مدل",
+    "warning": "توجه: لطفاً مدل‌هایی که از تشخیص تصویر پشتیبانی می‌کنند اضافه کنید و مطمئن شوید که شناسه مدل صحیح است. در غیر این صورت مدل به درستی کار نخواهد کرد!"
+  },
+  "actions": {
+    "delete_provider": "حذف ارائه‌دهنده",
+    "delete_model_title": "حذف",
+    "test_connection": "تست اتصال"
+  },
+  "confirmations": {
+    "delete_model_title": "تأیید حذف",
+    "delete_model_content": "آیا از حذف مدل «{{name}}» مطمئن هستید؟",
+    "delete_provider_title": "تأیید حذف",
+    "delete_provider_content": "آیا از حذف این ارائه‌دهنده مطمئن هستید؟ این عملیات قابل بازگشت نیست.",
+    "ok": "حذف",
+    "cancel": "لغو"
+  },
+  "messages": {
+    "fetch_details_failed": "دریافت جزئیات ارائه‌دهنده ناموفق بود",
+    "fetch_models_failed": "دریافت لیست مدل‌ها ناموفق بود",
+    "delete_model_success": "مدل با موفقیت حذف شد",
+    "delete_model_failed": "حذف مدل ناموفق بود",
+    "add_model_warning": "لطفاً اطلاعات کامل مدل را وارد کنید",
+    "add_model_success": "مدل با موفقیت اضافه شد",
+    "add_model_failed": "افزودن مدل ناموفق بود",
+    "update_success": "با موفقیت به‌روزرسانی شد",
+    "update_failed": "به‌روزرسانی ناموفق بود",
+    "test_success": "تست اتصال مدل موفق بود",
+    "test_failed": "تست اتصال ناموفق بود",
+    "delete_provider_success": "ارائه‌دهنده با موفقیت حذف شد",
+    "delete_provider_failed": "حذف ارائه‌دهنده ناموفق بود",
+    "update_status_failed": "به‌روزرسانی وضعیت ارائه‌دهنده ناموفق بود"
+  },
+  "add_provider": {
+    "tab_label": "افزودن ارائه‌دهنده",
+    "name_label": "نام ارائه‌دهنده",
+    "name_placeholder": "نام ارائه‌دهنده را وارد کنید",
+    "name_required": "لطفاً نام ارائه‌دهنده را وارد کنید",
+    "type_label": "نوع پروتکل",
+    "type_placeholder": "نوع پروتکل را انتخاب کنید",
+    "type_required": "لطفاً نوع پروتکل را انتخاب کنید",
+    "submit_button": "افزودن ارائه‌دهنده",
+    "success": "ارائه‌دهنده با موفقیت اضافه شد",
+    "failed": "افزودن ارائه‌دهنده ناموفق بود"
+  }
+}

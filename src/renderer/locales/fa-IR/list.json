@@ -1,0 +1,41 @@
+{
+  "columns": {
+    "file": "فایل",
+    "model": "مدل",
+    "progress": "پیشرفت",
+    "status": "وضعیت",
+    "action": "عملیات"
+  },
+  "status": {
+    "pending": "در انتظار",
+    "initializing": "در حال راه‌اندازی",
+    "processing": "در حال پردازش",
+    "merging_pending": "در انتظار ادغام",
+    "merging": "در حال ادغام",
+    "completed": "تکمیل شده",
+    "cancelled": "لغو شده",
+    "failed": "ناموفق",
+    "unknown": "ناشناخته"
+  },
+  "actions": {
+    "view": "مشاهده",
+    "cancel": "لغو",
+    "retry": "تلاش مجدد",
+    "delete": "حذف"
+  },
+  "confirmations": {
+    "delete_title": "تأیید حذف",
+    "delete_content": "آیا از حذف این تسک مطمئن هستید؟ این عملیات قابل بازگشت نیست.",
+    "cancel_title": "تأیید {{action}}",
+    "cancel_content": "آیا از {{action}} این تسک مطمئن هستید؟",
+    "ok": "تأیید",
+    "cancel": "لغو"
+  },
+  "messages": {
+    "fetch_failed": "دریافت لیست تسک‌ها ناموفق بود",
+    "delete_success": "با موفقیت حذف شد",
+    "delete_failed": "حذف تسک ناموفق بود",
+    "action_success": "{{action}} با موفقیت انجام شد",
+    "action_failed": "{{action}} ناموفق بود"
+  }
+}

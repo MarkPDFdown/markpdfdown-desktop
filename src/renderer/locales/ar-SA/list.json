@@ -1,0 +1,41 @@
+{
+  "columns": {
+    "file": "ملف",
+    "model": "نموذج",
+    "progress": "التقدم",
+    "status": "الحالة",
+    "action": "إجراء"
+  },
+  "status": {
+    "pending": "قيد الانتظار",
+    "initializing": "جاري التهيئة",
+    "processing": "جاري المعالجة",
+    "merging_pending": "انتظار الدمج",
+    "merging": "جاري الدمج",
+    "completed": "مكتمل",
+    "cancelled": "ملغى",
+    "failed": "فشل",
+    "unknown": "غير معروف"
+  },
+  "actions": {
+    "view": "عرض",
+    "cancel": "إلغاء",
+    "retry": "إعادة المحاولة",
+    "delete": "حذف"
+  },
+  "confirmations": {
+    "delete_title": "تأكيد الحذف",
+    "delete_content": "هل أنت متأكد من حذف هذه المهمة؟ لا يمكن التراجع عن هذا الإجراء.",
+    "cancel_title": "تأكيد {{action}}",
+    "cancel_content": "هل أنت متأكد من {{action}} هذه المهمة؟",
+    "ok": "تأكيد",
+    "cancel": "إلغاء"
+  },
+  "messages": {
+    "fetch_failed": "فشل في جلب قائمة المهام",
+    "delete_success": "تم الحذف بنجاح",
+    "delete_failed": "فشل في حذف المهمة",
+    "action_success": "تم {{action}} بنجاح",
+    "action_failed": "فشل {{action}}"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "dragger": {
+    "text": "下のボタンでファイルを選択してください",
+    "hint": "PDF/JPG/PNG/BMPファイルの単一または一括アップロードに対応",
+    "button": "ファイルを選択"
+  },
+  "form": {
+    "model_label": "モデルの選択:",
+    "model_placeholder": "モデルを選択してください",
+    "model_empty": "利用可能なモデルがありません。設定でモデルを構成してください",
+    "page_range_label": "ページ範囲:",
+    "page_range_placeholder": "例: 1-10,12（デフォルト: 全ページ）",
+    "convert_button": "変換を開始"
+  },
+  "messages": {
+    "no_files": "まずファイルをアップロードしてください",
+    "no_model": "モデルを選択してください",
+    "select_failed": "ファイルの選択に失敗しました",
+    "fetch_models_failed": "モデルリストの取得に失敗しました",
+    "create_task_failed": "タスクの作成に失敗しました",
+    "upload_failed": "アップロードに失敗しました: {{filename}}",
+    "update_status_failed": "タスクのステータス更新に失敗しました: {{filename}}",
+    "tasks_created": "{{count}}件のタスクが作成されました",
+    "upload_error": "アップロードに失敗しました"
+  }
+}

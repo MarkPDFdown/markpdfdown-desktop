@@ -1,0 +1,27 @@
+{
+  "navigation": {
+    "home": "الرئيسية",
+    "list": "القائمة",
+    "settings": "الإعدادات"
+  },
+  "actions": {
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "confirm": "تأكيد",
+    "retry": "إعادة المحاولة",
+    "view": "عرض",
+    "back": "رجوع",
+    "add": "إضافة",
+    "check": "فحص"
+  },
+  "status": {
+    "enabled": "مُفعّل",
+    "disabled": "مُعطّل",
+    "loading": "جاري التحميل..."
+  },
+  "common": {
+    "copyright": "حقوق النشر © {{year}} MarkPDFdown جميع الحقوق محفوظة.",
+    "pages": "{{count}} صفحات"
+  }
+}

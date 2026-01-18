@@ -1,0 +1,21 @@
+{
+  "tabs": {
+    "model_service": "モデルサービス",
+    "about": "概要"
+  },
+  "about": {
+    "version": "v1.0.6",
+    "subtitle": "大規模ビジョンモデルを使用した高品質なPDFからMarkdownへのコンバーター",
+    "buttons": {
+      "website": "公式サイト",
+      "license": "ライセンス",
+      "feedback": "フィードバック",
+      "contact": "連絡先メールアドレス"
+    }
+  },
+  "preview": {
+    "back": "戻る",
+    "download": ".md形式でダウンロード",
+    "delete": "削除"
+  }
+}
