@@ -150,6 +150,41 @@ import './styles.css';
 - **Styling**: Plain CSS files (e.g., `App.css`), no CSS modules by default
 - **State Management**: React hooks (`useState`, `useEffect`) + Ant Design form/table state
 
+### Internationalization (i18n)
+- **Library**: react-i18next (v16.5.3)
+- **Supported Languages**: Chinese (zh-CN), English (en-US)
+- **Context Provider**: `<I18nProvider>` wraps the app at `src/renderer/App.tsx`
+- **Key Files**:
+  - `src/renderer/contexts/I18nContext.tsx` - Context provider with i18next initialization
+  - `src/renderer/contexts/I18nContextDefinition.ts` - TypeScript type definitions
+  - `src/renderer/hooks/useLanguage.ts` - Hook for language switching and Antd locale integration
+  - `src/renderer/components/LanguageSwitcher.tsx` - Language switcher UI component
+  - `src/renderer/locales/` - Translation files organized by namespace
+- **Translation Namespaces**:
+  - `common` - Common UI text (buttons, status labels, copyright)
+  - `home` - Home page content
+  - `list` - Task list page content
+  - `upload` - File upload panel content
+  - `provider` - Provider management content
+  - `settings` - Settings page content
+- **Usage**:
+  ```typescript
+  import { useTranslation } from 'react-i18next';
+
+  // Basic usage
+  const { t } = useTranslation('namespace');
+  return <div>{t('key.path')}</div>
+
+  // With variables
+  return <div>{t('key.path', { variable: value })}</div>
+
+  // Multiple namespaces
+  const { t } = useTranslation('common');
+  const { t: tProvider } = useTranslation('provider');
+  ```
+- **Language Switching**: Use `useLanguage()` hook to access `changeLanguage()` and `language` state
+- **Antd Locale**: Automatically switches Ant Design component locale when language changes
+
 ### Error Handling
 - Backend: IPC handlers wrap all logic in try-catch, return `{ success: false, error: message }`
 - Frontend: Check `result.success`, show `message.error(result.error)` for failures
@@ -185,10 +220,16 @@ src/
 ├── preload/        # Preload scripts for IPC
 │   └── index.ts    # Preload script exposing window.api
 ├── renderer/       # React frontend
-│   ├── components/ # Reusable UI components (About, AddProvider, Layout, MarkdownPreview, ModelService, Provider, UploadPanel)
+│   ├── components/ # Reusable UI components (About, AddProvider, Layout, MarkdownPreview, ModelService, Provider, UploadPanel, LanguageSwitcher)
 │   ├── pages/      # Route pages (Home, List, Preview, Settings)
+│   ├── contexts/   # React contexts (I18nContext for internationalization)
+│   ├── hooks/      # Custom React hooks (useLanguage for i18n)
+│   ├── locales/    # Translation files (zh-CN, en-US)
+│   │   ├── index.ts
+│   │   ├── zh-CN/  # Chinese translations (common, home, list, upload, provider, settings)
+│   │   └── en-US/  # English translations (common, home, list, upload, provider, settings)
 │   ├── electron.d.ts # TypeScript definitions for window.api
-│   ├── App.tsx     # Root component
+│   ├── App.tsx     # Root component (wrapped with I18nProvider)
 │   └── main.tsx    # Frontend entry point
 └── server/         # Backend logic (no HTTP server)
     ├── dal/        # Data access layer (TaskDal, providerDal, modelDal)
@@ -230,7 +271,23 @@ src/
    ```
 8. **Update TypeScript types** in `src/renderer/electron.d.ts`
 9. Update React frontend components to use `window.api.feature.action()`
-10. Run `npm run lint` and `npm run dev` to test
+10. **Add i18n translations** (if UI changes):
+   ```typescript
+   // Add translation keys to src/renderer/locales/zh-CN/namespace.json
+   {
+     "key": "中文文本"
+   }
+
+   // Add translation keys to src/renderer/locales/en-US/namespace.json
+   {
+     "key": "English text"
+   }
+
+   // Use in component
+   const { t } = useTranslation('namespace');
+   return <div>{t('key')}</div>
+   ```
+11. Run `npm run lint` and `npm run dev` to test
 
 ### IPC API Reference
 All communication via `window.api.*` returning `Promise<IpcResponse>`:
