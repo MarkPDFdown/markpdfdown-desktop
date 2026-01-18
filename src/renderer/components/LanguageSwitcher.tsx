@@ -1,29 +1,38 @@
 import React from 'react';
-import { Select } from 'antd';
+import { Dropdown, Button } from 'antd';
+import type { MenuProps } from 'antd';
+import { GlobalOutlined } from '@ant-design/icons';
 import { useLanguage } from '../hooks/useLanguage';
 
 const LanguageSwitcher: React.FC = () => {
   const { language, changeLanguage } = useLanguage();
 
-  const options = [
+  const items: MenuProps['items'] = [
     {
-      value: 'en-US',
+      key: 'en-US',
       label: '🇺🇸 English',
     },
     {
-      value: 'zh-CN',
+      key: 'zh-CN',
       label: '🇨🇳 简体中文',
     },
   ];
 
+  const handleMenuClick: MenuProps['onClick'] = (e) => {
+    changeLanguage(e.key);
+  };
+
+  const currentLabel = language === 'zh-CN' ? '简体中文' : 'English';
+
   return (
-    <Select
-      value={language}
-      onChange={changeLanguage}
-      options={options}
-      style={{ width: 140 }}
-      size="small"
-    />
+    <Dropdown menu={{ items, onClick: handleMenuClick }} placement="bottomRight">
+      <Button
+        type="text"
+        icon={<GlobalOutlined />}
+      >
+        {currentLabel}
+      </Button>
+    </Dropdown>
   );
 };
 
