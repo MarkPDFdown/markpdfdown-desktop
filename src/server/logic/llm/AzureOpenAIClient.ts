@@ -151,7 +151,7 @@ export class AzureOpenAIClient extends LLMClient {
                     normalizedOptions.onUpdate(content);
                   }
                 }
-              } catch (e) {
+              } catch {
                 // 忽略解析错误
               }
             }
@@ -252,7 +252,7 @@ export class AzureOpenAIClient extends LLMClient {
           text: (content as TextContent).text
         };
         
-      case 'image_url':
+      case 'image_url': {
         const imageContent = content as ImageContent;
         return {
           type: 'image_url',
@@ -260,8 +260,9 @@ export class AzureOpenAIClient extends LLMClient {
             url: imageContent.image_url.url,
           }
         };
-        
-      case 'tool_call':
+      }
+
+      case 'tool_call': {
         const toolCallContent = content as ToolCallContent;
         return {
           type: 'tool_call',
@@ -271,14 +272,16 @@ export class AzureOpenAIClient extends LLMClient {
             arguments: toolCallContent.function.arguments
           }
         };
-        
-      case 'tool_result':
+      }
+
+      case 'tool_result': {
         const toolResultContent = content as ToolResultContent;
         return {
           type: 'tool_result',
           tool_call_id: toolResultContent.tool_call_id,
           content: toolResultContent.content
         };
+      }
         
       default:
         throw new Error(`不支持的内容类型: ${(content as any).type}`);

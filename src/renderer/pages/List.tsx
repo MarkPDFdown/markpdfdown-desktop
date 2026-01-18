@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Progress, Space, Table, Tooltip, Typography, Tag, App } from "antd";
 import {
   FilePdfTwoTone,
@@ -21,6 +21,10 @@ const List: React.FC = () => {
     pageSize: 10,
     total: 0,
   });
+
+  // 使用 ref 存储 pagination，避免 useEffect 无限循环
+  const paginationRef = useRef(pagination);
+  paginationRef.current = pagination;
 
   const fetchTasks = useCallback(async (page = 1, pageSize = 10) => {
     setLoading(true);
@@ -46,20 +50,20 @@ const List: React.FC = () => {
   }, [message]);
 
   useEffect(() => {
-    fetchTasks(pagination.current, pagination.pageSize);
-  }, [fetchTasks, pagination.current, pagination.pageSize]);
+    fetchTasks(paginationRef.current.current, paginationRef.current.pageSize);
+  }, [fetchTasks]);
 
   useEffect(() => {
     // 设置定时器，每10秒获取一次任务列表
     const timer = setInterval(() => {
-      fetchTasks(pagination.current, pagination.pageSize);
+      fetchTasks(paginationRef.current.current, paginationRef.current.pageSize);
     }, 10000);
 
     // 组件卸载时清除定时器
     return () => {
       clearInterval(timer);
     };
-  }, [fetchTasks, pagination.current, pagination.pageSize]);
+  }, [fetchTasks]);
 
   const handleTableChange = (newPagination: any) => {
     fetchTasks(newPagination.current, newPagination.pageSize);

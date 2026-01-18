@@ -192,21 +192,26 @@ export class LLMClientFactory {
    */
   static async createClient(type: string, apiKey: string, baseUrl?: string): Promise<LLMClient> {
     switch (type) {
-      case 'openai':
+      case 'openai': {
         const OpenAIModule = await import('./OpenAIClient.js');
         return new OpenAIModule.OpenAIClient(apiKey, baseUrl || '');
-      case 'azure-openai':
+      }
+      case 'azure-openai': {
         const AzureOpenAIModule = await import('./AzureOpenAIClient.js');
         return new AzureOpenAIModule.AzureOpenAIClient(apiKey, baseUrl || '');
-      case 'gemini':
+      }
+      case 'gemini': {
         const GeminiModule = await import('./GeminiClient.js');
         return new GeminiModule.GeminiClient(apiKey, baseUrl || '');
-      case 'anthropic':
+      }
+      case 'anthropic': {
         const AnthropicModule = await import('./AnthropicClient.js');
         return new AnthropicModule.AnthropicClient(apiKey, baseUrl || '');
-      case 'ollama':
+      }
+      case 'ollama': {
         const OllamaModule = await import('./OllamaClient.js');
         return new OllamaModule.OllamaClient(apiKey, baseUrl || '');
+      }
       default:
         throw new Error(`不支持的LLM客户端类型: ${type}`);
     }

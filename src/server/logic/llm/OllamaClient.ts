@@ -123,7 +123,7 @@ export class OllamaClient extends LLMClient {
                   rawResponse: data
                 };
               }
-            } catch (e) {
+            } catch {
               // 忽略解析错误
             }
           }
@@ -236,7 +236,7 @@ export class OllamaClient extends LLMClient {
         // 图片会单独处理到images字段，这里只返回提示
         return '';
         
-      case 'tool_call':
+      case 'tool_call': {
         const toolCall = content as ToolCallContent;
         return JSON.stringify({
           tool_call_id: toolCall.tool_call_id,
@@ -245,13 +245,15 @@ export class OllamaClient extends LLMClient {
             arguments: toolCall.function.arguments
           }
         });
-        
-      case 'tool_result':
+      }
+
+      case 'tool_result': {
         const toolResult = content as ToolResultContent;
         return JSON.stringify({
           tool_call_id: toolResult.tool_call_id,
           content: toolResult.content
         });
+      }
         
       default:
         return '';

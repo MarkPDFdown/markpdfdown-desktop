@@ -1,3 +1,4 @@
+import fs from 'fs';
 import { LLMClientFactory, Message, ToolDefinition } from './LLMClient.js';
 
 /**
@@ -215,8 +216,6 @@ async function advancedExample() {
 // 辅助函数：将图片文件转换为base64数据URI（用于本地文件）
 export function imageToDataURI(filePath: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const fs = require('fs');
-    
     fs.readFile(filePath, (err: any, data: Buffer) => {
       if (err) {
         reject(err);

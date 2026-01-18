@@ -121,7 +121,7 @@ export class AnthropicClient extends LLMClient {
                     normalizedOptions.onUpdate(content);
                   }
                 }
-              } catch (e) {
+              } catch {
                 // 忽略解析错误
               }
             }
@@ -215,9 +215,9 @@ export class AnthropicClient extends LLMClient {
           text: (content as TextContent).text
         }];
         
-      case 'image_url':
+      case 'image_url': {
         const imageContent = content as ImageContent;
-        
+
         let source: any;
         if (imageContent.image_url.url.startsWith('data:')) {
           // 处理Base64数据URI
@@ -242,7 +242,8 @@ export class AnthropicClient extends LLMClient {
           type: 'image',
           source
         }];
-        
+      }
+
       // Anthropic不支持工具调用和工具结果，将其转换为文本
       case 'tool_call':
       case 'tool_result':

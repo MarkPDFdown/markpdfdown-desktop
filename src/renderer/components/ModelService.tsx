@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { ConfigProvider, Tabs } from "antd";
 import AddProvider from "./AddProvider";
 import { PlusSquareOutlined, CloudOutlined } from "@ant-design/icons";
@@ -28,9 +28,13 @@ const ModelService: React.FC = () => {
       key: "add provider",
       label: "添加服务商",
       icon: <PlusSquareOutlined />,
-      children: <AddProvider onProviderAdded={handleProviderAdded} />,
+      children: <AddProvider onProviderAdded={() => {}} />,
     },
   ]);
+
+  // 使用 ref 来存储回调函数，避免循环依赖
+  const handleProviderAddedRef = useRef<(providerId: string) => void>(() => {});
+  const handleProviderDeletedRef = useRef<() => void>(() => {});
 
   // 定义获取服务商列表的函数
   const fetchProviders = useCallback(async () => {
@@ -51,7 +55,7 @@ const ModelService: React.FC = () => {
         children: (
           <Provider
             providerId={provider.id}
-            onProviderDeleted={handleProviderDeleted}
+            onProviderDeleted={handleProviderDeletedRef.current}
           />
         ),
       }));
@@ -61,7 +65,7 @@ const ModelService: React.FC = () => {
         key: "add provider",
         label: "添加服务商",
         icon: <PlusSquareOutlined />,
-        children: <AddProvider onProviderAdded={handleProviderAdded} />,
+        children: <AddProvider onProviderAdded={handleProviderAddedRef.current} />,
       };
 
       // 合并服务商选项卡和"添加服务商"选项卡
@@ -74,19 +78,19 @@ const ModelService: React.FC = () => {
     } catch (error) {
       console.error("获取服务商列表出错:", error);
     }
-  }, []);
+  }, [activeKey]);
 
   // 处理添加服务商成功的函数
-  function handleProviderAdded(providerId: string) {
+  const handleProviderAdded = useCallback((providerId: string) => {
     // 刷新服务商列表
     fetchProviders().then(() => {
       // 切换到新添加的服务商标签
       setActiveKey(providerId);
     });
-  }
+  }, [fetchProviders]);
 
   // 处理删除服务商成功的函数
-  function handleProviderDeleted() {
+  const handleProviderDeleted = useCallback(() => {
     // 刷新服务商列表,完成后选中第一个服务商(如果有)
     fetchProviders().then(async () => {
       try {
@@ -112,7 +116,16 @@ const ModelService: React.FC = () => {
         setActiveKey("add provider");
       }
     });
-  }
+  }, [fetchProviders]);
+
+  // 更新 ref，确保初始 items 能正确引用回调
+  useEffect(() => {
+    handleProviderAddedRef.current = handleProviderAdded;
+  }, [handleProviderAdded]);
+
+  useEffect(() => {
+    handleProviderDeletedRef.current = handleProviderDeleted;
+  }, [handleProviderDeleted]);
 
   useEffect(() => {
     fetchProviders();

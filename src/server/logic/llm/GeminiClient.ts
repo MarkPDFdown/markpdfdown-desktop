@@ -167,7 +167,7 @@ export class GeminiClient extends LLMClient {
           text: (content as TextContent).text
         };
         
-      case 'image_url':
+      case 'image_url': {
         const imageContent = content as ImageContent;
         return {
           inline_data: {
@@ -175,6 +175,7 @@ export class GeminiClient extends LLMClient {
             data: this.extractBase64FromUrl(imageContent.image_url.url)
           }
         };
+      }
         
       // Gemini不直接支持工具调用和工具结果
       case 'tool_call':
