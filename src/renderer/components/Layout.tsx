@@ -10,6 +10,9 @@ import {
   BorderOutlined
 } from "@ant-design/icons";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "../hooks/useLanguage";
+import LanguageSwitcher from "./LanguageSwitcher";
 import ImgLogo from "../assets/MarkPDFdown.png";
 
 const { Header, Sider, Content, Footer } = Layout;
@@ -115,6 +118,8 @@ const WindowControls: React.FC = () => {
 const AppLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation('common');
+  const { antdLocale } = useLanguage();
   const {
     token: { colorBgContainer, borderRadiusLG, colorBgLayout },
   } = theme.useToken();
@@ -126,19 +131,19 @@ const AppLayout: React.FC = () => {
     {
       key: "1",
       icon: <HomeOutlined />,
-      label: "主页",
+      label: t('navigation.home'),
       path: "/",
     },
     {
       key: "2",
       icon: <UnorderedListOutlined />,
-      label: "列表",
+      label: t('navigation.list'),
       path: "/list",
     },
     {
       key: "3",
       icon: <SettingOutlined />,
-      label: "设置",
+      label: t('navigation.settings'),
       path: "/settings",
     },
   ];
@@ -183,6 +188,7 @@ const AppLayout: React.FC = () => {
 
   return (
     <ConfigProvider
+      locale={antdLocale}
       theme={{
         components: {
           Menu: {
@@ -289,9 +295,17 @@ const AppLayout: React.FC = () => {
             right: 0,
             zIndex: 9,
             background: colorBgLayout,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            paddingRight: '16px',
             // Windows/Linux 平台启用拖拽功能
             ...(isNotMac ? { WebkitAppRegion: 'drag' as const } : {})
-          }}></Header>
+          }}>
+            <div style={{ WebkitAppRegion: 'no-drag' as const }}>
+              <LanguageSwitcher />
+            </div>
+          </Header>
           <Content
             style={{
               margin: "20px 16px 0",
@@ -305,8 +319,7 @@ const AppLayout: React.FC = () => {
             </div>
           </Content>
           <Footer style={{ textAlign: "center" }}>
-            Copyright &copy; {new Date().getFullYear()} MarkPDFdown All Rights
-            Reserved.
+            {t('common.copyright', { year: new Date().getFullYear() })}
           </Footer>
         </Layout>
       </Layout>

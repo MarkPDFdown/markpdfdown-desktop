@@ -6,21 +6,25 @@ import List from './pages/List'
 import Settings from './pages/Settings'
 import Preview from './pages/Preview'
 import { App as AntdApp } from 'antd'
+import { I18nProvider } from './contexts/I18nContext'
+import './locales'
 
 function App() {
   return (
-    <AntdApp>
-      <Router>
-        <Routes>
-          <Route path="/" element={<AppLayout />}>
-            <Route index element={<Home />} />
-            <Route path="list" element={<List />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="list/preview/:id" element={<Preview />} />
-        </Route>
-      </Routes>
-    </Router>
-    </AntdApp>
+    <I18nProvider>
+      <AntdApp>
+        <Router>
+          <Routes>
+            <Route path="/" element={<AppLayout />}>
+              <Route index element={<Home />} />
+              <Route path="list" element={<List />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="list/preview/:id" element={<Preview />} />
+          </Route>
+        </Routes>
+      </Router>
+      </AntdApp>
+    </I18nProvider>
   )
 }
 

@@ -1,0 +1,26 @@
+{
+  "dragger": {
+    "text": "点击下方按钮选择文件",
+    "hint": "支持单个或批量上传 PDF/JPG/PNG/BMP 文件",
+    "button": "选择文件"
+  },
+  "form": {
+    "model_label": "选择模型:",
+    "model_placeholder": "请选择模型",
+    "model_empty": "无可用模型,请在设置中配置模型",
+    "page_range_label": "页码范围:",
+    "page_range_placeholder": "例如:1-10,12(默认全部页面)",
+    "convert_button": "开始转换"
+  },
+  "messages": {
+    "no_files": "请先上传文件",
+    "no_model": "请选择一个模型",
+    "select_failed": "选择文件失败",
+    "fetch_models_failed": "获取模型列表失败",
+    "create_task_failed": "创建任务失败",
+    "upload_failed": "上传文件 {{filename}} 失败",
+    "update_status_failed": "更新任务状态失败: {{filename}}",
+    "tasks_created": "已创建{{count}}个任务",
+    "upload_error": "上传失败"
+  }
+}

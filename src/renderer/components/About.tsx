@@ -1,9 +1,12 @@
 import { Flex, Typography, Button, Space, Badge } from "antd";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import ImgLogo from "../assets/MarkPDFdown.png";
 
 const About: React.FC = () => {
   const { Text, Title } = Typography;
+  const { t } = useTranslation('settings');
+
   return (
     <div
       style={{
@@ -30,17 +33,17 @@ const About: React.FC = () => {
           }}
           draggable={false}
         />
-        <Badge.Ribbon text="v1.0.6">
+        <Badge.Ribbon text={t('about.version')}>
           <Title level={2}>MarkPDFdown</Title>
         </Badge.Ribbon>
         <Text type="secondary">
-          一款基于大模型视觉识别的高质量PDF转Markdown工具
+          {t('about.subtitle')}
         </Text>
         <Space style={{ marginTop: 16 }}>
-          <Button>官方网址</Button>
-          <Button>许可协议</Button>
-          <Button>反馈意见</Button>
-          <Button>联系邮件</Button>
+          <Button>{t('about.buttons.website')}</Button>
+          <Button>{t('about.buttons.license')}</Button>
+          <Button>{t('about.buttons.feedback')}</Button>
+          <Button>{t('about.buttons.contact')}</Button>
         </Space>
       </Flex>
     </div>

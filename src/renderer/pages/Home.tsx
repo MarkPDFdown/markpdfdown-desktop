@@ -1,10 +1,12 @@
 import React from "react";
 import ImgLogo from "../assets/MarkPDFdown.png";
 import { Flex, Typography } from "antd";
+import { useTranslation } from "react-i18next";
 import UploadPanel from "../components/UploadPanel";
 
 const Home: React.FC = () => {
   const { Text, Title } = Typography;
+  const { t } = useTranslation('home');
 
   return (
     <Flex
@@ -26,9 +28,9 @@ const Home: React.FC = () => {
           draggable={false}
         />
       </p>
-      <Title level={2}>MarkPDFdown</Title>
+      <Title level={2}>{t('title')}</Title>
       <Text type="secondary">
-        一款基于大模型视觉识别的高质量PDF转Markdown工具
+        {t('subtitle')}
       </Text>
       <UploadPanel />
     </Flex>

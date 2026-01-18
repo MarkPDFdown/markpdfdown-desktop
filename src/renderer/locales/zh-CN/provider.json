@@ -1,0 +1,58 @@
+{
+  "details": {
+    "protocol_type": "协议类型:",
+    "api_key_label": "API 密钥:",
+    "api_key_placeholder": "请输入API密钥",
+    "api_url_label": "API 地址:",
+    "api_url_placeholder": "请输入API地址"
+  },
+  "model_config": {
+    "title": "模型配置",
+    "name_label": "模型名称:",
+    "name_placeholder": "GPT 4o",
+    "id_label": "模型ID:",
+    "id_placeholder": "gpt-4o",
+    "add_button": "添加模型",
+    "warning": "注意:请添加支持视觉识别的模型,并确保模型ID正确,否则模型将无法正常使用!"
+  },
+  "actions": {
+    "delete_provider": "删除服务商",
+    "delete_model_title": "删除",
+    "test_connection": "检查"
+  },
+  "confirmations": {
+    "delete_model_title": "确认删除",
+    "delete_model_content": "确定要删除模型\"{{name}}\"吗?",
+    "delete_provider_title": "确认删除",
+    "delete_provider_content": "确定要删除此服务商吗?删除后无法恢复。",
+    "ok": "删除",
+    "cancel": "取消"
+  },
+  "messages": {
+    "fetch_details_failed": "获取服务商详情失败",
+    "fetch_models_failed": "获取模型列表失败",
+    "delete_model_success": "模型已成功删除",
+    "delete_model_failed": "删除模型失败",
+    "add_model_warning": "请填写完整的模型信息",
+    "add_model_success": "模型添加成功",
+    "add_model_failed": "添加模型失败",
+    "update_success": "更新成功",
+    "update_failed": "更新失败",
+    "test_success": "模型连接测试成功",
+    "test_failed": "连接测试失败",
+    "delete_provider_success": "服务商已成功删除",
+    "delete_provider_failed": "删除服务商失败",
+    "update_status_failed": "更新服务商状态失败"
+  },
+  "add_provider": {
+    "name_label": "服务商名称",
+    "name_placeholder": "请输入服务商名称",
+    "name_required": "请输入服务商名称",
+    "type_label": "协议类型",
+    "type_placeholder": "请选择协议类型",
+    "type_required": "请选择协议类型",
+    "submit_button": "确认添加",
+    "success": "服务商添加成功",
+    "failed": "添加服务商失败"
+  }
+}

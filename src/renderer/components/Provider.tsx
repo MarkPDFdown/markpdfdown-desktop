@@ -16,6 +16,7 @@ import {
   App,
 } from "antd";
 import React, { useEffect, useState, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 interface ProviderProps {
   providerId?: number;
@@ -34,6 +35,8 @@ const Provider: React.FC<ProviderProps> = ({
 }) => {
   const [providerData, setProviderData] = useState<any>(null);
   const { modal, message } = App.useApp();
+  const { t } = useTranslation('provider');
+  const { t: tCommon } = useTranslation('common');
 
   // 添加状态变量用于存储输入值
   const [apiKey, setApiKey] = useState<string>("");
@@ -59,7 +62,7 @@ const Provider: React.FC<ProviderProps> = ({
           const result = await window.api.provider.getById(providerId);
 
           if (!result.success) {
-            throw new Error(result.error || "获取服务商详情失败");
+            throw new Error(result.error || t('messages.fetch_details_failed'));
           }
 
           const data = result.data;
@@ -103,7 +106,7 @@ const Provider: React.FC<ProviderProps> = ({
       // 获取该服务商下的所有模型
       fetchModelsRef.current();
     }
-  }, [providerId]);
+  }, [providerId, t]);
 
   // 获取服务商下的模型列表
   const fetchModels = useCallback(async () => {
@@ -113,18 +116,18 @@ const Provider: React.FC<ProviderProps> = ({
       const result = await window.api.model.getByProvider(providerId);
 
       if (!result.success) {
-        throw new Error(result.error || "获取模型列表失败");
+        throw new Error(result.error || t('messages.fetch_models_failed'));
       }
 
       setModels(result.data);
     } catch (error) {
       console.error("获取模型列表出错:", error);
       message.error(
-        "获取模型列表失败: " +
+        t('messages.fetch_models_failed') + ": " +
           (error instanceof Error ? error.message : String(error)),
       );
     }
-  }, [providerId, message]);
+  }, [providerId, message, t]);
 
   // 更新 ref
   useEffect(() => {
@@ -139,16 +142,16 @@ const Provider: React.FC<ProviderProps> = ({
       const result = await window.api.model.delete(modelId, providerId);
 
       if (!result.success) {
-        throw new Error(result.error || "删除模型失败");
+        throw new Error(result.error || t('messages.delete_model_failed'));
       }
 
-      message.success("模型已成功删除");
+      message.success(t('messages.delete_model_success'));
       // 刷新模型列表
       fetchModelsRef.current();
     } catch (error) {
       console.error("删除模型出错:", error);
       message.error(
-        "删除模型失败: " +
+        t('messages.delete_model_failed') + ": " +
           (error instanceof Error ? error.message : String(error)),
       );
     }
@@ -157,7 +160,7 @@ const Provider: React.FC<ProviderProps> = ({
   // 添加模型
   const addModel = async () => {
     if (!providerId || !newModelName || !newModelId) {
-      message.warning("请填写完整的模型信息");
+      message.warning(t('messages.add_model_warning'));
       return;
     }
 
@@ -169,19 +172,19 @@ const Provider: React.FC<ProviderProps> = ({
       });
 
       if (!result.success) {
-        throw new Error(result.error || "添加模型失败");
+        throw new Error(result.error || t('messages.add_model_failed'));
       }
 
       // 添加成功后清空输入框
       setNewModelName("");
       setNewModelId("");
-      message.success("模型添加成功");
+      message.success(t('messages.add_model_success'));
       // 刷新模型列表
       fetchModelsRef.current();
     } catch (error) {
       console.error("添加模型出错:", error);
       message.error(
-        "添加模型失败: " +
+        t('messages.add_model_failed') + ": " +
           (error instanceof Error ? error.message : String(error)),
       );
     }
@@ -199,15 +202,15 @@ const Provider: React.FC<ProviderProps> = ({
       const result = await window.api.provider.update(providerId, updateData);
 
       if (!result.success) {
-        throw new Error(result.error || "更新服务商信息失败");
+        throw new Error(result.error || t('messages.update_failed'));
       }
 
       setProviderData(result.data);
-      message.success("更新成功");
+      message.success(t('messages.update_success'));
     } catch (error) {
       console.error("更新服务商信息出错:", error);
       message.error(
-        "更新失败: " + (error instanceof Error ? error.message : String(error)),
+        t('messages.update_failed') + ": " + (error instanceof Error ? error.message : String(error)),
       );
     }
   };
@@ -225,15 +228,15 @@ const Provider: React.FC<ProviderProps> = ({
       );
 
       if (!result.success) {
-        throw new Error(result.error || "连接测试失败");
+        throw new Error(result.error || t('messages.test_failed'));
       }
 
       // 测试成功
-      message.success("模型连接测试成功");
+      message.success(t('messages.test_success'));
     } catch (error) {
       console.error("测试模型连接出错:", error);
       message.error(
-        "连接测试失败: " +
+        t('messages.test_failed') + ": " +
           (error instanceof Error ? error.message : String(error)),
       );
     } finally {
@@ -249,12 +252,12 @@ const Provider: React.FC<ProviderProps> = ({
             {providerData?.name || "MarkPDFdown"}
           </Typography.Text>
           <Typography.Text type="secondary">
-            协议类型: {providerData?.type}
+            {t('details.protocol_type')} {providerData?.type}
           </Typography.Text>
         </Space>
         <Switch
-          checkedChildren="启用"
-          unCheckedChildren="停用"
+          checkedChildren={tCommon('status.enabled')}
+          unCheckedChildren={tCommon('status.disabled')}
           checked={providerData?.status === 0}
           onChange={async (checked) => {
             if (!providerId) return;
@@ -266,7 +269,7 @@ const Provider: React.FC<ProviderProps> = ({
               );
 
               if (!result.success) {
-                throw new Error(result.error || "更新服务商状态失败");
+                throw new Error(result.error || t('messages.update_status_failed'));
               }
 
               setProviderData(result.data);
@@ -277,9 +280,9 @@ const Provider: React.FC<ProviderProps> = ({
         />
       </div>
       <div>
-        <Typography.Text>API 密钥：</Typography.Text>
+        <Typography.Text>{t('details.api_key_label')}</Typography.Text>
         <Input.Password
-          placeholder="请输入API密钥"
+          placeholder={t('details.api_key_placeholder')}
           value={apiKey}
           onChange={(e) => {
             setApiKey(e.target.value);
@@ -292,14 +295,14 @@ const Provider: React.FC<ProviderProps> = ({
         />
       </div>
       <div>
-        <Typography.Text>API 地址：</Typography.Text>
+        <Typography.Text>{t('details.api_url_label')}</Typography.Text>
         <Typography.Text type="secondary">
           {baseUrl}
           {suffix}
         </Typography.Text>
         <Space.Compact style={{ width: "100%" }}>
           <Input
-            placeholder="请输入API地址"
+            placeholder={t('details.api_url_placeholder')}
             value={baseUrl}
             onChange={(e) => {
               setBaseUrl(e.target.value);
@@ -368,7 +371,7 @@ const Provider: React.FC<ProviderProps> = ({
       </div>
 
       <Divider variant="dashed" dashed plain={true}>
-        模型配置
+        {t('model_config.title')}
       </Divider>
       <List
         bordered={true}
@@ -383,7 +386,7 @@ const Provider: React.FC<ProviderProps> = ({
                 icon={<ThunderboltOutlined />}
                 shape="circle"
                 size="small"
-                title="检查"
+                title={tCommon('actions.check')}
                 onClick={() => testModelConnection(item.id)}
                 loading={testingModelId === item.id}
               ></Button>
@@ -394,14 +397,14 @@ const Provider: React.FC<ProviderProps> = ({
                 shape="circle"
                 danger
                 size="small"
-                title="删除"
+                title={tCommon('actions.delete')}
                 onClick={() => {
                   modal.confirm({
-                    title: "确认删除",
-                    content: `确定要删除模型"${item.name}"吗？`,
-                    okText: "删除",
+                    title: t('confirmations.delete_model_title'),
+                    content: t('confirmations.delete_model_content', { name: item.name }),
+                    okText: t('confirmations.ok'),
                     okType: "danger",
-                    cancelText: "取消",
+                    cancelText: t('confirmations.cancel'),
                     onOk: () => deleteModel(item.id),
                   });
                 }}
@@ -413,51 +416,51 @@ const Provider: React.FC<ProviderProps> = ({
 
       <div style={{ display: "flex", justifyContent: "space-between" }}>
         <Space>
-          <Typography.Text>模型名称：</Typography.Text>
+          <Typography.Text>{t('model_config.name_label')}</Typography.Text>
           <Input
-            placeholder="GPT 4o"
+            placeholder={t('model_config.name_placeholder')}
             style={{ width: "290px" }}
             value={newModelName}
             onChange={(e) => setNewModelName(e.target.value)}
           />
-          <Typography.Text>模型ID：</Typography.Text>
+          <Typography.Text>{t('model_config.id_label')}</Typography.Text>
           <Input
-            placeholder="gpt-4o"
+            placeholder={t('model_config.id_placeholder')}
             style={{ width: "290px" }}
             value={newModelId}
             onChange={(e) => setNewModelId(e.target.value)}
           />
         </Space>
         <Button type="primary" icon={<PlusOutlined />} onClick={addModel}>
-          添加模型
+          {t('model_config.add_button')}
         </Button>
       </div>
       <Typography.Text type="secondary">
-        注意：请添加支持视觉识别的模型，并确保模型ID正确，否则模型将无法正常使用！
+        {t('model_config.warning')}
       </Typography.Text>
       <Button
-        title="删除服务商"
+        title={t('actions.delete_provider')}
         icon={<DeleteOutlined />}
         danger
         onClick={() => {
           if (!providerId) return;
 
           modal.confirm({
-            title: "确认删除",
-            content: "确定要删除此服务商吗？删除后无法恢复。",
-            okText: "删除",
+            title: t('confirmations.delete_provider_title'),
+            content: t('confirmations.delete_provider_content'),
+            okText: t('confirmations.ok'),
             okType: "danger",
-            cancelText: "取消",
+            cancelText: t('confirmations.cancel'),
             onOk: async () => {
               try {
                 const result = await window.api.provider.delete(providerId);
 
                 if (!result.success) {
-                  throw new Error(result.error || "删除服务商失败");
+                  throw new Error(result.error || t('messages.delete_provider_failed'));
                 }
 
                 // 删除成功后，提示用户
-                message.success("服务商已成功删除");
+                message.success(t('messages.delete_provider_success'));
 
                 // 调用回调函数通知父组件刷新列表并选中第一个服务商
                 if (onProviderDeleted) {
@@ -466,7 +469,7 @@ const Provider: React.FC<ProviderProps> = ({
               } catch (error) {
                 console.error("删除服务商出错:", error);
                 message.error(
-                  "删除服务商失败: " +
+                  t('messages.delete_provider_failed') + ": " +
                     (error instanceof Error ? error.message : String(error)),
                 );
               }
@@ -474,7 +477,7 @@ const Provider: React.FC<ProviderProps> = ({
           });
         }}
       >
-        删除服务商
+        {t('actions.delete_provider')}
       </Button>
     </Flex>
   );

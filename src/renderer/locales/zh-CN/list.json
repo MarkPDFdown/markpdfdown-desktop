@@ -1,0 +1,41 @@
+{
+  "columns": {
+    "file": "文件",
+    "model": "模型",
+    "progress": "进度",
+    "status": "状态",
+    "action": "操作"
+  },
+  "status": {
+    "pending": "待处理",
+    "initializing": "初始化",
+    "processing": "进行中",
+    "merging_pending": "待合并",
+    "merging": "合并中",
+    "completed": "已完成",
+    "cancelled": "已取消",
+    "failed": "失败",
+    "unknown": "未知"
+  },
+  "actions": {
+    "view": "查看",
+    "cancel": "取消",
+    "retry": "重试",
+    "delete": "删除"
+  },
+  "confirmations": {
+    "delete_title": "确认删除",
+    "delete_content": "确定要删除这个任务吗？此操作不可逆。",
+    "cancel_title": "确认{{action}}",
+    "cancel_content": "确定要{{action}}这个任务吗？",
+    "ok": "确定",
+    "cancel": "取消"
+  },
+  "messages": {
+    "fetch_failed": "获取任务列表失败",
+    "delete_success": "删除成功",
+    "delete_failed": "删除任务失败",
+    "action_success": "{{action}}成功",
+    "action_failed": "{{action}}失败"
+  }
+}

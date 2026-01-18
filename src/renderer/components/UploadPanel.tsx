@@ -14,6 +14,7 @@ import {
 } from "antd";
 import { FileMarkdownOutlined, InboxOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 const { Text } = Typography;
 
 // 定义模型数据接口
@@ -32,6 +33,7 @@ interface ModelGroupType {
 const UploadPanel: React.FC = () => {
   const navigate = useNavigate();
   const { message } = App.useApp();
+  const { t } = useTranslation('upload');
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [modelGroups, setModelGroups] = useState<ModelGroupType[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -50,12 +52,12 @@ const UploadPanel: React.FC = () => {
         if (result.success && result.data) {
           setModelGroups(result.data);
         } else {
-          message.error(result.error || "获取模型列表失败");
+          message.error(result.error || t('messages.fetch_models_failed'));
         }
       } catch (error) {
         console.error("获取模型列表出错:", error);
         message.error(
-          "获取模型列表失败: " +
+          t('messages.fetch_models_failed') + ": " +
             (error instanceof Error ? error.message : String(error)),
         );
       } finally {
@@ -64,7 +66,7 @@ const UploadPanel: React.FC = () => {
     };
 
     fetchAllModels();
-  }, [message]);
+  }, [message, t]);
 
   // 将模型数据转换为Select选项格式
   const getModelOptions = () => {
@@ -81,7 +83,7 @@ const UploadPanel: React.FC = () => {
     if (options.length === 0) {
       return [
         {
-          label: <span>无可用模型，请在设置中配置模型</span>,
+          label: <span>{t('form.model_empty')}</span>,
           title: "",
           options: [],
         },
@@ -123,7 +125,7 @@ const UploadPanel: React.FC = () => {
     } catch (error) {
       console.error("选择文件失败:", error);
       message.error(
-        "选择文件失败: " +
+        t('messages.select_failed') + ": " +
           (error instanceof Error ? error.message : String(error)),
       );
     }
@@ -149,12 +151,12 @@ const UploadPanel: React.FC = () => {
   // 处理开始转换按钮点击
   const handleConvert = async () => {
     if (fileList.length === 0) {
-      message.error("请先上传文件");
+      message.error(t('messages.no_files'));
       return;
     }
 
     if (!selectedModel) {
-      message.error("请选择一个模型");
+      message.error(t('messages.no_model'));
       return;
     }
 
@@ -195,7 +197,7 @@ const UploadPanel: React.FC = () => {
       const createResult = await window.api.task.create(tasks);
 
       if (!createResult.success || !createResult.data) {
-        throw new Error(createResult.error || "创建任务失败");
+        throw new Error(createResult.error || t('messages.create_task_failed'));
       }
 
       // 获取创建的任务列表
@@ -224,20 +226,20 @@ const UploadPanel: React.FC = () => {
               if (updateResult.success) {
                 successCount++;
               } else {
-                message.error(`更新任务状态失败: ${file.name}`);
+                message.error(t('messages.update_status_failed', { filename: file.name }));
                 // 删除任务
                 await window.api.task.delete(task.id);
               }
             } else {
               message.error(
-                `上传文件 ${file.name} 失败: ${uploadResult.error || "未知错误"}`,
+                t('messages.upload_failed', { filename: file.name }) + `: ${uploadResult.error || "Unknown error"}`,
               );
               // 删除任务
               await window.api.task.delete(task.id);
             }
           } catch (error) {
             console.error(`上传文件 ${file.name} 出错:`, error);
-            message.error(`上传文件 ${file.name} 失败`);
+            message.error(t('messages.upload_failed', { filename: file.name }));
             // 删除任务
             await window.api.task.delete(task.id);
           }
@@ -245,17 +247,17 @@ const UploadPanel: React.FC = () => {
       }
 
       if (successCount > 0) {
-        message.success(`已创建${successCount}个任务`);
+        message.success(t('messages.tasks_created', { count: successCount }));
         // 清空文件列表
         setFileList([]);
         navigate("/list", { replace: true });
       } else {
-        message.error("文件上传失败");
+        message.error(t('messages.upload_error'));
       }
     } catch (error) {
       console.error("上传文件出错:", error);
       message.error(
-        "上传失败: " + (error instanceof Error ? error.message : String(error)),
+        t('messages.upload_error') + ": " + (error instanceof Error ? error.message : String(error)),
       );
     } finally {
       setUploading(false);
@@ -270,16 +272,16 @@ const UploadPanel: React.FC = () => {
             <p className="ant-upload-drag-icon">
               <InboxOutlined />
             </p>
-            <p className="ant-upload-text">点击下方按钮选择文件</p>
+            <p className="ant-upload-text">{t('dragger.text')}</p>
             <p className="ant-upload-hint">
-              支持单个或批量上传 PDF/JPG/PNG/BMP 文件
+              {t('dragger.hint')}
             </p>
             <Button
               type="primary"
               onClick={handleFileSelect}
               style={{ marginTop: 16 }}
             >
-              选择文件
+              {t('dragger.button')}
             </Button>
           </Dragger>
         </Col>
@@ -287,18 +289,18 @@ const UploadPanel: React.FC = () => {
       <Row style={{ display: "block", marginTop: "24px" }}>
         <Col span={24}>
           <Space>
-            <Text>选择模型：</Text>
+            <Text>{t('form.model_label')}</Text>
             <Select
               style={{ width: 240 }}
               options={getModelOptions()}
               loading={loading}
-              placeholder="请选择模型"
+              placeholder={t('form.model_placeholder')}
               onChange={(value) => setSelectedModel(value)}
             />
-            <Text>页码范围：</Text>
+            <Text>{t('form.page_range_label')}</Text>
             <Input
               style={{ width: 240 }}
-              placeholder="例如：1-10,12（默认全部页面）"
+              placeholder={t('form.page_range_placeholder')}
               value={pageRange}
               onChange={(e) => setPageRange(e.target.value)}
             />
@@ -309,7 +311,7 @@ const UploadPanel: React.FC = () => {
               loading={uploading}
               disabled={uploading || fileList.length === 0 || !selectedModel}
             >
-              开始转换
+              {t('form.convert_button')}
             </Button>
           </Space>
         </Col>

@@ -1,0 +1,26 @@
+{
+  "dragger": {
+    "text": "Click button below to select files",
+    "hint": "Supports single or batch upload of PDF/JPG/PNG/BMP files",
+    "button": "Select Files"
+  },
+  "form": {
+    "model_label": "Select Model:",
+    "model_placeholder": "Please select a model",
+    "model_empty": "No models available, please configure models in Settings",
+    "page_range_label": "Page Range:",
+    "page_range_placeholder": "e.g., 1-10,12 (default: all pages)",
+    "convert_button": "Start Conversion"
+  },
+  "messages": {
+    "no_files": "Please upload files first",
+    "no_model": "Please select a model",
+    "select_failed": "File selection failed",
+    "fetch_models_failed": "Failed to fetch model list",
+    "create_task_failed": "Failed to create task",
+    "upload_failed": "Upload failed: {{filename}}",
+    "update_status_failed": "Failed to update task status: {{filename}}",
+    "tasks_created": "{{count}} task(s) created",
+    "upload_error": "Upload failed"
+  }
+}

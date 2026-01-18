@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Input, Select, Button, Form, App } from "antd";
+import { useTranslation } from "react-i18next";
 
 interface AddProviderProps {
   onProviderAdded?: (providerId: string) => void;
@@ -9,6 +10,7 @@ const AddProvider: React.FC<AddProviderProps> = ({ onProviderAdded }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState<boolean>(false);
   const { message } = App.useApp();
+  const { t } = useTranslation('provider');
 
   const handleAddProvider = async () => {
     try {
@@ -18,10 +20,10 @@ const AddProvider: React.FC<AddProviderProps> = ({ onProviderAdded }) => {
       const response = await window.api.provider.create(values);
 
       if (!response.success) {
-        throw new Error(response.error || "添加服务商失败");
+        throw new Error(response.error || t('add_provider.failed'));
       }
 
-      message.success("服务商添加成功");
+      message.success(t('add_provider.success'));
       form.resetFields();
 
       // 调用回调函数,传递新添加的服务商ID
@@ -32,7 +34,7 @@ const AddProvider: React.FC<AddProviderProps> = ({ onProviderAdded }) => {
       if (error instanceof Error) {
         message.error(error.message);
       } else {
-        message.error("添加服务商失败");
+        message.error(t('add_provider.failed'));
       }
     } finally {
       setLoading(false);
@@ -43,18 +45,18 @@ const AddProvider: React.FC<AddProviderProps> = ({ onProviderAdded }) => {
     <Form form={form} layout="vertical" style={{ padding: "16px" }}>
       <Form.Item
         name="name"
-        label="服务商名称"
-        rules={[{ required: true, message: "请输入服务商名称" }]}
+        label={t('add_provider.name_label')}
+        rules={[{ required: true, message: t('add_provider.name_required') }]}
       >
-        <Input placeholder="请输入服务商名称" />
+        <Input placeholder={t('add_provider.name_placeholder')} />
       </Form.Item>
 
       <Form.Item
         name="type"
-        label="协议类型"
-        rules={[{ required: true, message: "请选择协议类型" }]}
+        label={t('add_provider.type_label')}
+        rules={[{ required: true, message: t('add_provider.type_required') }]}
       >
-        <Select placeholder="请选择协议类型">
+        <Select placeholder={t('add_provider.type_placeholder')}>
           <Select.Option value="openai">OpenAI</Select.Option>
           <Select.Option value="anthropic">Anthropic</Select.Option>
           <Select.Option value="gemini">Gemini</Select.Option>
@@ -65,7 +67,7 @@ const AddProvider: React.FC<AddProviderProps> = ({ onProviderAdded }) => {
 
       <Form.Item>
         <Button type="primary" onClick={handleAddProvider} loading={loading}>
-          确认添加
+          {t('add_provider.submit_button')}
         </Button>
       </Form.Item>
     </Form>

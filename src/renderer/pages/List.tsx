@@ -9,11 +9,14 @@ import {
   FileExcelTwoTone,
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Task } from "../../server/types/Task";
 const { Text } = Typography;
 
 const List: React.FC = () => {
   const { message, modal } = App.useApp();
+  const { t } = useTranslation('list');
+  const { t: tCommon } = useTranslation('common');
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<Task[]>([]);
   const [pagination, setPagination] = useState({
@@ -39,15 +42,15 @@ const List: React.FC = () => {
           total: result.data.total,
         }));
       } else {
-        message.error(result.error || "获取任务列表失败");
+        message.error(result.error || t('messages.fetch_failed'));
       }
     } catch (error) {
       console.error("获取任务列表失败:", error);
-      message.error("获取任务列表失败");
+      message.error(t('messages.fetch_failed'));
     } finally {
       setLoading(false);
     }
-  }, [message]);
+  }, [message, t]);
 
   useEffect(() => {
     fetchTasks(paginationRef.current.current, paginationRef.current.pageSize);
@@ -72,22 +75,22 @@ const List: React.FC = () => {
   // 删除任务
   const handleDeleteTask = async (id: string) => {
     modal.confirm({
-      title: "确认删除",
-      content: "确定要删除这个任务吗？此操作不可逆。",
-      okText: "确定",
-      cancelText: "取消",
+      title: t('confirmations.delete_title'),
+      content: t('confirmations.delete_content'),
+      okText: t('confirmations.ok'),
+      cancelText: t('confirmations.cancel'),
       onOk: async () => {
         try {
           const result = await window.api.task.delete(id);
           if (result.success) {
-            message.success("删除成功");
+            message.success(t('messages.delete_success'));
             fetchTasks(pagination.current, pagination.pageSize);
           } else {
-            message.error(result.error || "删除任务失败");
+            message.error(result.error || t('messages.delete_failed'));
           }
         } catch (error) {
           console.error("删除任务失败:", error);
-          message.error("删除任务失败");
+          message.error(t('messages.delete_failed'));
         }
       },
     });
@@ -100,22 +103,22 @@ const List: React.FC = () => {
     statusText: string,
   ) => {
     modal.confirm({
-      title: `确认${statusText}`,
-      content: `确定要${statusText}这个任务吗？`,
-      okText: "确定",
-      cancelText: "取消",
+      title: t('confirmations.cancel_title', { action: statusText }),
+      content: t('confirmations.cancel_content', { action: statusText }),
+      okText: t('confirmations.ok'),
+      cancelText: t('confirmations.cancel'),
       onOk: async () => {
         try {
           const result = await window.api.task.update(id, { status });
           if (result.success) {
-            message.success(`${statusText}成功`);
+            message.success(t('messages.action_success', { action: statusText }));
             fetchTasks(pagination.current, pagination.pageSize);
           } else {
-            message.error(result.error || `${statusText}失败`);
+            message.error(result.error || t('messages.action_failed', { action: statusText }));
           }
         } catch (error) {
           console.error(`${statusText}任务失败:`, error);
-          message.error(`${statusText}失败`);
+          message.error(t('messages.action_failed', { action: statusText }));
         }
       },
     });
@@ -123,34 +126,34 @@ const List: React.FC = () => {
 
   // 重试任务
   const handleRetryTask = (id: string) => {
-    handleUpdateTaskStatus(id, 1, "重试");
+    handleUpdateTaskStatus(id, 1, t('actions.retry'));
   };
 
   // 取消任务
   const handleCancelTask = (id: string) => {
-    handleUpdateTaskStatus(id, 7, "取消");
+    handleUpdateTaskStatus(id, 7, t('actions.cancel'));
   };
 
   const getStatusText = (status: number) => {
     switch (status) {
       case 1:
-        return "待处理"; // action: 取消
+        return t('status.pending');
       case 2:
-        return "初始化"; // action: 查看，取消
+        return t('status.initializing');
       case 3:
-        return "进行中"; // action: 查看，取消
+        return t('status.processing');
       case 4:
-        return "待合并"; // action: 查看，取消
+        return t('status.merging_pending');
       case 5:
-        return "合并中"; // action: 查看，取消
+        return t('status.merging');
       case 6:
-        return "已完成"; // action: 查看，删除
+        return t('status.completed');
       case 7:
-        return "已取消"; // action: 删除
+        return t('status.cancelled');
       case 0:
-        return "失败"; // action: 重试，删除
+        return t('status.failed');
       default:
-        return "未知"; // action: 删除
+        return t('status.unknown');
     }
   };
 
@@ -179,7 +182,7 @@ const List: React.FC = () => {
 
   const columns = [
     {
-      title: "文件",
+      title: t('columns.file'),
       dataIndex: "filename",
       width: 280,
       render: (text: string, record: Task) => (
@@ -214,7 +217,7 @@ const List: React.FC = () => {
               if (record.pages && record.pages > 1) {
                 return (
                   <Text strong>
-                    [{record.pages}页]{text}
+                    [{tCommon('common.pages', { count: record.pages })}]{text}
                   </Text>
                 );
               } else {
@@ -226,7 +229,7 @@ const List: React.FC = () => {
       ),
     },
     {
-      title: "模型",
+      title: t('columns.model'),
       dataIndex: "model_name",
       width: 240,
       render: (text: string) => (
@@ -243,7 +246,7 @@ const List: React.FC = () => {
       ),
     },
     {
-      title: "进度",
+      title: t('columns.progress'),
       dataIndex: "progress",
       render: (progress: number) => (
         <Progress
@@ -255,7 +258,7 @@ const List: React.FC = () => {
       ),
     },
     {
-      title: "状态",
+      title: t('columns.status'),
       dataIndex: "status",
       width: 100,
       render: (status: number) => (
@@ -263,7 +266,7 @@ const List: React.FC = () => {
       ),
     },
     {
-      title: "操作",
+      title: t('columns.action'),
       dataIndex: "action",
       width: 160,
       render: (_text: string, record: Task) => (
@@ -272,7 +275,7 @@ const List: React.FC = () => {
             if (record.status && record.status > 1 && record.status < 7) {
               return (
                 <Link type="success" to={`/list/preview/${record.id}`}>
-                  查看
+                  {t('actions.view')}
                 </Link>
               );
             }
@@ -285,7 +288,7 @@ const List: React.FC = () => {
                   style={{ cursor: "pointer" }}
                   onClick={() => record.id && handleCancelTask(record.id)}
                 >
-                  取消
+                  {t('actions.cancel')}
                 </Text>
               );
             }
@@ -298,7 +301,7 @@ const List: React.FC = () => {
                   style={{ cursor: "pointer" }}
                   onClick={() => record.id && handleRetryTask(record.id)}
                 >
-                  重试
+                  {t('actions.retry')}
                 </Text>
               );
             }
@@ -311,7 +314,7 @@ const List: React.FC = () => {
                   style={{ cursor: "pointer" }}
                   onClick={() => record.id && handleDeleteTask(record.id)}
                 >
-                  删除
+                  {t('actions.delete')}
                 </Text>
               );
             }

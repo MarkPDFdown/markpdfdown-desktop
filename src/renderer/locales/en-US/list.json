@@ -1,0 +1,41 @@
+{
+  "columns": {
+    "file": "File",
+    "model": "Model",
+    "progress": "Progress",
+    "status": "Status",
+    "action": "Action"
+  },
+  "status": {
+    "pending": "Pending",
+    "initializing": "Initializing",
+    "processing": "Processing",
+    "merging_pending": "Pending Merge",
+    "merging": "Merging",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "failed": "Failed",
+    "unknown": "Unknown"
+  },
+  "actions": {
+    "view": "View",
+    "cancel": "Cancel",
+    "retry": "Retry",
+    "delete": "Delete"
+  },
+  "confirmations": {
+    "delete_title": "Confirm Delete",
+    "delete_content": "Are you sure you want to delete this task? This action cannot be undone.",
+    "cancel_title": "Confirm {{action}}",
+    "cancel_content": "Are you sure you want to {{action}} this task?",
+    "ok": "Confirm",
+    "cancel": "Cancel"
+  },
+  "messages": {
+    "fetch_failed": "Failed to fetch task list",
+    "delete_success": "Deleted successfully",
+    "delete_failed": "Failed to delete task",
+    "action_success": "{{action}} successful",
+    "action_failed": "{{action}} failed"
+  }
+}

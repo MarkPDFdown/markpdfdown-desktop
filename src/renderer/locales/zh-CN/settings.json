@@ -1,0 +1,21 @@
+{
+  "tabs": {
+    "model_service": "模型服务",
+    "about": "关于我们"
+  },
+  "about": {
+    "version": "v1.0.6",
+    "subtitle": "一款基于大模型视觉识别的高质量PDF转Markdown工具",
+    "buttons": {
+      "website": "官方网址",
+      "license": "许可协议",
+      "feedback": "反馈意见",
+      "contact": "联系邮件"
+    }
+  },
+  "preview": {
+    "back": "返回",
+    "download": "下载 .md",
+    "delete": "删除"
+  }
+}

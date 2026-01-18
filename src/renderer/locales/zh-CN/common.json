@@ -1,0 +1,27 @@
+{
+  "navigation": {
+    "home": "主页",
+    "list": "列表",
+    "settings": "设置"
+  },
+  "actions": {
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "confirm": "确定",
+    "retry": "重试",
+    "view": "查看",
+    "back": "返回",
+    "add": "添加",
+    "check": "检查"
+  },
+  "status": {
+    "enabled": "启用",
+    "disabled": "停用",
+    "loading": "加载中..."
+  },
+  "common": {
+    "copyright": "Copyright © {{year}} MarkPDFdown All Rights Reserved.",
+    "pages": "{{count}}页"
+  }
+}

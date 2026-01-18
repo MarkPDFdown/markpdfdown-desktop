@@ -13,6 +13,7 @@ import {
 } from "antd";
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import MarkdownPreview from "../components/MarkdownPreview";
 
 const { Text } = Typography;
@@ -74,6 +75,8 @@ console.log(c);
 const Preview: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation('settings');
+  const { t: tCommon } = useTranslation('common');
   const title = "some name for the card some name for the card some name for the card.pdf";
   const pages = 10;
 
@@ -93,7 +96,7 @@ const Preview: React.FC = () => {
           color="default"
           variant="filled"
         >
-          返回
+          {t('preview.back')}
         </Button>
         <Space
           style={{
@@ -106,7 +109,7 @@ const Preview: React.FC = () => {
           <FilePdfTwoTone twoToneColor="#ec5f4a" />
           <Tooltip title={title}>
             <Text strong>
-              [{pages}页]{title}
+              [{tCommon('common.pages', { count: pages })}]{title}
             </Text>
           </Tooltip>
         </Space>
@@ -116,10 +119,10 @@ const Preview: React.FC = () => {
             icon={<FileMarkdownOutlined />}
             variant="filled"
           >
-            下载 .md
+            {t('preview.download')}
           </Button>
           <Button color="danger" variant="filled">
-            删除
+            {t('preview.delete')}
           </Button>
         </Space>
       </div>

@@ -1,0 +1,27 @@
+{
+  "navigation": {
+    "home": "Home",
+    "list": "List",
+    "settings": "Settings"
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "retry": "Retry",
+    "view": "View",
+    "back": "Back",
+    "add": "Add",
+    "check": "Check"
+  },
+  "status": {
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "loading": "Loading..."
+  },
+  "common": {
+    "copyright": "Copyright © {{year}} MarkPDFdown All Rights Reserved.",
+    "pages": "{{count}} pages"
+  }
+}
