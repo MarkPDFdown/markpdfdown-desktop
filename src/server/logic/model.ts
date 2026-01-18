@@ -1,4 +1,4 @@
-// @ts-ignore
+// @ts-expect-error - ProviderDal import may have type issues
 import providerDal from '../dal/ProviderDal.js';
 import { LLMClientFactory, CompletionOptions, Message } from './llm/LLMClient.js';
 import sharp from 'sharp';
