@@ -18,7 +18,12 @@
     "migrate:dev": "prisma migrate dev --schema=./src/server/db/schema.prisma",
     "migrate:reset": "prisma migrate reset --schema=./src/server/db/schema.prisma",
     "generate": "prisma generate --schema=./src/server/db/schema.prisma",
-    "logo": "electron-icon-builder --input=./src/renderer/assets/logo.png --output=./public"
+    "logo": "electron-icon-builder --input=./src/renderer/assets/logo.png --output=./public",
+    "test": "vitest",
+    "test:unit": "vitest run --config vitest.config.ts",
+    "test:renderer": "vitest run --config vitest.config.renderer.ts",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest run --coverage"
   },
   "build": {
     "appId": "com.markpdfdown.desktop",
@@ -107,9 +112,13 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
+    "@testing-library/jest-dom": "^6.1.5",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/user-event": "^14.5.1",
     "@types/react": "^18.2.67",
     "@types/react-dom": "^18.2.22",
     "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "^2.1.8",
     "concurrently": "^9.1.2",
     "electron": "^35.0.2",
     "electron-builder": "^25.1.8",
@@ -119,11 +128,14 @@
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^15.15.0",
+    "jsdom": "^25.0.1",
     "nodemon": "^3.1.9",
     "prisma": "^6.5.0",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.24.1",
     "vite": "^6.2.0",
+    "vitest": "^2.1.8",
+    "vitest-mock-extended": "^2.0.2",
     "wait-on": "^8.0.3"
   }
 }

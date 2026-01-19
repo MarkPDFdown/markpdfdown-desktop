@@ -1,0 +1,38 @@
+[
+  {
+    "id": "gpt-4o",
+    "providerId": "openai",
+    "name": "GPT-4o",
+    "description": "OpenAI GPT-4o model"
+  },
+  {
+    "id": "gpt-4o-mini",
+    "providerId": "openai",
+    "name": "GPT-4o Mini",
+    "description": "OpenAI GPT-4o Mini model"
+  },
+  {
+    "id": "claude-3-5-sonnet-20241022",
+    "providerId": "anthropic",
+    "name": "Claude 3.5 Sonnet",
+    "description": "Anthropic Claude 3.5 Sonnet model"
+  },
+  {
+    "id": "claude-3-5-haiku-20241022",
+    "providerId": "anthropic",
+    "name": "Claude 3.5 Haiku",
+    "description": "Anthropic Claude 3.5 Haiku model"
+  },
+  {
+    "id": "gemini-2.0-flash-exp",
+    "providerId": "gemini",
+    "name": "Gemini 2.0 Flash",
+    "description": "Google Gemini 2.0 Flash model"
+  },
+  {
+    "id": "llama2",
+    "providerId": "ollama",
+    "name": "Llama 2",
+    "description": "Meta Llama 2 model"
+  }
+]

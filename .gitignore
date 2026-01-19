@@ -26,3 +26,5 @@ files
 *.njsproj
 *.sln
 *.sw?
+
+coverage

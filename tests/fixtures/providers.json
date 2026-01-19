@@ -1,0 +1,36 @@
+[
+  {
+    "id": "openai",
+    "name": "OpenAI",
+    "apiKey": "sk-test-key-123",
+    "baseUrl": "https://api.openai.com/v1",
+    "enabled": true,
+    "config": {}
+  },
+  {
+    "id": "anthropic",
+    "name": "Anthropic",
+    "apiKey": "sk-ant-test-key-456",
+    "baseUrl": "https://api.anthropic.com",
+    "enabled": true,
+    "config": {
+      "anthropic-version": "2023-06-01"
+    }
+  },
+  {
+    "id": "gemini",
+    "name": "Google Gemini",
+    "apiKey": "test-gemini-key-789",
+    "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
+    "enabled": true,
+    "config": {}
+  },
+  {
+    "id": "ollama",
+    "name": "Ollama",
+    "apiKey": "",
+    "baseUrl": "http://localhost:11434",
+    "enabled": false,
+    "config": {}
+  }
+]

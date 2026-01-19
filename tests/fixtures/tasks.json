@@ -1,0 +1,38 @@
+[
+  {
+    "id": "task-123-456-789",
+    "originalName": "document.pdf",
+    "filePath": "/uploads/task-123-456-789/document.pdf",
+    "status": "pending",
+    "modelId": "gpt-4o",
+    "providerId": "openai",
+    "result": null,
+    "error": null,
+    "createdAt": "2026-01-19T00:00:00.000Z",
+    "updatedAt": "2026-01-19T00:00:00.000Z"
+  },
+  {
+    "id": "task-987-654-321",
+    "originalName": "report.pdf",
+    "filePath": "/uploads/task-987-654-321/report.pdf",
+    "status": "completed",
+    "modelId": "claude-3-5-sonnet-20241022",
+    "providerId": "anthropic",
+    "result": "# Report Title\n\nThis is the converted markdown content.",
+    "error": null,
+    "createdAt": "2026-01-18T00:00:00.000Z",
+    "updatedAt": "2026-01-18T01:00:00.000Z"
+  },
+  {
+    "id": "task-111-222-333",
+    "originalName": "error-document.pdf",
+    "filePath": "/uploads/task-111-222-333/error-document.pdf",
+    "status": "failed",
+    "modelId": "gpt-4o-mini",
+    "providerId": "openai",
+    "result": null,
+    "error": "API Error: Rate limit exceeded",
+    "createdAt": "2026-01-17T00:00:00.000Z",
+    "updatedAt": "2026-01-17T00:30:00.000Z"
+  }
+]
