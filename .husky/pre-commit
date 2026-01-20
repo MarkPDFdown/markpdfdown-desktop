@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+
+echo "🧪 Running all tests before commit..."
+
+# Run unit tests
+npm run test:unit
+if [ $? -ne 0 ]; then
+  echo "❌ Unit tests failed. Commit aborted."
+  exit 1
+fi
+
+# Run renderer tests
+npm run test:renderer
+if [ $? -ne 0 ]; then
+  echo "❌ Renderer tests failed. Commit aborted."
+  exit 1
+fi
+
+echo "✅ All tests passed! Proceeding with commit."

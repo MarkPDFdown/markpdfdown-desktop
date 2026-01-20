@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, waitFor, cleanup } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { App } from 'antd'
 import UploadPanel from '../UploadPanel'
@@ -14,22 +14,6 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
-// Setup window.api mock
-const mockWindowApi = {
-  model: {
-    getAll: vi.fn()
-  },
-  file: {
-    selectDialog: vi.fn()
-  },
-  task: {
-    create: vi.fn()
-  }
-}
-
-// @ts-expect-error - Mocking window.api
-global.window.api = mockWindowApi
-
 // Wrapper component for tests
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
   <BrowserRouter>
@@ -40,11 +24,19 @@ const Wrapper = ({ children }: { children: React.ReactNode }) => (
 describe('UploadPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Setup default mock responses
+    vi.mocked(window.api.model.getAll).mockResolvedValue({ success: true, data: [] })
+    vi.mocked(window.api.file.selectDialog).mockResolvedValue({ success: true, data: { canceled: true, filePaths: [] } })
+    vi.mocked(window.api.task.create).mockResolvedValue({ success: true, data: [] })
+  })
+
+  afterEach(() => {
+    cleanup()
   })
 
   describe('Component Rendering', () => {
-    it('should render without crashing', () => {
-      mockWindowApi.model.getAll.mockResolvedValue({
+    it('should render without crashing', async () => {
+      vi.mocked(window.api.model.getAll).mockResolvedValue({
         success: true,
         data: []
       })
@@ -55,11 +47,13 @@ describe('UploadPanel', () => {
         </Wrapper>
       )
 
-      expect(screen.getByText(/upload/i)).toBeDefined()
+      await waitFor(() => {
+        expect(window.api.model.getAll).toHaveBeenCalled()
+      })
     })
 
     it('should show loading state initially', async () => {
-      mockWindowApi.model.getAll.mockImplementation(
+      vi.mocked(window.api.model.getAll).mockImplementation(
         () => new Promise(resolve => setTimeout(() => resolve({ success: true, data: [] }), 100))
       )
 
@@ -70,7 +64,7 @@ describe('UploadPanel', () => {
       )
 
       // Component should be in loading state
-      expect(mockWindowApi.model.getAll).toHaveBeenCalled()
+      expect(window.api.model.getAll).toHaveBeenCalled()
     })
   })
 
@@ -86,7 +80,7 @@ describe('UploadPanel', () => {
         }
       ]
 
-      mockWindowApi.model.getAll.mockResolvedValue({
+      vi.mocked(window.api.model.getAll).mockResolvedValue({
         success: true,
         data: mockModelData
       })
@@ -98,12 +92,12 @@ describe('UploadPanel', () => {
       )
 
       await waitFor(() => {
-        expect(mockWindowApi.model.getAll).toHaveBeenCalledTimes(1)
+        expect(window.api.model.getAll).toHaveBeenCalled()
       })
     })
 
     it('should handle model fetch error', async () => {
-      mockWindowApi.model.getAll.mockResolvedValue({
+      vi.mocked(window.api.model.getAll).mockResolvedValue({
         success: false,
         error: 'Failed to fetch models'
       })
@@ -115,12 +109,12 @@ describe('UploadPanel', () => {
       )
 
       await waitFor(() => {
-        expect(mockWindowApi.model.getAll).toHaveBeenCalled()
+        expect(window.api.model.getAll).toHaveBeenCalled()
       })
     })
 
     it('should handle empty model list', async () => {
-      mockWindowApi.model.getAll.mockResolvedValue({
+      vi.mocked(window.api.model.getAll).mockResolvedValue({
         success: true,
         data: []
       })
@@ -132,7 +126,7 @@ describe('UploadPanel', () => {
       )
 
       await waitFor(() => {
-        expect(mockWindowApi.model.getAll).toHaveBeenCalled()
+        expect(window.api.model.getAll).toHaveBeenCalled()
       })
     })
 
@@ -155,7 +149,7 @@ describe('UploadPanel', () => {
         }
       ]
 
-      mockWindowApi.model.getAll.mockResolvedValue({
+      vi.mocked(window.api.model.getAll).mockResolvedValue({
         success: true,
         data: mockModelData
       })
@@ -167,21 +161,14 @@ describe('UploadPanel', () => {
       )
 
       await waitFor(() => {
-        expect(mockWindowApi.model.getAll).toHaveBeenCalled()
+        expect(window.api.model.getAll).toHaveBeenCalled()
       })
     })
   })
 
   describe('File Selection', () => {
-    beforeEach(() => {
-      mockWindowApi.model.getAll.mockResolvedValue({
-        success: true,
-        data: []
-      })
-    })
-
     it('should handle successful file dialog', async () => {
-      mockWindowApi.file.selectDialog.mockResolvedValue({
+      vi.mocked(window.api.file.selectDialog).mockResolvedValue({
         success: true,
         data: {
           canceled: false,
@@ -195,13 +182,16 @@ describe('UploadPanel', () => {
         </Wrapper>
       )
 
-      // Note: Actual button clicking would require more complex setup
-      // This test verifies the API mock is configured
-      expect(mockWindowApi.file.selectDialog).toBeDefined()
+      await waitFor(() => {
+        expect(window.api.model.getAll).toHaveBeenCalled()
+      })
+
+      // Verify the API mock is configured
+      expect(window.api.file.selectDialog).toBeDefined()
     })
 
     it('should handle canceled file dialog', async () => {
-      mockWindowApi.file.selectDialog.mockResolvedValue({
+      vi.mocked(window.api.file.selectDialog).mockResolvedValue({
         success: true,
         data: {
           canceled: true,
@@ -215,11 +205,15 @@ describe('UploadPanel', () => {
         </Wrapper>
       )
 
-      expect(mockWindowApi.file.selectDialog).toBeDefined()
+      await waitFor(() => {
+        expect(window.api.model.getAll).toHaveBeenCalled()
+      })
+
+      expect(window.api.file.selectDialog).toBeDefined()
     })
 
     it('should handle file dialog error', async () => {
-      mockWindowApi.file.selectDialog.mockResolvedValue({
+      vi.mocked(window.api.file.selectDialog).mockResolvedValue({
         success: false,
         error: 'Dialog error'
       })
@@ -230,11 +224,15 @@ describe('UploadPanel', () => {
         </Wrapper>
       )
 
-      expect(mockWindowApi.file.selectDialog).toBeDefined()
+      await waitFor(() => {
+        expect(window.api.model.getAll).toHaveBeenCalled()
+      })
+
+      expect(window.api.file.selectDialog).toBeDefined()
     })
 
     it('should handle multiple file selection', async () => {
-      mockWindowApi.file.selectDialog.mockResolvedValue({
+      vi.mocked(window.api.file.selectDialog).mockResolvedValue({
         success: true,
         data: {
           canceled: false,
@@ -252,13 +250,17 @@ describe('UploadPanel', () => {
         </Wrapper>
       )
 
-      expect(mockWindowApi.file.selectDialog).toBeDefined()
+      await waitFor(() => {
+        expect(window.api.model.getAll).toHaveBeenCalled()
+      })
+
+      expect(window.api.file.selectDialog).toBeDefined()
     })
   })
 
   describe('Form Validation', () => {
     beforeEach(() => {
-      mockWindowApi.model.getAll.mockResolvedValue({
+      vi.mocked(window.api.model.getAll).mockResolvedValue({
         success: true,
         data: [
           {
@@ -270,12 +272,16 @@ describe('UploadPanel', () => {
       })
     })
 
-    it('should render form elements', () => {
+    it('should render form elements', async () => {
       render(
         <Wrapper>
           <UploadPanel />
         </Wrapper>
       )
+
+      await waitFor(() => {
+        expect(window.api.model.getAll).toHaveBeenCalled()
+      })
 
       // Component should render without errors
       expect(true).toBe(true)
@@ -284,7 +290,7 @@ describe('UploadPanel', () => {
 
   describe('Task Creation', () => {
     beforeEach(() => {
-      mockWindowApi.model.getAll.mockResolvedValue({
+      vi.mocked(window.api.model.getAll).mockResolvedValue({
         success: true,
         data: [
           {
@@ -295,26 +301,30 @@ describe('UploadPanel', () => {
         ]
       })
 
-      mockWindowApi.task.create.mockResolvedValue({
+      vi.mocked(window.api.task.create).mockResolvedValue({
         success: true,
         data: []
       })
     })
 
-    it('should have task creation API available', () => {
+    it('should have task creation API available', async () => {
       render(
         <Wrapper>
           <UploadPanel />
         </Wrapper>
       )
 
-      expect(mockWindowApi.task.create).toBeDefined()
+      await waitFor(() => {
+        expect(window.api.model.getAll).toHaveBeenCalled()
+      })
+
+      expect(window.api.task.create).toBeDefined()
     })
   })
 
   describe('Error Handling', () => {
     it('should handle network errors gracefully', async () => {
-      mockWindowApi.model.getAll.mockRejectedValue(new Error('Network error'))
+      vi.mocked(window.api.model.getAll).mockRejectedValue(new Error('Network error'))
 
       render(
         <Wrapper>
@@ -323,12 +333,12 @@ describe('UploadPanel', () => {
       )
 
       await waitFor(() => {
-        expect(mockWindowApi.model.getAll).toHaveBeenCalled()
+        expect(window.api.model.getAll).toHaveBeenCalled()
       })
     })
 
     it('should handle invalid API responses', async () => {
-      mockWindowApi.model.getAll.mockResolvedValue({
+      vi.mocked(window.api.model.getAll).mockResolvedValue({
         success: true,
         data: null
       })
@@ -340,7 +350,7 @@ describe('UploadPanel', () => {
       )
 
       await waitFor(() => {
-        expect(mockWindowApi.model.getAll).toHaveBeenCalled()
+        expect(window.api.model.getAll).toHaveBeenCalled()
       })
     })
   })

@@ -34,12 +34,33 @@ const mockWindowApi = {
   }
 }
 
-// @ts-expect-error - Mocking window.api
-global.window = {
-  api: mockWindowApi
-}
+// Only add the api property to window, don't overwrite the entire window object
+Object.defineProperty(window, 'api', {
+  value: mockWindowApi,
+  writable: true,
+  configurable: true
+})
+
+// Mock matchMedia for Ant Design components
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+})
 
 // Reset all mocks before each test
 beforeEach(() => {
   vi.clearAllMocks()
+  // Reset mock implementations with default resolved values
+  mockWindowApi.model.getAll.mockResolvedValue({ success: true, data: [] })
+  mockWindowApi.file.selectDialog.mockResolvedValue({ success: true, data: { canceled: true, filePaths: [] } })
+  mockWindowApi.task.create.mockResolvedValue({ success: true, data: [] })
 })

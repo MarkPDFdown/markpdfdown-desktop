@@ -23,7 +23,8 @@
     "test:unit": "vitest run --config vitest.config.ts",
     "test:renderer": "vitest run --config vitest.config.renderer.ts",
     "test:watch": "vitest watch",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "prepare": "husky"
   },
   "build": {
     "appId": "com.markpdfdown.desktop",
@@ -128,6 +129,7 @@
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^15.15.0",
+    "husky": "^9.1.7",
     "jsdom": "^25.0.1",
     "nodemon": "^3.1.9",
     "prisma": "^6.5.0",
