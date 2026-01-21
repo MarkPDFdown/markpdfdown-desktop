@@ -36,31 +36,60 @@ model Model {
 }
 
 model Task {
-  id         String  @unique
+  id         String   @unique
   filename   String
   type       String
   page_range String
-  pages      Int
+  pages      Int      @default(0)
   provider   Int
   model      String
   model_name String
-  progress   Int      @default(0)
-  status     Int      @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
 
+  // 进度和状态
+  progress        Int     @default(0)  // 0-100
+  status          Int     @default(1)  // TaskStatus
+  completed_count Int     @default(0)  // 已完成页面数
+  failed_count    Int     @default(0)  // 失败页面数
 
+  // Worker 追踪
+  worker_id String? // 当前处理的 worker ID
+
+  // 结果和错误
+  merged_path String? // 合并后的文件路径
+  error       String? // 错误信息
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([status, updatedAt])
 }
 
 model TaskDetail {
-  id          Int      @id @default(autoincrement())
-  task        String
-  page        Int
-  page_source Int
-  status      Int      @default(0)
-  provider    Int
-  model       String
-  content     String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id          Int    @id @default(autoincrement())
+  task        String // 关联 Task.id
+  page        Int    // 当前页码 (1-based)
+  page_source Int    // 原始 PDF 页码
+
+  // 状态和处理
+  status    Int     @default(0) // PageStatus
+  worker_id String? // 当前处理的 worker ID
+
+  // LLM 配置
+  provider Int
+  model    String
+
+  // 结果和错误
+  content     String  @default("") // 转换后的 Markdown
+  error       String? // 错误信息
+  retry_count Int     @default(0) // 重试次数
+
+  // 注意：不存储 image_path，图片路径通过 ImagePathUtil.getPath(task, page) 动态计算
+  // 格式：{tempDir}/{taskId}/page-{page}.png
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([task, status])
+  @@index([task, page])
 }

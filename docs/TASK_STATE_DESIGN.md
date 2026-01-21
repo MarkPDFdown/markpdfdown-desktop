@@ -274,9 +274,11 @@ model TaskDetail {
 
   // 结果和错误
   content     String   @default("")     // 转换后的 Markdown
-  image_path  String?                   // 页面图片路径
   error       String?                   // 错误信息
   retry_count Int      @default(0)      // 重试次数
+
+  // 注意：不存储 image_path，图片路径通过 ImagePathUtil.getPath(task, page) 动态计算
+  // 格式：{tempDir}/{taskId}/page-{page}.png
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -431,14 +433,14 @@ class SplitterWorker extends WorkerBase {
         // 2. 创建 TaskDetail 记录并更新状态（原子操作）
         await prisma.$transaction(async (tx) => {
           // 批量创建 TaskDetail
+          // 注意：不存储 image_path，图片路径通过 ImagePathUtil.getPath(task, page) 动态计算
           const details = pages.map(page => ({
             task: task.id,
             page: page.page,
-            page_source: page.page,
+            page_source: page.pageSource,
             status: PageStatus.PENDING,
             provider: task.provider,
             model: task.model,
-            image_path: page.imagePath,
             content: ''
           }));
           await tx.taskDetail.createMany({ data: details });
@@ -466,24 +468,14 @@ class SplitterWorker extends WorkerBase {
 
   /**
    * 拆分 PDF 为单页图片
+   * 详细实现参见 SPLITTER_WORKER_DESIGN.md
    */
   private async splitPDF(task: Task): Promise<PageInfo[]> {
-    // TODO: 实现 PDF 拆分逻辑
-    // 1. 读取 PDF 文件
-    // 2. 按页拆分为图片
-    // 3. 保存图片到临时目录
-    // 4. 返回页面信息数组
-
-    const pdfPath = path.join(UPLOAD_DIR, task.filename);
-    const outputDir = path.join(TEMP_DIR, task.id);
-
-    // 使用 pdf-lib 或其他库拆分
-    // 返回格式：
-    return [
-      { page: 1, imagePath: `${outputDir}/page-1.png` },
-      { page: 2, imagePath: `${outputDir}/page-2.png` },
-      // ...
-    ];
+    // 使用 SplitterFactory 获取对应的拆分器
+    const fileType = SplitterFactory.getFileType(task.filename);
+    const splitter = SplitterFactory.create(fileType);
+    const result = await splitter.split(task);
+    return result.pages;
   }
 }
 ```
@@ -565,12 +557,9 @@ class ConverterWorker extends WorkerBase {
    * 调用 LLM 转换页面为 Markdown
    */
   private async convertToMarkdown(page: TaskDetail): Promise<string> {
-    // TODO: 实现 LLM 调用逻辑
-    // 1. 读取页面图片
-    // 2. 调用对应的 LLM Client
-    // 3. 返回 Markdown 文本
-
-    const imageBase64 = await this.readImageAsBase64(page.image_path!);
+    // 动态计算图片路径，不从数据库读取
+    const imagePath = ImagePathUtil.getPath(page.task, page.page);
+    const imageBase64 = await this.readImageAsBase64(imagePath);
 
     // 根据 provider 选择 LLM Client
     const client = this.getLLMClient(page.provider, page.model);
