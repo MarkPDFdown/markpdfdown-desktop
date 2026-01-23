@@ -109,8 +109,13 @@ export class PDFSplitter implements ISplitter {
 
     return this.withRetry(async () => {
       // Convert all specified pages
+      // IMPORTANT: pdf-to-png-converter expects a RELATIVE path
+      // It will internally do: path.join(process.cwd(), outputFolder)
+      // So we must convert absolute path to relative path
+      const relativeOutputFolder = path.relative(process.cwd(), taskDir);
+
       const options: any = {
-        outputFolder: taskDir,
+        outputFolder: relativeOutputFolder,
         viewportScale: WORKER_CONFIG.splitter.viewportScale,
         strictPagesToProcess: false,
         verbosityLevel: 0,
