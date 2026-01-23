@@ -2,35 +2,53 @@ import { app } from "electron";
 import isDev from "electron-is-dev";
 import path from "path";
 import fs from "fs";
+
 // 获取上传目录
 const getUploadDir = () => {
-    // DEV目录
-    if (isDev) {
-      return path.join(process.cwd(), 'files');
-    }
-    // 打包目录
-    const userDataPath = app.getPath('userData');
-    return path.join(userDataPath, 'files');
-  };
+  // DEV目录
+  if (isDev) {
+    return path.join(process.cwd(), 'files');
+  }
+  // 打包目录
+  const userDataPath = app.getPath('userData');
+  return path.join(userDataPath, 'files');
+};
 
-// 删除任务对应的文件
-const deleteTaskFiles = (id: string) => {
-  const baseUploadDir = getUploadDir();
-  const uploadDir = path.join(baseUploadDir, id);
-  
-  // 检查路径是否存在
-  if (fs.existsSync(uploadDir)) {
-    // 如果是目录，使用递归删除
-    if (fs.lstatSync(uploadDir).isDirectory()) {
-      fs.rmSync(uploadDir, { recursive: true, force: true });
+// 获取临时目录
+const getTempDir = () => {
+  // DEV目录
+  if (isDev) {
+    return path.join(process.cwd(), 'temp');
+  }
+  // 打包目录
+  const userDataPath = app.getPath('userData');
+  return path.join(userDataPath, 'temp');
+};
+
+// 删除单个目录或文件
+const deleteDirectory = (dirPath: string) => {
+  if (fs.existsSync(dirPath)) {
+    if (fs.lstatSync(dirPath).isDirectory()) {
+      fs.rmSync(dirPath, { recursive: true, force: true });
     } else {
-      // 如果是文件，使用unlinkSync
-      fs.unlinkSync(uploadDir);
+      fs.unlinkSync(dirPath);
     }
   }
-}; 
+};
+
+// 删除任务对应的所有文件（包括上传文件和临时文件）
+const deleteTaskFiles = (id: string) => {
+  // 删除上传目录 (files/{taskId})
+  const uploadDir = path.join(getUploadDir(), id);
+  deleteDirectory(uploadDir);
+
+  // 删除临时目录 (temp/{taskId})
+  const tempDir = path.join(getTempDir(), id);
+  deleteDirectory(tempDir);
+};
 
 export default {
   getUploadDir,
+  getTempDir,
   deleteTaskFiles,
 };

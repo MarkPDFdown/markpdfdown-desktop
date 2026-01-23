@@ -46,10 +46,10 @@ model Task {
   model_name String
 
   // 进度和状态
-  progress        Int     @default(0)  // 0-100
-  status          Int     @default(1)  // TaskStatus
-  completed_count Int     @default(0)  // 已完成页面数
-  failed_count    Int     @default(0)  // 失败页面数
+  progress        Int     @default(0)   // 0-100
+  status          Int     @default(-1)  // TaskStatus (CREATED)
+  completed_count Int     @default(0)   // 已完成页面数
+  failed_count    Int     @default(0)   // 失败页面数
 
   // Worker 追踪
   worker_id String? // 当前处理的 worker ID

@@ -253,7 +253,7 @@ export function registerIpcHandlers() {
           ...task,
           id: uuidv4(),
           progress: 0,
-          status: 1, // 待处理
+          status: -1, // CREATED - 等待文件上传
         }));
 
         const createdTasks = await taskDal.createTasks(tasksWithId);
@@ -377,9 +377,7 @@ export function registerIpcHandlers() {
 
         // 获取文件信息
         const fileName = path.basename(filePath);
-        const extname = path.extname(fileName);
-        const savedName = taskId + extname;
-        const destPath = path.join(uploadDir, savedName);
+        const destPath = path.join(uploadDir, fileName);
 
         // 复制文件
         fs.copyFileSync(filePath, destPath);
@@ -389,7 +387,7 @@ export function registerIpcHandlers() {
 
         const fileInfo = {
           originalName: fileName,
-          savedName: savedName,
+          savedName: fileName,
           path: destPath,
           size: stats.size,
           taskId: taskId,
@@ -432,9 +430,7 @@ export function registerIpcHandlers() {
 
           // 获取文件信息
           const fileName = path.basename(filePath);
-          const extname = path.extname(fileName);
-          const savedName = taskId + extname;
-          const destPath = path.join(uploadDir, savedName);
+          const destPath = path.join(uploadDir, fileName);
 
           // 复制文件
           fs.copyFileSync(filePath, destPath);
@@ -444,7 +440,7 @@ export function registerIpcHandlers() {
 
           uploadResults.push({
             originalName: fileName,
-            savedName: savedName,
+            savedName: fileName,
             path: destPath,
             size: stats.size,
             taskId: taskId,

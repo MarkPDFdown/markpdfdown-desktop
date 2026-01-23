@@ -400,7 +400,7 @@ describe('IPC Handlers', () => {
           data: createdTasks
         })
         expect(mockTaskDal.createTasks).toHaveBeenCalledWith([
-          { file: 'test.pdf', model: 'gpt-4o', id: 'test-uuid-123', progress: 0, status: 1 }
+          { file: 'test.pdf', model: 'gpt-4o', id: 'test-uuid-123', progress: 0, status: -1 }
         ])
       })
 
