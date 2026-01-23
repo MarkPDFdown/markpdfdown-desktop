@@ -13,7 +13,22 @@ vi.mock('../../db/index.js', () => ({
   },
 }));
 
+// Mock EventBus
+vi.mock('../../events/EventBus.js', () => ({
+  eventBus: {
+    emitTaskEvent: vi.fn(),
+    onTaskEvent: vi.fn(),
+  },
+  TaskEventType: {
+    TASK_UPDATED: 'task:updated',
+    TASK_STATUS_CHANGED: 'task:status_changed',
+    TASK_PROGRESS_CHANGED: 'task:progress_changed',
+    TASK_DELETED: 'task:deleted',
+  },
+}));
+
 import { prisma } from '../../db/index.js';
+import { eventBus, TaskEventType } from '../../events/EventBus.js';
 
 // Concrete implementation for testing
 class TestWorker extends WorkerBase {
@@ -141,6 +156,85 @@ describe('WorkerBase', () => {
       await worker['claimTask'](TaskStatus.PENDING, TaskStatus.SPLITTING);
       expect(updateCalled).toBe(true);
     });
+
+    it('should emit TASK_UPDATED event when claiming task', async () => {
+      const mockTask = {
+        id: 'task123',
+        status: TaskStatus.SPLITTING,
+        worker_id: worker.getWorkerId(),
+      };
+
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback) => {
+        const tx = {
+          task: {
+            findFirst: vi.fn().mockResolvedValue({ id: 'task123' }),
+            update: vi.fn().mockResolvedValue(mockTask),
+          },
+        };
+        return callback(tx as any);
+      });
+
+      await worker['claimTask'](TaskStatus.PENDING, TaskStatus.SPLITTING);
+
+      expect(eventBus.emitTaskEvent).toHaveBeenCalledWith(
+        TaskEventType.TASK_UPDATED,
+        expect.objectContaining({
+          taskId: 'task123',
+          task: mockTask,
+        })
+      );
+    });
+
+    it('should emit TASK_STATUS_CHANGED event when claiming task', async () => {
+      const mockTask = {
+        id: 'task123',
+        status: TaskStatus.SPLITTING,
+      };
+
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback) => {
+        const tx = {
+          task: {
+            findFirst: vi.fn().mockResolvedValue({ id: 'task123' }),
+            update: vi.fn().mockResolvedValue(mockTask),
+          },
+        };
+        return callback(tx as any);
+      });
+
+      await worker['claimTask'](TaskStatus.PENDING, TaskStatus.SPLITTING);
+
+      expect(eventBus.emitTaskEvent).toHaveBeenCalledWith(
+        TaskEventType.TASK_STATUS_CHANGED,
+        expect.objectContaining({
+          taskId: 'task123',
+          task: { status: TaskStatus.SPLITTING },
+        })
+      );
+    });
+
+    it('should not emit events when no task available', async () => {
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback) => {
+        const tx = {
+          task: {
+            findFirst: vi.fn().mockResolvedValue(null),
+            update: vi.fn(),
+          },
+        };
+        return callback(tx as any);
+      });
+
+      await worker['claimTask'](TaskStatus.PENDING, TaskStatus.SPLITTING);
+
+      expect(eventBus.emitTaskEvent).not.toHaveBeenCalled();
+    });
+
+    it('should not emit events when transaction fails', async () => {
+      vi.mocked(prisma.$transaction).mockRejectedValue(new Error('Database error'));
+
+      await worker['claimTask'](TaskStatus.PENDING, TaskStatus.SPLITTING);
+
+      expect(eventBus.emitTaskEvent).not.toHaveBeenCalled();
+    });
   });
 
   describe('updateTaskStatus()', () => {
@@ -184,6 +278,103 @@ describe('WorkerBase', () => {
       await expect(
         worker['updateTaskStatus']('task123', TaskStatus.PROCESSING)
       ).rejects.toThrow('Update failed');
+    });
+
+    it('should emit TASK_UPDATED event when updating status', async () => {
+      const updatedTask = {
+        id: 'task123',
+        status: TaskStatus.PROCESSING,
+      };
+
+      vi.mocked(prisma.task.update).mockResolvedValue(updatedTask as any);
+
+      await worker['updateTaskStatus']('task123', TaskStatus.PROCESSING);
+
+      expect(eventBus.emitTaskEvent).toHaveBeenCalledWith(
+        TaskEventType.TASK_UPDATED,
+        expect.objectContaining({
+          taskId: 'task123',
+          task: updatedTask,
+        })
+      );
+    });
+
+    it('should emit TASK_STATUS_CHANGED event when status changes', async () => {
+      vi.mocked(prisma.task.update).mockResolvedValue({
+        id: 'task123',
+        status: TaskStatus.COMPLETED,
+      } as any);
+
+      await worker['updateTaskStatus']('task123', TaskStatus.COMPLETED);
+
+      expect(eventBus.emitTaskEvent).toHaveBeenCalledWith(
+        TaskEventType.TASK_STATUS_CHANGED,
+        expect.objectContaining({
+          taskId: 'task123',
+          task: { status: TaskStatus.COMPLETED },
+        })
+      );
+    });
+
+    it('should emit TASK_PROGRESS_CHANGED event when progress changes', async () => {
+      vi.mocked(prisma.task.update).mockResolvedValue({
+        id: 'task123',
+        progress: 75,
+      } as any);
+
+      await worker['updateTaskStatus']('task123', TaskStatus.PROCESSING, {
+        progress: 75,
+      });
+
+      expect(eventBus.emitTaskEvent).toHaveBeenCalledWith(
+        TaskEventType.TASK_PROGRESS_CHANGED,
+        expect.objectContaining({
+          taskId: 'task123',
+          task: { progress: 75 },
+        })
+      );
+    });
+
+    it('should emit multiple events when both status and progress change', async () => {
+      vi.mocked(prisma.task.update).mockResolvedValue({
+        id: 'task123',
+        status: TaskStatus.PROCESSING,
+        progress: 50,
+      } as any);
+
+      await worker['updateTaskStatus']('task123', TaskStatus.PROCESSING, {
+        progress: 50,
+      });
+
+      // Should emit TASK_UPDATED, TASK_STATUS_CHANGED, and TASK_PROGRESS_CHANGED
+      expect(eventBus.emitTaskEvent).toHaveBeenCalledTimes(3);
+      expect(eventBus.emitTaskEvent).toHaveBeenCalledWith(
+        TaskEventType.TASK_UPDATED,
+        expect.any(Object)
+      );
+      expect(eventBus.emitTaskEvent).toHaveBeenCalledWith(
+        TaskEventType.TASK_STATUS_CHANGED,
+        expect.any(Object)
+      );
+      expect(eventBus.emitTaskEvent).toHaveBeenCalledWith(
+        TaskEventType.TASK_PROGRESS_CHANGED,
+        expect.any(Object)
+      );
+    });
+
+    it('should not emit TASK_PROGRESS_CHANGED when progress is not provided', async () => {
+      vi.mocked(prisma.task.update).mockResolvedValue({
+        id: 'task123',
+        status: TaskStatus.PROCESSING,
+      } as any);
+
+      await worker['updateTaskStatus']('task123', TaskStatus.PROCESSING);
+
+      // Should only emit TASK_UPDATED and TASK_STATUS_CHANGED
+      const progressCalls = vi.mocked(eventBus.emitTaskEvent).mock.calls.filter(
+        (call) => call[0] === TaskEventType.TASK_PROGRESS_CHANGED
+      );
+      expect(progressCalls).toHaveLength(0);
     });
   });
 
@@ -237,6 +428,70 @@ describe('WorkerBase', () => {
       await expect(
         worker['handleError']('task123', new Error('Original error'))
       ).resolves.toBeUndefined();
+    });
+
+    it('should emit TASK_UPDATED event when handling error', async () => {
+      const updatedTask = {
+        id: 'task123',
+        status: TaskStatus.FAILED,
+        error: 'Test error',
+      };
+
+      vi.mocked(prisma.task.update).mockResolvedValue(updatedTask as any);
+
+      await worker['handleError']('task123', new Error('Test error'));
+
+      expect(eventBus.emitTaskEvent).toHaveBeenCalledWith(
+        TaskEventType.TASK_UPDATED,
+        expect.objectContaining({
+          taskId: 'task123',
+          task: updatedTask,
+        })
+      );
+    });
+
+    it('should emit TASK_STATUS_CHANGED event when handling error', async () => {
+      vi.mocked(prisma.task.update).mockResolvedValue({
+        id: 'task123',
+        status: TaskStatus.FAILED,
+      } as any);
+
+      await worker['handleError']('task123', new Error('Test error'));
+
+      expect(eventBus.emitTaskEvent).toHaveBeenCalledWith(
+        TaskEventType.TASK_STATUS_CHANGED,
+        expect.objectContaining({
+          taskId: 'task123',
+          task: { status: TaskStatus.FAILED },
+        })
+      );
+    });
+
+    it('should emit events even when error update fails', async () => {
+      vi.mocked(prisma.task.update).mockRejectedValue(new Error('Update failed'));
+
+      await worker['handleError']('task123', new Error('Original error'));
+
+      // Should not emit events if database update fails
+      expect(eventBus.emitTaskEvent).not.toHaveBeenCalled();
+    });
+
+    it('should include timestamp in emitted events', async () => {
+      vi.mocked(prisma.task.update).mockResolvedValue({
+        id: 'task123',
+        status: TaskStatus.FAILED,
+      } as any);
+
+      const beforeTime = Date.now();
+      await worker['handleError']('task123', new Error('Test'));
+      const afterTime = Date.now();
+
+      const calls = vi.mocked(eventBus.emitTaskEvent).mock.calls;
+      calls.forEach((call) => {
+        const eventData = call[1];
+        expect(eventData.timestamp).toBeGreaterThanOrEqual(beforeTime);
+        expect(eventData.timestamp).toBeLessThanOrEqual(afterTime);
+      });
     });
   });
 
