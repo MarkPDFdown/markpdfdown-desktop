@@ -44,7 +44,7 @@ export class PDFSplitter implements ISplitter {
 
     try {
       // Step 1: Get total page count with retry
-      const totalPages = await this.getPDFPageCountWithRetry(sourcePath);
+      const totalPages = await this.getPDFPageCountWithRetry(sourcePath, taskId);
 
       // Step 2: Parse page range (defaults to all pages if not specified)
       const pageNumbers = PageRangeParser.parse(task.page_range, totalPages);
@@ -64,11 +64,15 @@ export class PDFSplitter implements ISplitter {
   /**
    * Get PDF page count with retry logic.
    */
-  private async getPDFPageCountWithRetry(pdfPath: string): Promise<number> {
+  private async getPDFPageCountWithRetry(pdfPath: string, taskId: string): Promise<number> {
     return this.withRetry(async () => {
+      // Use task's split directory for temporary output
+      const taskDir = ImagePathUtil.getTaskDir(taskId);
+      await fs.mkdir(taskDir, { recursive: true });
+
       // Convert first page to get metadata
       const result = await pdfToPng(pdfPath, {
-        outputFolder: ImagePathUtil.getUploadsDir()!,
+        outputFolder: taskDir,
         viewportScale: WORKER_CONFIG.splitter.viewportScale,
         pagesToProcess: [1], // Array of page numbers, not a number
         strictPagesToProcess: false,
@@ -77,6 +81,13 @@ export class PDFSplitter implements ISplitter {
 
       if (!result || result.length === 0) {
         throw new Error('Failed to get PDF metadata');
+      }
+
+      // Clean up the temporary file (we only need the page count)
+      if (result[0].path) {
+        await fs.unlink(result[0].path).catch(() => {
+          // Ignore cleanup errors
+        });
       }
 
       // The library returns page info with total page count

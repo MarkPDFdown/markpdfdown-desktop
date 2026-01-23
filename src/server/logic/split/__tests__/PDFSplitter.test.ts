@@ -15,6 +15,7 @@ vi.mock('fs', () => ({
     mkdir: vi.fn(),
     rename: vi.fn(),
     rm: vi.fn(),
+    unlink: vi.fn(),
   },
 }));
 
@@ -60,6 +61,7 @@ describe('PDFSplitter', () => {
 
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
       vi.mocked(fs.rename).mockResolvedValue(undefined);
+      vi.mocked(fs.unlink).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
@@ -90,6 +92,7 @@ describe('PDFSplitter', () => {
 
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
       vi.mocked(fs.rename).mockResolvedValue(undefined);
+      vi.mocked(fs.unlink).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
@@ -117,6 +120,7 @@ describe('PDFSplitter', () => {
 
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
       vi.mocked(fs.rename).mockResolvedValue(undefined);
+      vi.mocked(fs.unlink).mockResolvedValue(undefined);
 
       await splitter.split(task);
 
@@ -232,6 +236,7 @@ describe('PDFSplitter', () => {
 
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
       vi.mocked(fs.rename).mockResolvedValue(undefined);
+      vi.mocked(fs.unlink).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
@@ -289,6 +294,7 @@ describe('PDFSplitter', () => {
 
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
       vi.mocked(fs.rename).mockResolvedValue(undefined);
+      vi.mocked(fs.unlink).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
@@ -318,6 +324,7 @@ describe('PDFSplitter', () => {
       vi.mocked(pdfToPng).mockResolvedValueOnce(pages);
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
       vi.mocked(fs.rename).mockResolvedValue(undefined);
+      vi.mocked(fs.unlink).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
