@@ -89,10 +89,10 @@ describe('PDFSplitter', () => {
         page_range: '1,3',
       };
 
-      // Mock pdfToPng to return page count
-      vi.mocked(pdfToPng).mockResolvedValueOnce([
-        { pageCount: 5, path: '/tmp/page-1.png', name: 'page-1.png', page: 1, content: Buffer.from('') },
-      ]);
+      // Mock PDF with 5 pages
+      vi.mocked(PDFDocument.load).mockResolvedValueOnce({
+        getPageCount: () => 5,
+      } as any);
 
       // Mock pdfToPng to return selected pages
       vi.mocked(pdfToPng).mockResolvedValueOnce([
@@ -102,7 +102,6 @@ describe('PDFSplitter', () => {
 
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
       vi.mocked(fs.rename).mockResolvedValue(undefined);
-      vi.mocked(fs.unlink).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
@@ -119,9 +118,10 @@ describe('PDFSplitter', () => {
         page_range: '',
       };
 
-      vi.mocked(pdfToPng).mockResolvedValueOnce([
-        { pageCount: 2, path: '/tmp/page-1.png', name: 'page-1.png', page: 1, content: Buffer.from('') },
-      ]);
+      // Mock PDF with 2 pages
+      vi.mocked(PDFDocument.load).mockResolvedValueOnce({
+        getPageCount: () => 2,
+      } as any);
 
       vi.mocked(pdfToPng).mockResolvedValueOnce([
         { path: '/tmp/temp-1.png', name: 'temp-1.png', page: 1, content: Buffer.from('') },
@@ -130,7 +130,6 @@ describe('PDFSplitter', () => {
 
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
       vi.mocked(fs.rename).mockResolvedValue(undefined);
-      vi.mocked(fs.unlink).mockResolvedValue(undefined);
 
       await splitter.split(task);
 
@@ -168,7 +167,7 @@ describe('PDFSplitter', () => {
         page_range: '',
       };
 
-      vi.mocked(pdfToPng).mockRejectedValueOnce(new Error('PDF is password protected'));
+      vi.mocked(PDFDocument.load).mockRejectedValueOnce(new Error('PDF is password protected'));
 
       await expect(splitter.split(task)).rejects.toThrow(/Cannot process password-protected PDF/);
     });
@@ -180,7 +179,7 @@ describe('PDFSplitter', () => {
         page_range: '',
       };
 
-      vi.mocked(pdfToPng).mockRejectedValueOnce(new Error('Invalid PDF structure'));
+      vi.mocked(PDFDocument.load).mockRejectedValueOnce(new Error('Invalid PDF structure'));
 
       await expect(splitter.split(task)).rejects.toThrow(/PDF file appears to be corrupted/);
     });
@@ -192,8 +191,8 @@ describe('PDFSplitter', () => {
         page_range: '',
       };
 
-      // Mock all retry attempts with the same error
-      vi.mocked(pdfToPng).mockRejectedValue(new Error('ENOENT: no such file'));
+      // Mock fs.readFile to throw file not found error
+      vi.mocked(fs.readFile).mockRejectedValue(new Error('ENOENT: no such file'));
 
       await expect(splitter.split(task)).rejects.toThrow(/PDF file not found/);
     });
@@ -233,26 +232,25 @@ describe('PDFSplitter', () => {
         page_range: '',
       };
 
-      // First call: fail with transient error
-      // Second call: succeed
-      vi.mocked(pdfToPng)
+      // Mock PDF with 1 page
+      vi.mocked(PDFDocument.load)
         .mockRejectedValueOnce(new Error('Network timeout'))
-        .mockResolvedValueOnce([
-          { pageCount: 1, path: '/tmp/page-1.png', name: 'page-1.png', page: 1, content: Buffer.from('') },
-        ])
-        .mockResolvedValueOnce([
-          { path: '/tmp/page-1.png', name: 'page-1.png', page: 1, content: Buffer.from('') },
-        ]);
+        .mockResolvedValueOnce({
+          getPageCount: () => 1,
+        } as any);
+
+      vi.mocked(pdfToPng).mockResolvedValueOnce([
+        { path: '/tmp/page-1.png', name: 'page-1.png', page: 1, content: Buffer.from('') },
+      ]);
 
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
       vi.mocked(fs.rename).mockResolvedValue(undefined);
-      vi.mocked(fs.unlink).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
       expect(result.totalPages).toBe(1);
-      // pdfToPng should have been called at least twice (once failed, once succeeded)
-      expect(pdfToPng).toHaveBeenCalledTimes(3); // 1 failed + 1 success for pageCount + 1 for pages
+      // PDFDocument.load should have been called twice (once failed, once succeeded)
+      expect(PDFDocument.load).toHaveBeenCalledTimes(2);
     });
 
     it('should not retry password errors', async () => {
@@ -262,12 +260,12 @@ describe('PDFSplitter', () => {
         page_range: '',
       };
 
-      vi.mocked(pdfToPng).mockRejectedValue(new Error('password required'));
+      vi.mocked(PDFDocument.load).mockRejectedValue(new Error('password required'));
 
       await expect(splitter.split(task)).rejects.toThrow();
 
       // Should only be called once (no retry)
-      expect(pdfToPng).toHaveBeenCalledTimes(1);
+      expect(PDFDocument.load).toHaveBeenCalledTimes(1);
     });
 
     it('should not retry encrypted PDF errors', async () => {
@@ -277,12 +275,12 @@ describe('PDFSplitter', () => {
         page_range: '',
       };
 
-      vi.mocked(pdfToPng).mockRejectedValue(new Error('PDF is encrypted'));
+      vi.mocked(PDFDocument.load).mockRejectedValue(new Error('PDF is encrypted'));
 
       await expect(splitter.split(task)).rejects.toThrow();
 
       // Should only be called once (no retry)
-      expect(pdfToPng).toHaveBeenCalledTimes(1);
+      expect(PDFDocument.load).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -294,9 +292,10 @@ describe('PDFSplitter', () => {
         page_range: '',
       };
 
-      vi.mocked(pdfToPng).mockResolvedValueOnce([
-        { pageCount: 1, path: '/tmp/page-1.png', name: 'page-1.png', page: 1, content: Buffer.from('') },
-      ]);
+      // Mock PDF with 1 page
+      vi.mocked(PDFDocument.load).mockResolvedValueOnce({
+        getPageCount: () => 1,
+      } as any);
 
       vi.mocked(pdfToPng).mockResolvedValueOnce([
         { path: '/tmp/page-1.png', name: 'page-1.png', page: 1, content: Buffer.from('') },
@@ -304,7 +303,6 @@ describe('PDFSplitter', () => {
 
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
       vi.mocked(fs.rename).mockResolvedValue(undefined);
-      vi.mocked(fs.unlink).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
@@ -319,9 +317,10 @@ describe('PDFSplitter', () => {
         page_range: '1-100',
       };
 
-      vi.mocked(pdfToPng).mockResolvedValueOnce([
-        { pageCount: 200, path: '/tmp/page-1.png', name: 'page-1.png', page: 1, content: Buffer.from('') },
-      ]);
+      // Mock PDF with 200 pages
+      vi.mocked(PDFDocument.load).mockResolvedValueOnce({
+        getPageCount: () => 200,
+      } as any);
 
       // Mock 100 pages
       const pages = Array.from({ length: 100 }, (_, i) => ({
@@ -334,7 +333,6 @@ describe('PDFSplitter', () => {
       vi.mocked(pdfToPng).mockResolvedValueOnce(pages);
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
       vi.mocked(fs.rename).mockResolvedValue(undefined);
-      vi.mocked(fs.unlink).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
