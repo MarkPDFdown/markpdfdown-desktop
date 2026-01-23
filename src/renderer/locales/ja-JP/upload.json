@@ -1,6 +1,6 @@
 {
   "dragger": {
-    "text": "下のボタンでファイルを選択してください",
+    "text": "ここにファイルをドラッグするか、下のボタンでファイルを選択してください",
     "hint": "PDF/JPG/PNG/BMPファイルの単一または一括アップロードに対応",
     "button": "ファイルを選択"
   },
@@ -21,6 +21,8 @@
     "upload_failed": "アップロードに失敗しました: {{filename}}",
     "update_status_failed": "タスクのステータス更新に失敗しました: {{filename}}",
     "tasks_created": "{{count}}件のタスクが作成されました",
-    "upload_error": "アップロードに失敗しました"
+    "upload_error": "アップロードに失敗しました",
+    "invalid_file_type": "ファイル {{filename}} は有効なPDFファイルではありません",
+    "invalid_file_path": "ファイル {{filename}} のパスを取得できません"
   }
 }

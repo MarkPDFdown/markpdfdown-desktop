@@ -55,6 +55,8 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("file:upload", taskId, filePath),
     uploadMultiple: (taskId: string, filePaths: string[]) =>
       ipcRenderer.invoke("file:uploadMultiple", taskId, filePaths),
+    uploadFileContent: (taskId: string, fileName: string, fileBuffer: ArrayBuffer) =>
+      ipcRenderer.invoke("file:uploadFileContent", taskId, fileName, fileBuffer),
     getImagePath: (taskId: string, page: number) =>
       ipcRenderer.invoke("file:getImagePath", taskId, page),
     downloadMarkdown: (taskId: string) =>

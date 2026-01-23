@@ -47,13 +47,21 @@ interface WindowAPI {
   task: {
     create: (tasks: any[]) => Promise<any>;
     getAll: (params: { page: number; pageSize: number }) => Promise<any>;
+    getById: (id: string) => Promise<any>;
     update: (id: string, data: any) => Promise<any>;
     delete: (id: string) => Promise<any>;
+  };
+  taskDetail: {
+    getByPage: (taskId: string, page: number) => Promise<any>;
+    getAllByTask: (taskId: string) => Promise<any>;
   };
   file: {
     selectDialog: () => Promise<any>;
     upload: (taskId: string, filePath: string) => Promise<any>;
     uploadMultiple: (taskId: string, filePaths: string[]) => Promise<any>;
+    uploadFileContent: (taskId: string, fileName: string, fileBuffer: ArrayBuffer) => Promise<any>;
+    getImagePath: (taskId: string, page: number) => Promise<any>;
+    downloadMarkdown: (taskId: string) => Promise<any>;
   };
   completion: {
     markImagedown: (providerId: number, modelId: string, url: string) => Promise<any>;

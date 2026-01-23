@@ -138,14 +138,34 @@ const UploadPanel: React.FC = () => {
       newFileList.splice(index, 1);
       setFileList(newFileList);
     },
-    beforeUpload: () => {
-      // 阻止默认上传行为，使用自定义文件对话框
+    beforeUpload: (file) => {
+      // 检查文件类型
+      const isPDF = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+
+      if (!isPDF) {
+        message.error(t('messages.invalid_file_type', { filename: file.name }));
+        return Upload.LIST_IGNORE;
+      }
+
+      // 将拖放的文件添加到文件列表
+      const newFile: UploadFile = {
+        uid: `${Date.now()}-${Math.random()}`,
+        name: file.name,
+        status: "done",
+        // 存储原始文件对象用于后续处理
+        originFileObj: file as any,
+      };
+
+      // 使用函数式 setState 确保正确处理多文件上传
+      setFileList((prevList) => [...prevList, newFile]);
+
+      // 阻止默认上传行为，我们将自己处理文件上传
       return false;
     },
     fileList,
     showUploadList: true,
-    // 禁用拖拽和点击上传，使用自定义按钮触发文件对话框
-    openFileDialogOnClick: false,
+    accept: '.pdf',
+    multiple: true,
   };
 
   // 处理开始转换按钮点击
@@ -209,40 +229,56 @@ const UploadPanel: React.FC = () => {
         const file = fileList[i];
         const task = createdTasks[i];
 
-        if (file.url && task.id) {
-          try {
-            // 使用新的 IPC API 上传文件
-            const uploadResult = await window.api.file.upload(
+        if (!task.id) {
+          continue;
+        }
+
+        try {
+          let uploadResult;
+
+          // 区分文件来源：通过对话框选择的文件有 url 属性（文件路径）
+          if (file.url) {
+            // 使用文件路径上传（文件对话框选择）
+            uploadResult = await window.api.file.upload(task.id, file.url);
+          } else if (file.originFileObj) {
+            // 使用文件内容上传（拖放上传）
+            const fileContent = await file.originFileObj.arrayBuffer();
+            uploadResult = await window.api.file.uploadFileContent(
               task.id,
-              file.url,
+              file.name,
+              fileContent,
             );
+          } else {
+            message.error(t('messages.invalid_file_path', { filename: file.name }));
+            await window.api.task.delete(task.id);
+            continue;
+          }
 
-            if (uploadResult.success) {
-              // 修改任务状态为待处理
-              const updateResult = await window.api.task.update(task.id, {
-                status: 1,
-              });
+          if (uploadResult.success) {
+            // 修改任务状态为待处理
+            const updateResult = await window.api.task.update(task.id, {
+              status: 1,
+            });
 
-              if (updateResult.success) {
-                successCount++;
-              } else {
-                message.error(t('messages.update_status_failed', { filename: file.name }));
-                // 删除任务
-                await window.api.task.delete(task.id);
-              }
+            if (updateResult.success) {
+              successCount++;
             } else {
-              message.error(
-                t('messages.upload_failed', { filename: file.name }) + `: ${uploadResult.error || "Unknown error"}`,
-              );
+              message.error(t('messages.update_status_failed', { filename: file.name }));
               // 删除任务
               await window.api.task.delete(task.id);
             }
-          } catch (error) {
-            console.error(`上传文件 ${file.name} 出错:`, error);
-            message.error(t('messages.upload_failed', { filename: file.name }));
+          } else {
+            message.error(
+              t('messages.upload_failed', { filename: file.name }) + `: ${uploadResult.error || "Unknown error"}`,
+            );
             // 删除任务
             await window.api.task.delete(task.id);
           }
+        } catch (error) {
+          console.error(`上传文件 ${file.name} 出错:`, error);
+          message.error(t('messages.upload_failed', { filename: file.name }));
+          // 删除任务
+          await window.api.task.delete(task.id);
         }
       }
 

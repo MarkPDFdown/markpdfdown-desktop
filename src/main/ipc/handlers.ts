@@ -655,6 +655,51 @@ export function registerIpcHandlers() {
     }
   );
 
+  /**
+   * 文件内容上传（用于拖放上传）
+   */
+  ipcMain.handle(
+    "file:uploadFileContent",
+    async (_, taskId: string, fileName: string, fileBuffer: ArrayBuffer): Promise<IpcResponse> => {
+      try {
+        if (!taskId || !fileName || !fileBuffer) {
+          return { success: false, error: "任务ID、文件名和文件内容不能为空" };
+        }
+
+        const baseUploadDir = fileLogic.getUploadDir();
+        const uploadDir = path.join(baseUploadDir, taskId);
+
+        // 确保目录存在
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+
+        // 构建目标路径
+        const destPath = path.join(uploadDir, fileName);
+
+        // 将 ArrayBuffer 转换为 Buffer 并写入文件
+        const buffer = Buffer.from(fileBuffer);
+        fs.writeFileSync(destPath, buffer);
+
+        // 获取文件信息
+        const stats = fs.statSync(destPath);
+
+        const fileInfo = {
+          originalName: fileName,
+          savedName: fileName,
+          path: destPath,
+          size: stats.size,
+          taskId: taskId,
+        };
+
+        return { success: true, data: fileInfo };
+      } catch (error: any) {
+        console.error("[IPC] file:uploadFileContent error:", error);
+        return { success: false, error: error.message };
+      }
+    }
+  );
+
   // ==================== Completion Handlers ====================
 
   /**

@@ -1,6 +1,6 @@
 {
   "dragger": {
-    "text": "انقر على الزر أدناه لتحديد الملفات",
+    "text": "اسحب الملفات هنا أو انقر على الزر أدناه لتحديد الملفات",
     "hint": "يدعم التحميل الفردي أو الدفعي لملفات PDF/JPG/PNG/BMP",
     "button": "تحديد الملفات"
   },
@@ -21,6 +21,8 @@
     "upload_failed": "فشل التحميل: {{filename}}",
     "update_status_failed": "فشل في تحديث حالة المهمة: {{filename}}",
     "tasks_created": "تم إنشاء {{count}} مهمة(ات)",
-    "upload_error": "فشل التحميل"
+    "upload_error": "فشل التحميل",
+    "invalid_file_type": "الملف {{filename}} ليس ملف PDF صالح",
+    "invalid_file_path": "تعذر الحصول على مسار الملف {{filename}}"
   }
 }
