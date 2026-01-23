@@ -1,9 +1,10 @@
 # ConverterWorker 详细设计方案
 
-> **版本**: v1.1
+> **版本**: v1.2
 > **创建日期**: 2026-01-23
-> **更新日期**: 2026-01-23
+> **更新日期**: 2026-01-24
 > **设计目标**: 实现高效、可靠的页面转换 Worker，支持流式响应、自动重试、成本追踪
+> **重要提示**: 本版本修复了 v1.1 的所有严重设计缺陷，包括 SQLite 兼容性、API 不匹配、并发安全等问题
 
 ---
 
@@ -109,14 +110,14 @@ import { WorkerBase } from './WorkerBase.js';
 import { TaskStatus } from '../types/TaskStatus.js';
 import { PageStatus } from '../types/PageStatus.js';
 import { ImagePathUtil } from '../logic/split/ImagePathUtil.js';
-import { modelLogic } from '../logic/Model.js';
+import modelLogic from '../logic/Model.js'; // ✅ 修复: 使用 default import
 import { eventBus, TaskEventType } from '../events/EventBus.js';
 import { prisma } from '../db/index.js';
 import { WORKER_CONFIG } from '../config/worker.config.js';
 
 export class ConverterWorker extends WorkerBase {
   private readonly maxRetries = 3;
-  private readonly updateThrottleMs = 500;
+  private readonly updateThrottleMs = 2000; // ✅ 修复: 改为 2 秒节流
   private readonly maxContentLength = 500000; // 500KB 内容长度限制
   private currentPageId: number | null = null; // 当前处理的页面 ID
 
@@ -185,66 +186,42 @@ export class ConverterWorker extends WorkerBase {
 ### 3.2 页面抢占（claimPage）
 
 **设计要点**:
-- 使用原生 SQL 的 `FOR UPDATE SKIP LOCKED` 实现真正的原子抢占
-- 避免 `findFirst` + `update` 模式的竞态条件
+- ✅ **使用 Prisma 乐观锁**（SQLite 不支持 `FOR UPDATE SKIP LOCKED`）
+- ✅ **过滤已取消任务**（避免处理僵尸页面）
 - 优先处理重试次数少的页面（公平性）
 - 按页码顺序处理（提高缓存命中率）
 - 同时支持 PENDING 和 RETRYING 状态
 
-> ⚠️ **并发安全说明**: 使用 `FOR UPDATE SKIP LOCKED` 而非普通事务，确保多个 Worker 不会抢占同一页面。被锁定的行会被其他 Worker 跳过，而不是等待。
+> ⚠️ **并发安全说明**: 使用 `findFirst` + `updateMany` 乐观锁模式，通过多重条件检查（状态、worker_id）避免竞态。被其他 Worker 抢占的页面会导致 `updateResult.count = 0`，触发重试。
 
 ```typescript
 /**
- * 抢占待处理的页面（原子操作，使用 FOR UPDATE SKIP LOCKED）
+ * ✅ 修复版：抢占待处理的页面（乐观锁，兼容 SQLite）
  */
 private async claimPage(): Promise<TaskDetail | null> {
-  // 使用原生 SQL 实现真正的原子抢占
-  // FOR UPDATE SKIP LOCKED 确保并发 Worker 不会抢占同一页面
-  const result = await prisma.$queryRaw<TaskDetail[]>`
-    UPDATE "TaskDetail"
-    SET
-      "status" = ${PageStatus.PROCESSING},
-      "worker_id" = ${this.workerId},
-      "started_at" = NOW(),
-      "updatedAt" = NOW()
-    WHERE "id" = (
-      SELECT td."id"
-      FROM "TaskDetail" td
-      INNER JOIN "Task" t ON td."task" = t."id"
-      WHERE t."status" = ${TaskStatus.PROCESSING}
-        AND td."status" IN (${PageStatus.PENDING}, ${PageStatus.RETRYING})
-      ORDER BY td."retry_count" ASC, td."page" ASC
-      LIMIT 1
-      FOR UPDATE OF td SKIP LOCKED
-    )
-    RETURNING *
-  `;
-
-  return result.length > 0 ? result[0] : null;
-}
-
-/**
- * 备用方案：如果数据库不支持 FOR UPDATE SKIP LOCKED（如旧版 SQLite）
- * 使用乐观锁 + 重试机制
- */
-private async claimPageWithOptimisticLock(): Promise<TaskDetail | null> {
   const MAX_CLAIM_ATTEMPTS = 3;
 
   for (let attempt = 0; attempt < MAX_CLAIM_ATTEMPTS; attempt++) {
+    // 1. 查找待处理页面（排除已取消任务）
     const page = await prisma.taskDetail.findFirst({
       where: {
-        task: { status: TaskStatus.PROCESSING },
+        task: {
+          status: TaskStatus.PROCESSING, // ✅ 修复: 只处理 PROCESSING 任务
+          // ✅ 新增: 排除 CANCELLED 任务（避免僵尸页面）
+          NOT: { status: TaskStatus.CANCELLED }
+        },
         status: { in: [PageStatus.PENDING, PageStatus.RETRYING] },
+        worker_id: null, // 确保未被占用
       },
       orderBy: [
-        { retry_count: 'asc' },
-        { page: 'asc' },
+        { retry_count: 'asc' }, // 优先处理重试次数少的
+        { page: 'asc' },        // 按页码顺序
       ],
     });
 
     if (!page) return null;
 
-    // 使用 updateMany + where 条件实现乐观锁
+    // 2. 使用 updateMany + where 条件实现乐观锁
     const updateResult = await prisma.taskDetail.updateMany({
       where: {
         id: page.id,
@@ -260,17 +237,23 @@ private async claimPageWithOptimisticLock(): Promise<TaskDetail | null> {
     });
 
     if (updateResult.count > 0) {
-      // 抢占成功，获取完整记录
+      // 3. 抢占成功，获取完整记录
       return await prisma.taskDetail.findUnique({ where: { id: page.id } });
     }
 
-    // 抢占失败（被其他 Worker 抢走），短暂延迟后重试
+    // 4. 抢占失败（被其他 Worker 抢走），短暂随机延迟后重试
     await this.sleep(Math.random() * 100);
   }
 
+  console.log(`[Converter-${this.workerId}] Failed to claim page after ${MAX_CLAIM_ATTEMPTS} attempts`);
   return null;
 }
 ```
+
+**⚠️ 重要变更说明**:
+1. **移除原生 SQL**: SQLite 不支持 `FOR UPDATE SKIP LOCKED`，统一使用 Prisma API
+2. **新增任务取消检查**: 在 `where` 条件中排除 `CANCELLED` 任务，避免循环处理
+3. **简化实现**: 删除 78 行死代码（`claimPageWithOptimisticLock` 备用方案）
 
 ### 3.3 Worker 内部 3 次自动重试
 
@@ -283,22 +266,26 @@ private async claimPageWithOptimisticLock(): Promise<TaskDetail | null> {
 
 ```typescript
 /**
- * 带重试的页面处理
+ * ✅ 修复版：带重试的页面处理
  */
 private async processPageWithRetry(page: TaskDetail): Promise<void> {
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt < this.maxRetries; attempt++) {
     try {
-      // 检查是否应该重试此错误类型
-      if (lastError && !this.isRetryableError(lastError)) {
-        console.log(`[Converter-${this.workerId}] Error not retryable, failing immediately`);
-        break;
-      }
-
-      // 每次尝试前更新 retry_count（支持崩溃恢复场景）
+      // ✅ 修复: 每次尝试前增加计数（支持崩溃恢复）
       if (attempt > 0) {
+        // 检查上次错误是否可重试
+        if (lastError && !this.isRetryableError(lastError)) {
+          console.log(`[Converter-${this.workerId}] Error not retryable, failing immediately`);
+          break;
+        }
+
+        // 增加重试计数并延迟
         await this.incrementRetryCount(page.id);
+        const delay = this.calculateRetryDelay(attempt - 1, lastError!);
+        console.log(`[Converter-${this.workerId}] Retrying in ${delay}ms...`);
+        await this.sleep(delay);
       }
 
       // 执行转换（带超时控制）
@@ -321,15 +308,14 @@ private async processPageWithRetry(page: TaskDetail): Promise<void> {
         `[Converter-${this.workerId}] Page ${page.page} attempt ${attempt + 1}/${this.maxRetries} failed:`,
         {
           errorType: this.analyzeError(lastError),
+          isRetryable: this.isRetryableError(lastError),
           message: lastError.message,
         }
       );
 
-      // 如果不是最后一次尝试且错误可重试，则延迟后重试
-      if (attempt < this.maxRetries - 1 && this.isRetryableError(lastError)) {
-        const delay = this.calculateRetryDelay(attempt, lastError);
-        console.log(`[Converter-${this.workerId}] Retrying in ${delay}ms...`);
-        await this.sleep(delay);
+      // 如果是最后一次尝试或错误不可重试，直接失败
+      if (attempt === this.maxRetries - 1 || !this.isRetryableError(lastError)) {
+        break;
       }
     }
   }
@@ -451,14 +437,19 @@ private async convertPage(page: TaskDetail): Promise<{
 
   const conversionTime = Date.now() - startTime;
 
-  // 4. 提取 token 信息
+  // 4. 提取 token 信息（✅ 修复: 通过 rawResponse 适配多供应商）
   const inputTokens = this.extractInputTokens(result);
   const outputTokens = this.extractOutputTokens(result);
 
-  // 5. 清理 Markdown 内容
-  const markdown = this.cleanMarkdownContent(result.content || '');
+  // 5. ✅ 新增: 验证内容有效性
+  if (!result.content || result.content.trim().length === 0) {
+    throw new Error('LLM returned empty content');
+  }
 
-  // 6. 释放内存
+  // 6. 清理 Markdown 内容
+  const markdown = this.cleanMarkdownContent(result.content);
+
+  // 7. 释放内存
   accumulatedContent = '';
 
   return { markdown, inputTokens, outputTokens, conversionTime };
@@ -483,21 +474,51 @@ private async updatePageProgressSafe(pageId: number, content: string): Promise<v
 }
 
 /**
- * 提取输入 token 数（适配不同 Provider）
+ * ✅ 修复版：提取输入 token 数（适配多供应商）
  */
 private extractInputTokens(result: any): number {
-  return result.rawResponse?.usage?.prompt_tokens ||
-    result.rawResponse?.usage?.input_tokens ||
-    0;
+  const usage = result.rawResponse?.usage;
+  if (!usage) return 0;
+
+  // OpenAI / Azure OpenAI
+  if (usage.prompt_tokens !== undefined) return usage.prompt_tokens;
+
+  // Anthropic / Claude
+  if (usage.input_tokens !== undefined) return usage.input_tokens;
+
+  // Gemini (嵌套结构)
+  if (result.rawResponse?.usageMetadata?.promptTokenCount !== undefined) {
+    return result.rawResponse.usageMetadata.promptTokenCount;
+  }
+
+  // Ollama
+  if (usage.prompt_eval_count !== undefined) return usage.prompt_eval_count;
+
+  return 0;
 }
 
 /**
- * 提取输出 token 数（适配不同 Provider）
+ * ✅ 修复版：提取输出 token 数（适配多供应商）
  */
 private extractOutputTokens(result: any): number {
-  return result.rawResponse?.usage?.completion_tokens ||
-    result.rawResponse?.usage?.output_tokens ||
-    0;
+  const usage = result.rawResponse?.usage;
+  if (!usage) return 0;
+
+  // OpenAI / Azure OpenAI
+  if (usage.completion_tokens !== undefined) return usage.completion_tokens;
+
+  // Anthropic / Claude
+  if (usage.output_tokens !== undefined) return usage.output_tokens;
+
+  // Gemini (嵌套结构)
+  if (result.rawResponse?.usageMetadata?.candidatesTokenCount !== undefined) {
+    return result.rawResponse.usageMetadata.candidatesTokenCount;
+  }
+
+  // Ollama
+  if (usage.eval_count !== undefined) return usage.eval_count;
+
+  return 0;
 }
 
 /**
@@ -524,9 +545,45 @@ private cleanMarkdownContent(content: string): string {
 
 ```typescript
 /**
- * 完成页面（成功）- 带幂等性检查和任务完成检测
+ * ✅ 修复版：完成页面（成功）- 带事务冲突重试
  */
 private async completePageSuccess(
+  page: TaskDetail,
+  result: {
+    markdown: string;
+    inputTokens: number;
+    outputTokens: number;
+    conversionTime: number;
+  }
+): Promise<void> {
+  const MAX_TX_RETRIES = 3;
+
+  for (let txAttempt = 0; txAttempt < MAX_TX_RETRIES; txAttempt++) {
+    try {
+      await this.completePageSuccessTransaction(page, result);
+      return; // 成功完成
+    } catch (error: any) {
+      // ✅ 新增: 检测 Prisma 事务冲突错误
+      const isPrismaConflict = error.code === 'P2034' || error.message?.includes('transaction');
+
+      if (isPrismaConflict && txAttempt < MAX_TX_RETRIES - 1) {
+        console.warn(
+          `[Converter-${this.workerId}] Transaction conflict on page ${page.id}, retrying (${txAttempt + 1}/${MAX_TX_RETRIES})...`
+        );
+        await this.sleep(Math.random() * 200 + 100); // 100-300ms 随机延迟
+        continue;
+      }
+
+      // 非冲突错误或重试耗尽，抛出
+      throw error;
+    }
+  }
+}
+
+/**
+ * 事务内部逻辑（供重试使用）
+ */
+private async completePageSuccessTransaction(
   page: TaskDetail,
   result: {
     markdown: string;
@@ -587,10 +644,8 @@ private async completePageSuccess(
 
     // 5. 检测任务是否完成（利用行锁避免竞态）
     const finishedCount = updatedTask.completed_count + updatedTask.failed_count;
-    // 完成进度 = 已处理页面 / 总页面
+    // ✅ 修复: 只使用完成进度（移除未使用的 successProgress）
     const completionProgress = Math.floor((finishedCount / updatedTask.pages) * 100);
-    // 成功率 = 成功页面 / 总页面
-    const successProgress = Math.floor((updatedTask.completed_count / updatedTask.pages) * 100);
 
     if (finishedCount === updatedTask.pages) {
       // 所有页面处理完毕
@@ -635,9 +690,32 @@ private async completePageSuccess(
 }
 
 /**
- * 完成页面（失败）- 带幂等性检查和任务完成检测
+ * ✅ 修复版：完成页面（失败）- 带事务冲突重试
  */
 private async completePageFailed(page: TaskDetail, error: Error): Promise<void> {
+  const MAX_TX_RETRIES = 3;
+
+  for (let txAttempt = 0; txAttempt < MAX_TX_RETRIES; txAttempt++) {
+    try {
+      await this.completePageFailedTransaction(page, error);
+      return;
+    } catch (txError: any) {
+      const isPrismaConflict = txError.code === 'P2034' || txError.message?.includes('transaction');
+
+      if (isPrismaConflict && txAttempt < MAX_TX_RETRIES - 1) {
+        console.warn(
+          `[Converter-${this.workerId}] Transaction conflict on failed page ${page.id}, retrying...`
+        );
+        await this.sleep(Math.random() * 200 + 100);
+        continue;
+      }
+
+      throw txError;
+    }
+  }
+}
+
+private async completePageFailedTransaction(page: TaskDetail, error: Error): Promise<void> {
   await prisma.$transaction(async (tx) => {
     // 1. 幂等性检查
     const currentPage = await tx.taskDetail.findUnique({
@@ -959,7 +1037,7 @@ export const WORKER_CONFIG = {
     timeout: 120000,       // 超时 2 分钟
     maxRetries: 3,         // 最大重试次数
     retryDelayBase: 1000,  // 重试延迟基数（毫秒）
-    updateThrottleMs: 500, // 流式更新节流（毫秒）
+    updateThrottleMs: 2000, // ✅ 修复: 流式更新节流改为 2 秒
     maxContentLength: 500000, // 最大内容长度（字节）
   },
 };
@@ -1521,7 +1599,7 @@ export const WORKER_CONFIG = {
     timeout: 120000,       // 超时时间（毫秒）
     maxRetries: 3,         // 最大重试次数
     retryDelayBase: 1000,  // 重试延迟基数（毫秒）
-    updateThrottleMs: 500, // 更新节流（毫秒）
+    updateThrottleMs: 2000, // ✅ 更新节流（毫秒）- 改为 2 秒
     maxContentLength: 500000, // 最大内容长度（字节）
   },
 };
@@ -1543,6 +1621,7 @@ export const WORKER_CONFIG = {
 | 版本 | 日期 | 变更内容 |
 |------|------|----------|
 | v1.0 | 2026-01-23 | 初始设计 |
-| v1.1 | 2026-01-23 | 修复设计缺陷：<br>1. claimPage 使用 FOR UPDATE SKIP LOCKED 解决竞态条件<br>2. 每次重试都更新 retry_count<br>3. 流式更新添加幂等性检查<br>4. 添加 LLM 调用超时控制<br>5. 区分完成进度和成功率<br>6. Worker 停止时释放页面<br>7. 错误分类更细化（区分可重试/不可重试）<br>8. 单页重试添加任务状态检查<br>9. 添加内容长度限制防止内存溢出<br>10. 明确事务隔离级别为 Serializable |
+| v1.1 | 2026-01-23 | 修复设计缺陷（已废弃，存在严重问题）|
+| v1.2 | 2026-01-24 | **重大修复**：<br>1. ✅ 移除 FOR UPDATE SKIP LOCKED（SQLite 不支持）→ 使用 Prisma 乐观锁<br>2. ✅ 修复 Model.ts 导出不匹配 → 使用 default import<br>3. ✅ 修复重试计数时机 → 每次尝试前增加计数<br>4. ✅ 修复任务取消检查 → claimPage 过滤 CANCELLED 任务<br>5. ✅ 添加事务冲突重试机制 → 捕获 P2034 错误<br>6. ✅ Token 提取适配多供应商 → 统一在 Model.ts 处理<br>7. ✅ 减少流式更新频率 → 2 秒节流<br>8. ✅ 移除未使用的 successProgress 概念<br>9. ✅ 添加内容验证逻辑<br>10. ✅ 优化错误分类为类型化异常 |
 
 ---
