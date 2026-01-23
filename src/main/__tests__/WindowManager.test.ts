@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { BrowserWindow } from 'electron';
 
 // Mock Electron
 vi.mock('electron', () => ({

@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { LLMClient, CompletionOptions, CompletionResponse } from '../LLMClient.js'
 
 // Create a test implementation of the abstract LLMClient
 class TestLLMClient extends LLMClient {
-  async completion(options: CompletionOptions): Promise<CompletionResponse> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async completion(_options: CompletionOptions): Promise<CompletionResponse> {
     // Simple implementation for testing
     return {
       content: 'test response',

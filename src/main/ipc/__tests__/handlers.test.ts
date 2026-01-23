@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mockDeep, mockReset } from 'vitest-mock-extended'
 
 // Mock all dependencies before imports
 const mockProviderDal = {
@@ -94,14 +93,14 @@ vi.mock('path', () => ({
 }))
 
 describe('IPC Handlers', () => {
-  let handlers: Map<string, Function>
+  let handlers: Map<string, (...args: any[]) => any>
 
   beforeEach(async () => {
     vi.clearAllMocks()
     handlers = new Map()
 
     // Capture all registered handlers
-    mockIpcMain.handle.mockImplementation((channel: string, handler: Function) => {
+    mockIpcMain.handle.mockImplementation((channel: string, handler: (...args: any[]) => any) => {
       handlers.set(channel, handler)
     })
 
@@ -439,7 +438,7 @@ describe('IPC Handlers', () => {
         mockTaskDal.getTotal.mockResolvedValue(0)
 
         const handler = handlers.get('task:getAll')
-        const result = await handler!({}, {})
+        await handler!({}, {})
 
         expect(mockTaskDal.findAll).toHaveBeenCalledWith(1, 10)
       })
