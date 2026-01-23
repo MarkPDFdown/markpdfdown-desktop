@@ -17,6 +17,13 @@ const getTotal = async () => {
   return await prisma.task.count();
 };
 
+// 根据ID查找任务
+const findById = async (id: string) => {
+  return await prisma.task.findUnique({
+    where: { id },
+  });
+};
+
 // 创建任务
 const create = async (task: Task) => {
   return await prisma.task.create({
@@ -66,6 +73,7 @@ const remove = async (id: string) => {
 
 export default {
   findAll,
+  findById,
   create,
   createTasks,
   getTotal,

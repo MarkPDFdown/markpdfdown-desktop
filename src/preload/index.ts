@@ -34,9 +34,18 @@ contextBridge.exposeInMainWorld("api", {
     create: (tasks: any[]) => ipcRenderer.invoke("task:create", tasks),
     getAll: (params: { page: number; pageSize: number }) =>
       ipcRenderer.invoke("task:getAll", params),
+    getById: (id: string) => ipcRenderer.invoke("task:getById", id),
     update: (id: string, data: any) =>
       ipcRenderer.invoke("task:update", id, data),
     delete: (id: string) => ipcRenderer.invoke("task:delete", id),
+  },
+
+  // ==================== TaskDetail APIs ====================
+  taskDetail: {
+    getByPage: (taskId: string, page: number) =>
+      ipcRenderer.invoke("taskDetail:getByPage", taskId, page),
+    getAllByTask: (taskId: string) =>
+      ipcRenderer.invoke("taskDetail:getAllByTask", taskId),
   },
 
   // ==================== File APIs ====================
@@ -46,6 +55,10 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("file:upload", taskId, filePath),
     uploadMultiple: (taskId: string, filePaths: string[]) =>
       ipcRenderer.invoke("file:uploadMultiple", taskId, filePaths),
+    getImagePath: (taskId: string, page: number) =>
+      ipcRenderer.invoke("file:getImagePath", taskId, page),
+    downloadMarkdown: (taskId: string) =>
+      ipcRenderer.invoke("file:downloadMarkdown", taskId),
   },
 
   // ==================== Completion APIs ====================

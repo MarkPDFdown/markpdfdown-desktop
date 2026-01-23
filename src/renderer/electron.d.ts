@@ -67,8 +67,43 @@ interface Task {
   model_name: string;
   progress: number;
   status: number;
+  completed_count: number;
+  failed_count: number;
+  worker_id?: string | null;
+  merged_path?: string | null;
+  error?: string | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// TaskDetail 相关类型
+interface TaskDetail {
+  id: number;
+  task: string;
+  page: number;
+  page_source: number;
+  status: number;
+  worker_id?: string | null;
+  provider: number;
+  model: string;
+  content: string;
+  error?: string | null;
+  retry_count: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface TaskDetailWithImage extends TaskDetail {
+  imagePath: string;
+  imageExists: boolean;
+}
+
+// TaskEvent 相关类型
+interface TaskEvent {
+  type: string;
+  taskId: string;
+  task?: Partial<Task>;
+  timestamp: number;
 }
 
 interface CreateTaskDTO {
@@ -139,8 +174,14 @@ interface ElectronAPI {
       page: number;
       pageSize: number;
     }) => Promise<IpcResponse<TaskListResponse>>;
+    getById: (id: string) => Promise<IpcResponse<Task>>;
     update: (id: string, data: UpdateTaskDTO) => Promise<IpcResponse<Task>>;
     delete: (id: string) => Promise<IpcResponse<Task>>;
+  };
+
+  taskDetail: {
+    getByPage: (taskId: string, page: number) => Promise<IpcResponse<TaskDetailWithImage>>;
+    getAllByTask: (taskId: string) => Promise<IpcResponse<TaskDetail[]>>;
   };
 
   file: {
@@ -153,6 +194,13 @@ interface ElectronAPI {
       taskId: string,
       filePaths: string[],
     ) => Promise<IpcResponse<{ message: string; files: FileUploadResult[] }>>;
+    getImagePath: (
+      taskId: string,
+      page: number,
+    ) => Promise<IpcResponse<{ imagePath: string; exists: boolean }>>;
+    downloadMarkdown: (
+      taskId: string,
+    ) => Promise<IpcResponse<{ savedPath: string }>>;
   };
 
   completion: {
@@ -169,6 +217,10 @@ interface ElectronAPI {
 
   shell: {
     openExternal: (url: string) => void;
+  };
+
+  events: {
+    onTaskEvent: (callback: (event: TaskEvent) => void) => () => void;
   };
 }
 

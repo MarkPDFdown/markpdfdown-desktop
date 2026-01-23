@@ -2,8 +2,10 @@ import { ipcMain, dialog } from "electron";
 import providerDal from "../../server/dal/ProviderDal.js";
 import modelDal from "../../server/dal/ModelDal.js";
 import taskDal from "../../server/dal/TaskDal.js";
+import taskDetailDal from "../../server/dal/TaskDetailDal.js";
 import fileLogic from "../../server/logic/File.js";
 import modelLogic from "../../server/logic/Model.js";
+import { ImagePathUtil } from "../../server/logic/split/ImagePathUtil.js";
 import path from "path";
 import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
@@ -346,7 +348,177 @@ export function registerIpcHandlers() {
     }
   });
 
+  /**
+   * 根据 ID 获取任务
+   */
+  ipcMain.handle("task:getById", async (_, id: string): Promise<IpcResponse> => {
+    try {
+      if (!id) {
+        return { success: false, error: "任务ID不能为空" };
+      }
+
+      const task = await taskDal.findById(id);
+
+      if (!task) {
+        return { success: false, error: "任务不存在" };
+      }
+
+      return { success: true, data: task };
+    } catch (error: any) {
+      console.error("[IPC] task:getById error:", error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // ==================== TaskDetail Handlers ====================
+
+  /**
+   * 获取任务指定页面的详情
+   */
+  ipcMain.handle(
+    "taskDetail:getByPage",
+    async (_, taskId: string, page: number): Promise<IpcResponse> => {
+      try {
+        if (!taskId) {
+          return { success: false, error: "任务ID不能为空" };
+        }
+
+        if (!page || page < 1) {
+          return { success: false, error: "页码必须大于0" };
+        }
+
+        const taskDetail = await taskDetailDal.findByTaskAndPage(taskId, page);
+
+        if (!taskDetail) {
+          return { success: false, error: "页面详情不存在" };
+        }
+
+        // 获取图片路径
+        const imagePath = ImagePathUtil.getPath(taskId, page);
+        const imageExists = fs.existsSync(imagePath);
+
+        // 返回包含图片信息的详情
+        const taskDetailWithImage = {
+          ...taskDetail,
+          imagePath,
+          imageExists,
+        };
+
+        return { success: true, data: taskDetailWithImage };
+      } catch (error: any) {
+        console.error("[IPC] taskDetail:getByPage error:", error);
+        return { success: false, error: error.message };
+      }
+    }
+  );
+
+  /**
+   * 获取任务的所有页面详情
+   */
+  ipcMain.handle(
+    "taskDetail:getAllByTask",
+    async (_, taskId: string): Promise<IpcResponse> => {
+      try {
+        if (!taskId) {
+          return { success: false, error: "任务ID不能为空" };
+        }
+
+        const taskDetails = await taskDetailDal.findByTaskId(taskId);
+
+        return { success: true, data: taskDetails };
+      } catch (error: any) {
+        console.error("[IPC] taskDetail:getAllByTask error:", error);
+        return { success: false, error: error.message };
+      }
+    }
+  );
+
   // ==================== File Handlers ====================
+
+  /**
+   * 获取图片路径和状态
+   */
+  ipcMain.handle(
+    "file:getImagePath",
+    async (_, taskId: string, page: number): Promise<IpcResponse> => {
+      try {
+        if (!taskId) {
+          return { success: false, error: "任务ID不能为空" };
+        }
+
+        if (!page || page < 1) {
+          return { success: false, error: "页码必须大于0" };
+        }
+
+        const imagePath = ImagePathUtil.getPath(taskId, page);
+        const exists = fs.existsSync(imagePath);
+
+        return {
+          success: true,
+          data: { imagePath, exists },
+        };
+      } catch (error: any) {
+        console.error("[IPC] file:getImagePath error:", error);
+        return { success: false, error: error.message };
+      }
+    }
+  );
+
+  /**
+   * 下载合并后的 Markdown 文件
+   */
+  ipcMain.handle(
+    "file:downloadMarkdown",
+    async (_, taskId: string): Promise<IpcResponse> => {
+      try {
+        if (!taskId) {
+          return { success: false, error: "任务ID不能为空" };
+        }
+
+        // 获取任务信息
+        const task = await taskDal.findById(taskId);
+
+        if (!task) {
+          return { success: false, error: "任务不存在" };
+        }
+
+        if (!task.merged_path) {
+          return { success: false, error: "合并文件不存在，任务可能尚未完成" };
+        }
+
+        // 检查文件是否存在
+        if (!fs.existsSync(task.merged_path)) {
+          return { success: false, error: "合并文件已丢失" };
+        }
+
+        // 打开保存对话框
+        const result = await dialog.showSaveDialog({
+          title: "保存 Markdown 文件",
+          defaultPath: task.filename.replace(/\.[^/.]+$/, ".md"),
+          filters: [
+            { name: "Markdown Files", extensions: ["md"] },
+            { name: "All Files", extensions: ["*"] },
+          ],
+        });
+
+        // 用户取消
+        if (result.canceled || !result.filePath) {
+          return { success: false, error: "用户取消保存" };
+        }
+
+        // 复制文件到目标位置
+        fs.copyFileSync(task.merged_path, result.filePath);
+
+        return {
+          success: true,
+          data: { savedPath: result.filePath },
+        };
+      } catch (error: any) {
+        console.error("[IPC] file:downloadMarkdown error:", error);
+        return { success: false, error: error.message };
+      }
+    }
+  );
 
   /**
    * 文件选择对话框

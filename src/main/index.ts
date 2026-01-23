@@ -1,13 +1,66 @@
-import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { app, BrowserWindow, ipcMain, shell, protocol } from "electron";
 import path from "path";
+import fs from "fs";
 import isDev from "electron-is-dev";
 import taskLogic from "../server/logic/Task.js";
 import { initDatabase, disconnect } from "../server/db/index.js";
 import { registerIpcHandlers } from "./ipc/handlers.js";
 import { windowManager } from './WindowManager.js';
 import { eventBridge } from './ipc/eventBridge.js';
+import fileLogic from "../server/logic/File.js";
+
+// 在 app ready 之前注册自定义协议的权限
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'local-file',
+    privileges: {
+      secure: true,
+      supportFetchAPI: true,
+      bypassCSP: false,
+      corsEnabled: false,
+    }
+  }
+]);
 
 let mainWindow: BrowserWindow | null;
+
+// 注册自定义协议，用于安全地加载本地文件
+function registerLocalFileProtocol() {
+  protocol.registerFileProtocol('local-file', (request, callback) => {
+    try {
+      // 从 URL 中提取文件路径
+      // URL 格式: local-file://path/to/file
+      const url = request.url.substring('local-file://'.length);
+      const decodedPath = decodeURIComponent(url);
+
+      // 安全检查：确保路径在允许的目录内
+      const uploadsDir = fileLogic.getUploadDir();
+      const tempDir = fileLogic.getTempDir();
+      const normalizedPath = path.normalize(decodedPath);
+
+      const isInUploads = normalizedPath.startsWith(uploadsDir);
+      const isInTemp = normalizedPath.startsWith(tempDir);
+
+      if (!isInUploads && !isInTemp) {
+        console.error('[Protocol] Attempted to access file outside allowed directories:', normalizedPath);
+        callback({ error: -10 }); // ACCESS_DENIED
+        return;
+      }
+
+      // 检查文件是否存在
+      if (!fs.existsSync(normalizedPath)) {
+        console.error('[Protocol] File not found:', normalizedPath);
+        callback({ error: -6 }); // FILE_NOT_FOUND
+        return;
+      }
+
+      callback({ path: normalizedPath });
+    } catch (error) {
+      console.error('[Protocol] Error handling local-file request:', error);
+      callback({ error: -2 }); // FAILED
+    }
+  });
+}
 
 // 启动任务
 async function startTask() {
@@ -110,29 +163,64 @@ function createWindow() {
 
 app.whenReady().then(async () => {
   try {
-    // 初始化数据库
-    await initDatabase();
+    const startTime = Date.now();
 
-    // 注册 IPC Handlers
+    // 注册自定义协议（立即执行，不耗时）
+    registerLocalFileProtocol();
+    console.log("[Main] Custom protocol 'local-file' registered");
+
+    // 注册 IPC Handlers（立即执行，不耗时）
     registerIpcHandlers();
 
-    // 初始化事件桥接器
+    // 初始化事件桥接器（立即执行，不耗时）
     eventBridge.initialize();
 
-    // 创建窗口
+    // 立即创建并显示窗口（用户体验优先）
     createWindow();
+    console.log(`[Main] Window created in ${Date.now() - startTime}ms`);
 
-    // 启动任务逻辑
-    await startTask();
+    // 后台异步初始化数据库和任务（不阻塞UI）
+    initializeBackgroundServices().catch(error => {
+      console.error("[Main] Background services initialization failed:", error);
+    });
 
-    console.log(
-      "[Main] Application started successfully with IPC architecture",
-    );
   } catch (error) {
     console.error("[Main] Error starting application:", error);
     app.quit();
   }
 });
+
+/**
+ * 后台异步初始化服务（不阻塞窗口显示）
+ */
+async function initializeBackgroundServices() {
+  try {
+    const startTime = Date.now();
+
+    // 初始化数据库
+    console.log("[Main] Initializing database in background...");
+    await initDatabase();
+    console.log(`[Main] Database initialized in ${Date.now() - startTime}ms`);
+
+    // 启动任务逻辑
+    console.log("[Main] Starting task logic in background...");
+    const taskStartTime = Date.now();
+    await startTask();
+    console.log(`[Main] Task logic started in ${Date.now() - taskStartTime}ms`);
+
+    console.log(
+      `[Main] Background services initialized successfully in ${Date.now() - startTime}ms`,
+    );
+
+    // 通知渲染进程初始化完成
+    if (mainWindow) {
+      mainWindow.webContents.send('app:ready');
+    }
+  } catch (error) {
+    console.error("[Main] Background services initialization error:", error);
+    throw error;
+  }
+}
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {

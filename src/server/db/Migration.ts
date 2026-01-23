@@ -34,33 +34,6 @@ CREATE TABLE IF NOT EXISTS _prisma_migrations (
 );
 `;
 
-// 检查迁移是否已应用
-const isMigrationApplied = async (prisma: any, migrationName: string): Promise<boolean> => {
-  try {
-    // 检查 _prisma_migrations 表是否存在
-    const tableExists = await prisma.$queryRaw`
-      SELECT name FROM sqlite_master 
-      WHERE type='table' AND name='_prisma_migrations';
-    `;
-
-    if (!tableExists || tableExists.length === 0) {
-      return false;
-    }
-
-    // 检查特定迁移是否已应用
-    const migration = await prisma.$queryRaw`
-      SELECT * FROM _prisma_migrations 
-      WHERE migration_name = ${migrationName} 
-      AND finished_at IS NOT NULL;
-    `;
-
-    return migration && migration.length > 0;
-  } catch (error) {
-    console.error('Error checking migration status:', error);
-    return false;
-  }
-};
-
 // 记录已应用的迁移
 const recordMigration = async (prisma: any, migrationName: string, checksum: string): Promise<void> => {
   const id = generateUUID();
@@ -128,8 +101,35 @@ const applyMigration = async (prisma: any, migrationDir: string, migrationName: 
   }
 };
 
-// 主要的迁移函数
+// 批量检查迁移状态（性能优化）
+const getAppliedMigrations = async (prisma: any): Promise<Set<string>> => {
+  try {
+    // 检查 _prisma_migrations 表是否存在
+    const tableExists = await prisma.$queryRaw`
+      SELECT name FROM sqlite_master
+      WHERE type='table' AND name='_prisma_migrations';
+    `;
+
+    if (!tableExists || tableExists.length === 0) {
+      return new Set();
+    }
+
+    // 一次性获取所有已应用的迁移
+    const migrations = await prisma.$queryRaw`
+      SELECT migration_name FROM _prisma_migrations
+      WHERE finished_at IS NOT NULL;
+    `;
+
+    return new Set(migrations.map((m: any) => m.migration_name));
+  } catch (error) {
+    console.error('Error getting applied migrations:', error);
+    return new Set();
+  }
+};
+
+// 主要的迁移函数（性能优化版）
 const runMigrations = async (prisma: any = null): Promise<boolean> => {
+  const startTime = Date.now();
   console.log('Running database migrations...');
 
   try {
@@ -143,20 +143,22 @@ const runMigrations = async (prisma: any = null): Promise<boolean> => {
       return false;
     }
 
-    // 读取所有迁移目录并按名称排序
+    // 批量获取所有已应用的迁移（性能优化）
+    const appliedMigrations = await getAppliedMigrations(prisma);
+
+    // 读取所有迁移目录并按名称排序（优化：减少 stat 调用）
     const migrationDirs = fs
-      .readdirSync(migrationsDir)
-      .filter(dir => {
-        const stat = fs.statSync(path.join(migrationsDir, dir));
-        return stat.isDirectory() && dir !== 'migration_lock.toml';
-      })
+      .readdirSync(migrationsDir, { withFileTypes: true })
+      .filter(dirent => dirent.isDirectory() && dirent.name !== 'migration_lock.toml')
+      .map(dirent => dirent.name)
       .sort(); // 按名称排序，确保按正确顺序应用
 
     let migrationsApplied = 0;
 
     // 应用每个迁移
     for (const migrationName of migrationDirs) {
-      const isApplied = await isMigrationApplied(prisma, migrationName);
+      // 使用批量查询结果检查（避免单独查询）
+      const isApplied = appliedMigrations.has(migrationName);
 
       if (!isApplied) {
         console.log(`Applying migration: ${migrationName}`);
@@ -167,7 +169,8 @@ const runMigrations = async (prisma: any = null): Promise<boolean> => {
       }
     }
 
-    console.log(`Database migration complete. Applied ${migrationsApplied} migrations.`);
+    const elapsed = Date.now() - startTime;
+    console.log(`Database migration complete. Applied ${migrationsApplied} migrations in ${elapsed}ms`);
     return migrationsApplied > 0;
   } catch (error) {
     console.error('Migration error:', error);
