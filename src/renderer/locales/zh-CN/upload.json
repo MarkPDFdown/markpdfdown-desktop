@@ -1,7 +1,7 @@
 {
   "dragger": {
     "text": "拖拽文件到此处或点击下方按钮选择文件",
-    "hint": "支持单个或批量上传 PDF/JPG/PNG/BMP 文件",
+    "hint": "支持单个或批量上传 PDF/JPG/PNG 文件",
     "button": "选择文件"
   },
   "form": {

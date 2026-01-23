@@ -1,7 +1,7 @@
 {
   "dragger": {
     "text": "Drag files here or click button below to select files",
-    "hint": "Supports single or batch upload of PDF/JPG/PNG/BMP files",
+    "hint": "Supports single or batch upload of PDF/JPG/PNG files",
     "button": "Select Files"
   },
   "form": {
