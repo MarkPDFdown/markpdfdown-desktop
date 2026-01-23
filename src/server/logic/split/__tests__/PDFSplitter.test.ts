@@ -22,12 +22,11 @@ import { pdfToPng } from 'pdf-to-png-converter';
 
 describe('PDFSplitter', () => {
   const uploadsDir = '/mock/uploads';
-  const tempDir = '/mock/temp';
   let splitter: PDFSplitter;
 
   beforeEach(() => {
     // Initialize ImagePathUtil
-    ImagePathUtil.init(tempDir);
+    ImagePathUtil.init(uploadsDir);
 
     // Create splitter instance
     splitter = new PDFSplitter(uploadsDir);
@@ -124,11 +123,11 @@ describe('PDFSplitter', () => {
       // Verify rename was called with correct paths
       expect(fs.rename).toHaveBeenCalledWith(
         '/tmp/temp-1.png',
-        path.join(tempDir, 'task789', 'page-1.png')
+        path.join(uploadsDir, 'task789', 'split', 'page-1.png')
       );
       expect(fs.rename).toHaveBeenCalledWith(
         '/tmp/temp-2.png',
-        path.join(tempDir, 'task789', 'page-2.png')
+        path.join(uploadsDir, 'task789', 'split', 'page-2.png')
       );
     });
 
@@ -193,7 +192,7 @@ describe('PDFSplitter', () => {
       await splitter.cleanup('task123');
 
       expect(fs.rm).toHaveBeenCalledWith(
-        path.join(tempDir, 'task123'),
+        path.join(uploadsDir, 'task123', 'split'),
         { recursive: true, force: true }
       );
     });

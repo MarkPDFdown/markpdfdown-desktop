@@ -10,7 +10,7 @@ import { ImagePathUtil } from './ImagePathUtil.js';
  * Supports: JPG, JPEG, PNG, WebP
  *
  * Behavior:
- * - Copies image from uploads/{taskId}/{filename} to temp/{taskId}/page-1.png
+ * - Copies image from uploads/{taskId}/{filename} to uploads/{taskId}/split/page-1.png
  * - Always returns single page (images are not split)
  * - Ignores page_range parameter
  * - Preserves image quality (direct file copy, no conversion)

@@ -1,24 +1,27 @@
 import path from 'path';
 
 /**
- * Static utility class for centralized image path management.
+ * Static utility class for centralized split image path management.
  *
  * Critical: Image paths are NOT stored in the database.
  * They are dynamically calculated to avoid path synchronization issues.
  *
- * This class must be initialized once at application startup with the temp directory path.
+ * Split results are stored in: {uploadsDir}/{taskId}/split/page-{N}.png
+ * This keeps all task-related files (uploads + splits) in one place.
+ *
+ * This class must be initialized once at application startup with the uploads directory path.
  */
 export class ImagePathUtil {
-  private static tempDir: string | null = null;
+  private static uploadsDir: string | null = null;
 
   /**
-   * Initialize the utility with the temp directory path.
+   * Initialize the utility with the uploads directory path.
    * Must be called once at application startup.
    *
-   * @param tempDir - Base temporary directory path (e.g., {userData}/temp)
+   * @param uploadsDir - Base uploads directory path (e.g., {userData}/files)
    */
-  static init(tempDir: string): void {
-    this.tempDir = tempDir;
+  static init(uploadsDir: string): void {
+    this.uploadsDir = uploadsDir;
   }
 
   /**
@@ -26,43 +29,43 @@ export class ImagePathUtil {
    *
    * @param taskId - Task ID
    * @param page - Page number (1-based)
-   * @returns Full path to the image file (e.g., {tempDir}/{taskId}/page-{page}.png)
+   * @returns Full path to the image file (e.g., {uploadsDir}/{taskId}/split/page-{page}.png)
    * @throws Error if utility is not initialized
    */
   static getPath(taskId: string, page: number): string {
-    if (!this.tempDir) {
+    if (!this.uploadsDir) {
       throw new Error('ImagePathUtil not initialized. Call ImagePathUtil.init() first.');
     }
-    return path.join(this.tempDir, taskId, `page-${page}.png`);
+    return path.join(this.uploadsDir, taskId, 'split', `page-${page}.png`);
   }
 
   /**
-   * Get the task directory path (contains all page images).
+   * Get the task split directory path (contains all page images).
    *
    * @param taskId - Task ID
-   * @returns Full path to the task directory (e.g., {tempDir}/{taskId})
+   * @returns Full path to the split directory (e.g., {uploadsDir}/{taskId}/split)
    * @throws Error if utility is not initialized
    */
   static getTaskDir(taskId: string): string {
-    if (!this.tempDir) {
+    if (!this.uploadsDir) {
       throw new Error('ImagePathUtil not initialized. Call ImagePathUtil.init() first.');
     }
-    return path.join(this.tempDir, taskId);
+    return path.join(this.uploadsDir, taskId, 'split');
   }
 
   /**
-   * Get the temp directory (for testing/debugging).
+   * Get the uploads directory (for testing/debugging).
    *
-   * @returns The temp directory path or null if not initialized
+   * @returns The uploads directory path or null if not initialized
    */
-  static getTempDir(): string | null {
-    return this.tempDir;
+  static getUploadsDir(): string | null {
+    return this.uploadsDir;
   }
 
   /**
    * Reset the utility (for testing purposes only).
    */
   static reset(): void {
-    this.tempDir = null;
+    this.uploadsDir = null;
   }
 }

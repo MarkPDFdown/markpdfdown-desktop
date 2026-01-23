@@ -36,9 +36,14 @@ const deleteDirectory = (dirPath: string) => {
   }
 };
 
-// 删除任务对应的所有文件（包括上传文件和临时文件）
+// 获取拆分结果目录
+const getSplitDir = (taskId: string) => {
+  return path.join(getUploadDir(), taskId, 'split');
+};
+
+// 删除任务对应的所有文件（包括上传文件、拆分文件和临时文件）
 const deleteTaskFiles = (id: string) => {
-  // 删除上传目录 (files/{taskId})
+  // 删除上传目录 (files/{taskId})，包括子目录 split
   const uploadDir = path.join(getUploadDir(), id);
   deleteDirectory(uploadDir);
 
@@ -50,5 +55,6 @@ const deleteTaskFiles = (id: string) => {
 export default {
   getUploadDir,
   getTempDir,
+  getSplitDir,
   deleteTaskFiles,
 };

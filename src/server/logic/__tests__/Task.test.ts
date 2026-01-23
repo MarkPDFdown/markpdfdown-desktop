@@ -45,10 +45,10 @@ describe('TaskLogic', () => {
   });
 
   describe('start()', () => {
-    it('should initialize ImagePathUtil with temp directory', async () => {
+    it('should initialize ImagePathUtil with uploads directory', async () => {
       await TaskLogic.start();
 
-      expect(ImagePathUtil.init).toHaveBeenCalledWith('/mock/userdata/temp');
+      expect(ImagePathUtil.init).toHaveBeenCalledWith('/mock/userdata/files');
     });
 
     it('should create and start SplitterWorker', async () => {
@@ -144,7 +144,6 @@ describe('TaskLogic', () => {
         },
         directories: {
           uploads: '/mock/userdata/files',
-          temp: '/mock/userdata/temp',
         },
       });
     });
@@ -157,23 +156,22 @@ describe('TaskLogic', () => {
         splitterWorker: null,
         directories: {
           uploads: '/mock/userdata/files',
-          temp: '/mock/userdata/temp',
         },
       });
     });
   });
 
   describe('directory paths', () => {
-    it('should use correct uploads directory', async () => {
+    it('should use correct uploads directory for workers', async () => {
       await TaskLogic.start();
 
       expect(SplitterWorker).toHaveBeenCalledWith('/mock/userdata/files');
     });
 
-    it('should use correct temp directory', async () => {
+    it('should initialize ImagePathUtil with uploads directory', async () => {
       await TaskLogic.start();
 
-      expect(ImagePathUtil.init).toHaveBeenCalledWith('/mock/userdata/temp');
+      expect(ImagePathUtil.init).toHaveBeenCalledWith('/mock/userdata/files');
     });
   });
 });

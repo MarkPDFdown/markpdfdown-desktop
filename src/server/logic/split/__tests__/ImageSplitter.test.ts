@@ -16,12 +16,11 @@ vi.mock('fs', () => ({
 
 describe('ImageSplitter', () => {
   const uploadsDir = '/mock/uploads';
-  const tempDir = '/mock/temp';
   let splitter: ImageSplitter;
 
   beforeEach(() => {
     // Initialize ImagePathUtil
-    ImagePathUtil.init(tempDir);
+    ImagePathUtil.init(uploadsDir);
 
     // Create splitter instance
     splitter = new ImageSplitter(uploadsDir);
@@ -35,7 +34,7 @@ describe('ImageSplitter', () => {
   });
 
   describe('split()', () => {
-    it('should copy JPG image to temp directory', async () => {
+    it('should copy JPG image to split directory', async () => {
       const task = {
         id: 'task123',
         filename: 'photo.jpg',
@@ -51,15 +50,15 @@ describe('ImageSplitter', () => {
       expect(result.pages).toHaveLength(1);
       expect(result.pages[0].page).toBe(1);
       expect(result.pages[0].pageSource).toBe(1);
-      expect(result.pages[0].imagePath).toBe(path.join(tempDir, 'task123', 'page-1.png'));
+      expect(result.pages[0].imagePath).toBe(path.join(uploadsDir, 'task123', 'split', 'page-1.png'));
 
       expect(fs.copyFile).toHaveBeenCalledWith(
         path.join(uploadsDir, 'task123', 'photo.jpg'),
-        path.join(tempDir, 'task123', 'page-1.png')
+        path.join(uploadsDir, 'task123', 'split', 'page-1.png')
       );
     });
 
-    it('should copy PNG image to temp directory', async () => {
+    it('should copy PNG image to split directory', async () => {
       const task = {
         id: 'task456',
         filename: 'screenshot.png',
@@ -74,7 +73,7 @@ describe('ImageSplitter', () => {
       expect(result.totalPages).toBe(1);
       expect(fs.copyFile).toHaveBeenCalledWith(
         path.join(uploadsDir, 'task456', 'screenshot.png'),
-        path.join(tempDir, 'task456', 'page-1.png')
+        path.join(uploadsDir, 'task456', 'split', 'page-1.png')
       );
     });
 
@@ -136,7 +135,7 @@ describe('ImageSplitter', () => {
       await splitter.split(task);
 
       expect(fs.mkdir).toHaveBeenCalledWith(
-        path.join(tempDir, 'task123'),
+        path.join(uploadsDir, 'task123', 'split'),
         { recursive: true }
       );
     });
@@ -227,7 +226,7 @@ describe('ImageSplitter', () => {
       await splitter.cleanup('task123');
 
       expect(fs.rm).toHaveBeenCalledWith(
-        path.join(tempDir, 'task123'),
+        path.join(uploadsDir, 'task123', 'split'),
         { recursive: true, force: true }
       );
     });

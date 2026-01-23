@@ -1,3 +1,26 @@
+// 任务事件类型
+type TaskEventType =
+  | 'task:updated'
+  | 'task:status_changed'
+  | 'task:progress_changed'
+  | 'task:deleted';
+
+// 任务类型（简化版，仅包含事件中可能用到的字段）
+interface Task {
+  id: string;
+  status?: number;
+  progress?: number;
+  [key: string]: any;
+}
+
+// 任务事件数据
+interface TaskEventData {
+  type: TaskEventType;
+  taskId: string;
+  task?: Partial<Task>;
+  timestamp: number;
+}
+
 interface ElectronAPI {
   ipcRenderer: {
     send: (channel: string, data: any) => void;
@@ -43,6 +66,10 @@ interface WindowAPI {
     minimize: () => void;
     maximize: () => void;
     close: () => void;
+  };
+  // 事件监听 API
+  events: {
+    onTaskEvent: (callback: (event: TaskEventData) => void) => () => void;
   };
   platform: NodeJS.Platform;
 }

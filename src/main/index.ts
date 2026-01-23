@@ -4,6 +4,8 @@ import isDev from "electron-is-dev";
 import taskLogic from "../server/logic/Task.js";
 import { initDatabase, disconnect } from "../server/db/index.js";
 import { registerIpcHandlers } from "./ipc/handlers.js";
+import { windowManager } from './WindowManager.js';
+import { eventBridge } from './ipc/eventBridge.js';
 
 let mainWindow: BrowserWindow | null;
 
@@ -39,6 +41,9 @@ function createWindow() {
           : "public/icons/png/512x512.png",
     ),
   });
+
+  // 注册窗口到 WindowManager
+  windowManager.setMainWindow(mainWindow);
 
   if (process.env.ELECTRON_RENDERER_URL) {
     mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
@@ -99,6 +104,7 @@ function createWindow() {
 
   mainWindow.on("closed", () => {
     mainWindow = null;
+    windowManager.setMainWindow(null);
   });
 }
 
@@ -109,6 +115,9 @@ app.whenReady().then(async () => {
 
     // 注册 IPC Handlers
     registerIpcHandlers();
+
+    // 初始化事件桥接器
+    eventBridge.initialize();
 
     // 创建窗口
     createWindow();
@@ -130,6 +139,7 @@ app.on("window-all-closed", () => {
     if (taskLogic.getStatus()) {
       stopTask();
     }
+    eventBridge.cleanup();
     disconnect();
     app.quit();
   }

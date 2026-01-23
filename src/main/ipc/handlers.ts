@@ -7,6 +7,7 @@ import modelLogic from "../../server/logic/Model.js";
 import path from "path";
 import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
+import { eventBus, TaskEventType } from '../../server/events/EventBus.js';
 
 // IPC Response 类型
 interface IpcResponse<T = any> {
@@ -296,6 +297,23 @@ export function registerIpcHandlers() {
     async (_, id: string, data: any): Promise<IpcResponse> => {
       try {
         const updatedTask = await taskDal.update(id, data);
+
+        // 发射任务更新事件
+        eventBus.emitTaskEvent(TaskEventType.TASK_UPDATED, {
+          taskId: id,
+          task: updatedTask,
+          timestamp: Date.now(),
+        });
+
+        // 如果状态变化，额外发射状态变化事件
+        if (data.status !== undefined) {
+          eventBus.emitTaskEvent(TaskEventType.TASK_STATUS_CHANGED, {
+            taskId: id,
+            task: { status: data.status },
+            timestamp: Date.now(),
+          });
+        }
+
         return { success: true, data: updatedTask };
       } catch (error: any) {
         console.error("[IPC] task:update error:", error);
@@ -314,6 +332,13 @@ export function registerIpcHandlers() {
 
       // 删除任务记录
       const deletedTask = await taskDal.remove(id);
+
+      // 发射任务删除事件
+      eventBus.emitTaskEvent(TaskEventType.TASK_DELETED, {
+        taskId: id,
+        timestamp: Date.now(),
+      });
+
       return { success: true, data: deletedTask };
     } catch (error: any) {
       console.error("[IPC] task:delete error:", error);

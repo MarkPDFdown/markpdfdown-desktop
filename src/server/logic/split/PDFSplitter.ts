@@ -68,7 +68,7 @@ export class PDFSplitter implements ISplitter {
     return this.withRetry(async () => {
       // Convert first page to get metadata
       const result = await pdfToPng(pdfPath, {
-        outputFolder: ImagePathUtil.getTempDir()!,
+        outputFolder: ImagePathUtil.getUploadsDir()!,
         viewportScale: WORKER_CONFIG.splitter.viewportScale,
         pagesToProcess: [1], // Array of page numbers, not a number
         strictPagesToProcess: false,

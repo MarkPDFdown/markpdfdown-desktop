@@ -4,6 +4,7 @@ import { SplitterFactory } from '../logic/split/index.js';
 import { WORKER_CONFIG } from '../config/worker.config.js';
 import { prisma } from '../db/index.js';
 import type { SplitResult } from '../logic/split/ISplitter.js';
+import { eventBus, TaskEventType } from '../events/EventBus.js';
 
 /**
  * Worker for splitting PDF/image files into individual pages.
@@ -114,7 +115,7 @@ export class SplitterWorker extends WorkerBase {
     const taskId = task.id!;
 
     try {
-      await prisma.$transaction(async (tx) => {
+      const updated = await prisma.$transaction(async (tx) => {
         // Step 1: Batch create TaskDetail records
         const taskDetails = result.pages.map((pageInfo) => ({
           task: taskId,
@@ -133,7 +134,7 @@ export class SplitterWorker extends WorkerBase {
         });
 
         // Step 2: Update Task status and metadata
-        await tx.task.update({
+        const updatedTask = await tx.task.update({
           where: {
             id: taskId,
           },
@@ -144,6 +145,21 @@ export class SplitterWorker extends WorkerBase {
             updatedAt: new Date(),
           },
         });
+
+        return updatedTask;
+      });
+
+      // 发射任务事件（在事务成功后）
+      eventBus.emitTaskEvent(TaskEventType.TASK_UPDATED, {
+        taskId,
+        task: updated,
+        timestamp: Date.now(),
+      });
+
+      eventBus.emitTaskEvent(TaskEventType.TASK_STATUS_CHANGED, {
+        taskId,
+        task: { status: TaskStatus.PROCESSING },
+        timestamp: Date.now(),
       });
 
       console.log(

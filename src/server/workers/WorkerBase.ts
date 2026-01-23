@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { prisma } from '../db/index.js';
 import { Task, TaskStatus } from '../types/index.js';
+import { eventBus, TaskEventType } from '../events/EventBus.js';
 
 /**
  * Abstract base class for all workers.
@@ -61,7 +62,7 @@ export abstract class WorkerBase {
    */
   protected async claimTask(fromStatus: TaskStatus, toStatus: TaskStatus): Promise<Task | null> {
     try {
-      return await prisma.$transaction(async (tx) => {
+      const claimed = await prisma.$transaction(async (tx) => {
         // Find first available task
         const task = await tx.task.findFirst({
           where: {
@@ -91,6 +92,23 @@ export abstract class WorkerBase {
 
         return updated as Task;
       });
+
+      // 发射任务事件（在事务成功后）
+      if (claimed) {
+        eventBus.emitTaskEvent(TaskEventType.TASK_UPDATED, {
+          taskId: claimed.id!,
+          task: claimed,
+          timestamp: Date.now(),
+        });
+
+        eventBus.emitTaskEvent(TaskEventType.TASK_STATUS_CHANGED, {
+          taskId: claimed.id!,
+          task: { status: toStatus },
+          timestamp: Date.now(),
+        });
+      }
+
+      return claimed;
     } catch (error) {
       console.error(`[Worker-${this.workerId}] Failed to claim task:`, error);
       return null;
@@ -110,7 +128,7 @@ export abstract class WorkerBase {
     data?: Partial<Task>
   ): Promise<void> {
     try {
-      await prisma.task.update({
+      const updated = await prisma.task.update({
         where: {
           id: taskId,
         },
@@ -120,6 +138,31 @@ export abstract class WorkerBase {
           updatedAt: new Date(),
         },
       });
+
+      // 发射任务更新事件
+      eventBus.emitTaskEvent(TaskEventType.TASK_UPDATED, {
+        taskId,
+        task: updated,
+        timestamp: Date.now(),
+      });
+
+      // 如果状态变化，额外发射状态变化事件
+      if (status !== undefined) {
+        eventBus.emitTaskEvent(TaskEventType.TASK_STATUS_CHANGED, {
+          taskId,
+          task: { status },
+          timestamp: Date.now(),
+        });
+      }
+
+      // 如果进度变化，发射进度变化事件
+      if (data?.progress !== undefined) {
+        eventBus.emitTaskEvent(TaskEventType.TASK_PROGRESS_CHANGED, {
+          taskId,
+          task: { progress: data.progress },
+          timestamp: Date.now(),
+        });
+      }
     } catch (error) {
       console.error(`[Worker-${this.workerId}] Failed to update task ${taskId}:`, error);
       throw error;
@@ -139,7 +182,7 @@ export abstract class WorkerBase {
     console.error(`[Worker-${this.workerId}] Task ${taskId} failed:`, errorMessage);
 
     try {
-      await prisma.task.update({
+      const updated = await prisma.task.update({
         where: {
           id: taskId,
         },
@@ -149,6 +192,19 @@ export abstract class WorkerBase {
           worker_id: null, // Release worker
           updatedAt: new Date(),
         },
+      });
+
+      // 发射任务更新事件
+      eventBus.emitTaskEvent(TaskEventType.TASK_UPDATED, {
+        taskId,
+        task: updated,
+        timestamp: Date.now(),
+      });
+
+      eventBus.emitTaskEvent(TaskEventType.TASK_STATUS_CHANGED, {
+        taskId,
+        task: { status: TaskStatus.FAILED },
+        timestamp: Date.now(),
       });
     } catch (updateError) {
       console.error(

@@ -24,6 +24,9 @@ const List: React.FC = () => {
     pageSize: 10,
     total: 0,
   });
+  const [isPageVisible, setIsPageVisible] = useState(!document.hidden);
+  const [pollInterval, setPollInterval] = useState(30000); // 默认30秒
+  const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 使用 ref 存储 pagination，避免 useEffect 无限循环
   const paginationRef = useRef(pagination);
@@ -52,21 +55,103 @@ const List: React.FC = () => {
     }
   }, [message, t]);
 
+  const handleTaskEvent = useCallback((event: any) => {
+    const { type, taskId, task } = event;
+
+    console.log(`[List] Received task event: ${type}`, { taskId, task });
+
+    setData(prevData => {
+      const newData = [...prevData];
+      const index = newData.findIndex(t => t.id === taskId);
+
+      switch (type) {
+        case 'task:updated':
+        case 'task:status_changed':
+        case 'task:progress_changed':
+          if (index !== -1 && task) {
+            newData[index] = { ...newData[index], ...task };
+            return newData;
+          } else if (index === -1) {
+            // 任务不在当前列表中，可能是新任务或不在当前页
+            // 触发刷新以获取最新数据
+            fetchTasks(paginationRef.current.current, paginationRef.current.pageSize);
+          }
+          break;
+
+        case 'task:deleted':
+          if (index !== -1) {
+            newData.splice(index, 1);
+            setPagination(prev => ({ ...prev, total: prev.total - 1 }));
+            return newData;
+          }
+          break;
+      }
+
+      return prevData;
+    });
+
+    // 动态调整轮询间隔
+    if (type === 'task:status_changed' && task?.status) {
+      if (task.status >= 1 && task.status <= 5) {
+        setPollInterval(10000); // 活跃任务：10秒
+      } else {
+        setPollInterval(30000); // 完成任务：30秒
+      }
+    }
+  }, [fetchTasks]);
+
   useEffect(() => {
     fetchTasks(paginationRef.current.current, paginationRef.current.pageSize);
   }, [fetchTasks]);
 
   useEffect(() => {
-    // 设置定时器，每10秒获取一次任务列表
-    const timer = setInterval(() => {
-      fetchTasks(paginationRef.current.current, paginationRef.current.pageSize);
-    }, 10000);
-
-    // 组件卸载时清除定时器
+    console.log('[List] Registering task event listener');
+    const cleanup = window.api.events.onTaskEvent(handleTaskEvent);
     return () => {
-      clearInterval(timer);
+      console.log('[List] Cleaning up task event listener');
+      cleanup();
+    };
+  }, [handleTaskEvent]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      const visible = !document.hidden;
+      setIsPageVisible(visible);
+
+      if (visible) {
+        console.log('[List] Page visible, refreshing...');
+        fetchTasks(paginationRef.current.current, paginationRef.current.pageSize);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [fetchTasks]);
+
+  useEffect(() => {
+    // 清理旧定时器
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+    }
+
+    // 仅在页面可见时启动轮询
+    if (isPageVisible) {
+      console.log(`[List] Starting poll with interval: ${pollInterval}ms`);
+
+      pollTimerRef.current = setInterval(() => {
+        fetchTasks(paginationRef.current.current, paginationRef.current.pageSize);
+      }, pollInterval);
+    }
+
+    return () => {
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+    };
+  }, [fetchTasks, isPageVisible, pollInterval]);
 
   const handleTableChange = (newPagination: any) => {
     fetchTasks(newPagination.current, newPagination.pageSize);

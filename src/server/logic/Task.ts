@@ -1,6 +1,3 @@
-import { app } from 'electron';
-import isDev from 'electron-is-dev';
-import path from 'path';
 import { SplitterWorker } from '../workers/index.js';
 import { ImagePathUtil } from './split/index.js';
 import fileLogic from './File.js';
@@ -17,7 +14,6 @@ class TaskLogic {
   private isRunning: boolean;
   private splitterWorker: SplitterWorker | null;
   private uploadsDir: string;
-  private tempDir: string;
 
   constructor() {
     this.isRunning = false;
@@ -25,14 +21,6 @@ class TaskLogic {
 
     // Use FileLogic for consistent directory paths across dev/prod
     this.uploadsDir = fileLogic.getUploadDir();
-
-    // Temp directory: same logic as File.ts
-    if (isDev) {
-      this.tempDir = path.join(process.cwd(), 'temp');
-    } else {
-      const userDataPath = app.getPath('userData');
-      this.tempDir = path.join(userDataPath, 'temp');
-    }
   }
 
   /**
@@ -48,8 +36,9 @@ class TaskLogic {
       console.log('[TaskLogic] Initializing workers...');
 
       // Initialize ImagePathUtil (critical for image path calculation)
-      ImagePathUtil.init(this.tempDir);
-      console.log(`[TaskLogic] ImagePathUtil initialized with tempDir: ${this.tempDir}`);
+      // Split results are stored in: {uploadsDir}/{taskId}/split/
+      ImagePathUtil.init(this.uploadsDir);
+      console.log(`[TaskLogic] ImagePathUtil initialized with uploadsDir: ${this.uploadsDir}`);
 
       // Start SplitterWorker
       this.splitterWorker = new SplitterWorker(this.uploadsDir);
@@ -115,7 +104,6 @@ class TaskLogic {
       } : null,
       directories: {
         uploads: this.uploadsDir,
-        temp: this.tempDir,
       },
     };
   }

@@ -3,7 +3,7 @@ import { ImagePathUtil } from '../ImagePathUtil.js';
 import path from 'path';
 
 describe('ImagePathUtil', () => {
-  const mockTempDir = '/mock/temp';
+  const mockUploadsDir = '/mock/uploads';
 
   beforeEach(() => {
     // Reset state before each test
@@ -16,53 +16,53 @@ describe('ImagePathUtil', () => {
   });
 
   describe('init()', () => {
-    it('should initialize with temp directory', () => {
-      ImagePathUtil.init(mockTempDir);
-      expect(ImagePathUtil.getTempDir()).toBe(mockTempDir);
+    it('should initialize with uploads directory', () => {
+      ImagePathUtil.init(mockUploadsDir);
+      expect(ImagePathUtil.getUploadsDir()).toBe(mockUploadsDir);
     });
 
     it('should allow re-initialization', () => {
       ImagePathUtil.init('/first');
       ImagePathUtil.init('/second');
-      expect(ImagePathUtil.getTempDir()).toBe('/second');
+      expect(ImagePathUtil.getUploadsDir()).toBe('/second');
     });
 
     it('should handle paths with trailing slash', () => {
-      ImagePathUtil.init('/mock/temp/');
-      expect(ImagePathUtil.getTempDir()).toBe('/mock/temp/');
+      ImagePathUtil.init('/mock/uploads/');
+      expect(ImagePathUtil.getUploadsDir()).toBe('/mock/uploads/');
     });
 
     it('should handle relative paths', () => {
-      ImagePathUtil.init('./temp');
-      expect(ImagePathUtil.getTempDir()).toBe('./temp');
+      ImagePathUtil.init('./uploads');
+      expect(ImagePathUtil.getUploadsDir()).toBe('./uploads');
     });
   });
 
   describe('getPath()', () => {
     beforeEach(() => {
-      ImagePathUtil.init(mockTempDir);
+      ImagePathUtil.init(mockUploadsDir);
     });
 
     it('should return correct path for page 1', () => {
       const result = ImagePathUtil.getPath('task123', 1);
-      expect(result).toBe(path.join(mockTempDir, 'task123', 'page-1.png'));
+      expect(result).toBe(path.join(mockUploadsDir, 'task123', 'split', 'page-1.png'));
     });
 
     it('should return correct path for page 10', () => {
       const result = ImagePathUtil.getPath('task456', 10);
-      expect(result).toBe(path.join(mockTempDir, 'task456', 'page-10.png'));
+      expect(result).toBe(path.join(mockUploadsDir, 'task456', 'split', 'page-10.png'));
     });
 
     it('should return correct path for page 100', () => {
       const result = ImagePathUtil.getPath('task789', 100);
-      expect(result).toBe(path.join(mockTempDir, 'task789', 'page-100.png'));
+      expect(result).toBe(path.join(mockUploadsDir, 'task789', 'split', 'page-100.png'));
     });
 
     it('should handle different task IDs', () => {
       const result1 = ImagePathUtil.getPath('abc', 1);
       const result2 = ImagePathUtil.getPath('xyz', 1);
-      expect(result1).toBe(path.join(mockTempDir, 'abc', 'page-1.png'));
-      expect(result2).toBe(path.join(mockTempDir, 'xyz', 'page-1.png'));
+      expect(result1).toBe(path.join(mockUploadsDir, 'abc', 'split', 'page-1.png'));
+      expect(result2).toBe(path.join(mockUploadsDir, 'xyz', 'split', 'page-1.png'));
     });
 
     it('should throw error if not initialized', () => {
@@ -80,19 +80,19 @@ describe('ImagePathUtil', () => {
 
   describe('getTaskDir()', () => {
     beforeEach(() => {
-      ImagePathUtil.init(mockTempDir);
+      ImagePathUtil.init(mockUploadsDir);
     });
 
-    it('should return correct task directory', () => {
+    it('should return correct task split directory', () => {
       const result = ImagePathUtil.getTaskDir('task123');
-      expect(result).toBe(path.join(mockTempDir, 'task123'));
+      expect(result).toBe(path.join(mockUploadsDir, 'task123', 'split'));
     });
 
     it('should handle different task IDs', () => {
       const result1 = ImagePathUtil.getTaskDir('abc');
       const result2 = ImagePathUtil.getTaskDir('xyz');
-      expect(result1).toBe(path.join(mockTempDir, 'abc'));
-      expect(result2).toBe(path.join(mockTempDir, 'xyz'));
+      expect(result1).toBe(path.join(mockUploadsDir, 'abc', 'split'));
+      expect(result2).toBe(path.join(mockUploadsDir, 'xyz', 'split'));
     });
 
     it('should throw error if not initialized', () => {
@@ -103,39 +103,39 @@ describe('ImagePathUtil', () => {
     });
   });
 
-  describe('getTempDir()', () => {
+  describe('getUploadsDir()', () => {
     it('should return null before initialization', () => {
-      expect(ImagePathUtil.getTempDir()).toBeNull();
+      expect(ImagePathUtil.getUploadsDir()).toBeNull();
     });
 
-    it('should return temp directory after initialization', () => {
-      ImagePathUtil.init(mockTempDir);
-      expect(ImagePathUtil.getTempDir()).toBe(mockTempDir);
+    it('should return uploads directory after initialization', () => {
+      ImagePathUtil.init(mockUploadsDir);
+      expect(ImagePathUtil.getUploadsDir()).toBe(mockUploadsDir);
     });
 
     it('should return null after reset', () => {
-      ImagePathUtil.init(mockTempDir);
+      ImagePathUtil.init(mockUploadsDir);
       ImagePathUtil.reset();
-      expect(ImagePathUtil.getTempDir()).toBeNull();
+      expect(ImagePathUtil.getUploadsDir()).toBeNull();
     });
   });
 
   describe('reset()', () => {
-    it('should reset temp directory to null', () => {
-      ImagePathUtil.init(mockTempDir);
-      expect(ImagePathUtil.getTempDir()).toBe(mockTempDir);
+    it('should reset uploads directory to null', () => {
+      ImagePathUtil.init(mockUploadsDir);
+      expect(ImagePathUtil.getUploadsDir()).toBe(mockUploadsDir);
       ImagePathUtil.reset();
-      expect(ImagePathUtil.getTempDir()).toBeNull();
+      expect(ImagePathUtil.getUploadsDir()).toBeNull();
     });
 
     it('should make getPath() throw after reset', () => {
-      ImagePathUtil.init(mockTempDir);
+      ImagePathUtil.init(mockUploadsDir);
       ImagePathUtil.reset();
       expect(() => ImagePathUtil.getPath('task123', 1)).toThrow();
     });
 
     it('should make getTaskDir() throw after reset', () => {
-      ImagePathUtil.init(mockTempDir);
+      ImagePathUtil.init(mockUploadsDir);
       ImagePathUtil.reset();
       expect(() => ImagePathUtil.getTaskDir('task123')).toThrow();
     });
@@ -143,7 +143,7 @@ describe('ImagePathUtil', () => {
 
   describe('path format consistency', () => {
     beforeEach(() => {
-      ImagePathUtil.init(mockTempDir);
+      ImagePathUtil.init(mockUploadsDir);
     });
 
     it('should always use .png extension', () => {
@@ -164,9 +164,10 @@ describe('ImagePathUtil', () => {
       expect(result3).toMatch(/page-100\.png$/);
     });
 
-    it('should always include task ID in path', () => {
+    it('should always include task ID and split directory in path', () => {
       const result = ImagePathUtil.getPath('my-task-id', 1);
       expect(result).toContain('my-task-id');
+      expect(result).toContain('split');
     });
 
     it('should produce platform-specific separators', () => {
@@ -179,27 +180,27 @@ describe('ImagePathUtil', () => {
 
   describe('edge cases', () => {
     beforeEach(() => {
-      ImagePathUtil.init(mockTempDir);
+      ImagePathUtil.init(mockUploadsDir);
     });
 
     it('should handle empty task ID', () => {
       const result = ImagePathUtil.getPath('', 1);
-      expect(result).toBe(path.join(mockTempDir, '', 'page-1.png'));
+      expect(result).toBe(path.join(mockUploadsDir, '', 'split', 'page-1.png'));
     });
 
     it('should handle task ID with special characters', () => {
       const result = ImagePathUtil.getPath('task-123_abc', 1);
-      expect(result).toBe(path.join(mockTempDir, 'task-123_abc', 'page-1.png'));
+      expect(result).toBe(path.join(mockUploadsDir, 'task-123_abc', 'split', 'page-1.png'));
     });
 
     it('should handle page 0 (even though invalid for business logic)', () => {
       const result = ImagePathUtil.getPath('task123', 0);
-      expect(result).toBe(path.join(mockTempDir, 'task123', 'page-0.png'));
+      expect(result).toBe(path.join(mockUploadsDir, 'task123', 'split', 'page-0.png'));
     });
 
     it('should handle negative page numbers (even though invalid)', () => {
       const result = ImagePathUtil.getPath('task123', -1);
-      expect(result).toBe(path.join(mockTempDir, 'task123', 'page--1.png'));
+      expect(result).toBe(path.join(mockUploadsDir, 'task123', 'split', 'page--1.png'));
     });
   });
 });
