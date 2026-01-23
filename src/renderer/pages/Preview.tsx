@@ -7,6 +7,7 @@ import {
   App,
   Button,
   Pagination,
+  Progress,
   Space,
   Spin,
   Splitter,
@@ -192,11 +193,11 @@ const Preview: React.FC = () => {
           height: "calc(100vh - 114px)",
           display: "flex",
           flexDirection: "column",
-          gap: "24px",
+          gap: "18px",
         }}
       >
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <Button
             onClick={() => navigate("/list")}
             icon={<ArrowLeftOutlined />}
@@ -206,21 +207,37 @@ const Preview: React.FC = () => {
             {t('preview.back')}
           </Button>
 
-          <Space
-            style={{
-              maxWidth: "580px",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            <FilePdfTwoTone twoToneColor="#ec5f4a" />
-            <Tooltip title={task?.filename || ''}>
-              <Text strong>
-                [{tCommon('common.pages', { count: task?.pages || 0 })}]{task?.filename || ''}
-              </Text>
-            </Tooltip>
-          </Space>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "center", width: "200px" }}>
+            <Space
+              style={{
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              <FilePdfTwoTone twoToneColor="#ec5f4a" />
+              <Tooltip title={task?.filename || ''}>
+                <Text strong>
+                  [{tCommon('common.pages', { count: task?.pages || 0 })}]{task?.filename || ''}
+                </Text>
+              </Tooltip>
+            </Space>
+
+            {/* Mini Progress Bar */}
+            {task && (
+              <Progress
+                percent={task.progress || 0}
+                size="small"
+                status={task.status === 6 ? 'success' : task.status === 4 ? 'exception' : 'active'}
+                strokeColor={{
+                  '0%': '#108ee9',
+                  '100%': '#87d068',
+                }}
+                showInfo={false}
+                style={{ width: "100%" }}
+              />
+            )}
+          </div>
 
           <Space>
             <Button
