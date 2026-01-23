@@ -61,20 +61,36 @@ export class PageRangeParser {
           throw new Error(`Invalid range: ${part}. Start page must be less than or equal to end page.`);
         }
 
-        if (start < 1 || end > totalPages) {
-          throw new Error(`Page range ${part} is out of bounds. Valid range: 1-${totalPages}`);
+        // Clamp range to valid bounds instead of throwing error
+        const clampedStart = Math.max(1, Math.min(start, totalPages));
+        const clampedEnd = Math.max(1, Math.min(end, totalPages));
+
+        // Log warning if clamping occurred
+        if (start < 1 || end > totalPages || start > totalPages) {
+          console.warn(
+            `[PageRangeParser] Requested page range ${part} adjusted to fit document bounds (1-${totalPages})`
+          );
         }
 
-        // Add all pages in range
-        for (let i = start; i <= end; i++) {
+        // Skip if start is beyond total pages
+        if (start > totalPages) {
+          continue;
+        }
+
+        // Add all pages in clamped range
+        for (let i = clampedStart; i <= clampedEnd; i++) {
           pages.add(i);
         }
       } else {
         // Handle single page (e.g., "3")
         const page = parseInt(part, 10);
 
+        // Skip pages that are out of bounds with a warning
         if (page < 1 || page > totalPages) {
-          throw new Error(`Page ${page} is out of bounds. Valid range: 1-${totalPages}`);
+          console.warn(
+            `[PageRangeParser] Page ${page} is out of bounds (valid: 1-${totalPages}), skipping`
+          );
+          continue;
         }
 
         pages.add(page);
@@ -82,7 +98,16 @@ export class PageRangeParser {
     }
 
     // Convert to sorted array
-    return Array.from(pages).sort((a, b) => a - b);
+    const result = Array.from(pages).sort((a, b) => a - b);
+
+    // Ensure at least one valid page exists
+    if (result.length === 0) {
+      throw new Error(
+        `No valid pages found in range "${rangeStr}". Document has ${totalPages} page(s), valid range: 1-${totalPages}`
+      );
+    }
+
+    return result;
   }
 
   /**

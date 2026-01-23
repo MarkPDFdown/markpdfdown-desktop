@@ -67,6 +67,21 @@ describe('PageRangeParser', () => {
       const result = PageRangeParser.parse(' 1 - 3 , 5 ', 10);
       expect(result).toEqual([1, 2, 3, 5]);
     });
+
+    it('should parse complex mixed format (user requested format)', () => {
+      const result = PageRangeParser.parse('1-3,7,9,10-20', 25);
+      expect(result).toEqual([1, 2, 3, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]);
+    });
+
+    it('should parse complex mixed format with many components', () => {
+      const result = PageRangeParser.parse('1-2,5,8-10,15,20-22', 25);
+      expect(result).toEqual([1, 2, 5, 8, 9, 10, 15, 20, 21, 22]);
+    });
+
+    it('should handle mixed format with unordered components', () => {
+      const result = PageRangeParser.parse('10-12,1-3,7,5', 15);
+      expect(result).toEqual([1, 2, 3, 5, 7, 10, 11, 12]);
+    });
   });
 
   describe('parse() - error cases', () => {
@@ -90,18 +105,6 @@ describe('PageRangeParser', () => {
       expect(() => PageRangeParser.parse('1--5', 10)).toThrow(/Invalid page range format/);
     });
 
-    it('should throw error for page out of bounds (below)', () => {
-      expect(() => PageRangeParser.parse('0', 10)).toThrow(/out of bounds/);
-    });
-
-    it('should throw error for page out of bounds (above)', () => {
-      expect(() => PageRangeParser.parse('11', 10)).toThrow(/out of bounds/);
-    });
-
-    it('should throw error for range out of bounds', () => {
-      expect(() => PageRangeParser.parse('5-15', 10)).toThrow(/out of bounds/);
-    });
-
     it('should throw error for inverted range', () => {
       expect(() => PageRangeParser.parse('5-2', 10)).toThrow(
         /Start page must be less than or equal to end page/
@@ -110,6 +113,87 @@ describe('PageRangeParser', () => {
 
     it('should throw error for negative page', () => {
       expect(() => PageRangeParser.parse('-1', 10)).toThrow(/Invalid page range format/);
+    });
+
+    it('should throw error when no valid pages found', () => {
+      expect(() => PageRangeParser.parse('15-20', 10)).toThrow(/No valid pages found/);
+    });
+  });
+
+  describe('parse() - clamping behavior', () => {
+    it('should clamp single page above bounds and skip it', () => {
+      // Page 11 is out of bounds for 10-page document, should throw
+      expect(() => PageRangeParser.parse('11', 10)).toThrow(/No valid pages found/);
+    });
+
+    it('should clamp single page below bounds and skip it', () => {
+      // Page 0 is out of bounds and gets skipped, resulting in no valid pages
+      expect(() => PageRangeParser.parse('0', 10)).toThrow(/No valid pages found/);
+    });
+
+    it('should clamp range that exceeds upper bound', () => {
+      // Requesting pages 5-15 but only 10 pages exist, should clamp to 5-10
+      const result = PageRangeParser.parse('5-15', 10);
+      expect(result).toEqual([5, 6, 7, 8, 9, 10]);
+    });
+
+    it('should clamp range that exceeds upper bound (user issue case)', () => {
+      // Requesting pages 1-3 but only 1 page exists, should clamp to page 1
+      const result = PageRangeParser.parse('1-3', 1);
+      expect(result).toEqual([1]);
+    });
+
+    it('should skip pages above bounds in mixed format', () => {
+      // Pages 1,2,3 are valid, but 15 is out of bounds
+      const result = PageRangeParser.parse('1,2,3,15', 10);
+      expect(result).toEqual([1, 2, 3]);
+    });
+
+    it('should clamp range and skip out-of-bounds pages in mixed format', () => {
+      // 1-3 is valid, 8-12 should clamp to 8-10, 20 should be skipped
+      const result = PageRangeParser.parse('1-3,8-12,20', 10);
+      expect(result).toEqual([1, 2, 3, 8, 9, 10]);
+    });
+
+    it('should skip range entirely above bounds', () => {
+      // All pages are out of bounds
+      expect(() => PageRangeParser.parse('20-25', 10)).toThrow(/No valid pages found/);
+    });
+
+    it('should handle complex mixed format with clamping (user scenario)', () => {
+      // Simulate "1-3,7,9,10-20" on a 15-page document
+      // Pages 1-3, 7, 9 are valid; 10-20 should clamp to 10-15
+      const result = PageRangeParser.parse('1-3,7,9,10-20', 15);
+      expect(result).toEqual([1, 2, 3, 7, 9, 10, 11, 12, 13, 14, 15]);
+    });
+
+    it('should handle complex mixed format with some out of bounds components', () => {
+      // 1-3 valid, 7 valid, 9 valid, 10-20 clamped to 10-12, 25 skipped, 30-35 skipped
+      const result = PageRangeParser.parse('1-3,7,9,10-20,25,30-35', 12);
+      expect(result).toEqual([1, 2, 3, 7, 9, 10, 11, 12]);
+    });
+
+    it('should handle mixed format where first part is out of bounds', () => {
+      // 20-25 out of bounds (skipped), 1-3 valid, 5 valid
+      const result = PageRangeParser.parse('20-25,1-3,5', 10);
+      expect(result).toEqual([1, 2, 3, 5]);
+    });
+
+    it('should handle mixed format with alternating valid/invalid parts', () => {
+      // 1-2 valid, 100 skip, 5-7 valid, 200-300 skip, 9 valid
+      const result = PageRangeParser.parse('1-2,100,5-7,200-300,9', 10);
+      expect(result).toEqual([1, 2, 5, 6, 7, 9]);
+    });
+
+    it('should handle complex mixed format on 1-page document (extreme case)', () => {
+      // Only page 1 is valid; 1-3 clamped to 1, 7 skipped, 9 skipped, 10-20 skipped
+      const result = PageRangeParser.parse('1-3,7,9,10-20', 1);
+      expect(result).toEqual([1]);
+    });
+
+    it('should throw when all components in mixed format are out of bounds', () => {
+      // All parts are out of bounds
+      expect(() => PageRangeParser.parse('20-25,30,35-40', 10)).toThrow(/No valid pages found/);
     });
   });
 

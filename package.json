@@ -98,6 +98,7 @@
     "antd": "^5.24.4",
     "electron-is-dev": "^3.0.1",
     "katex": "^0.16.21",
+    "pdf-lib": "^1.17.1",
     "pdf-to-png-converter": "^3.11.0",
     "prismjs": "^1.30.0",
     "react": "^18.2.0",

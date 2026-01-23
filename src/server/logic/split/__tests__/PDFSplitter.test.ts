@@ -9,6 +9,13 @@ vi.mock('pdf-to-png-converter', () => ({
   pdfToPng: vi.fn(),
 }));
 
+// Mock pdf-lib
+vi.mock('pdf-lib', () => ({
+  PDFDocument: {
+    load: vi.fn(),
+  },
+}));
+
 // Mock fs promises
 vi.mock('fs', () => ({
   promises: {
@@ -16,10 +23,12 @@ vi.mock('fs', () => ({
     rename: vi.fn(),
     rm: vi.fn(),
     unlink: vi.fn(),
+    readFile: vi.fn(),
   },
 }));
 
 import { pdfToPng } from 'pdf-to-png-converter';
+import { PDFDocument } from 'pdf-lib';
 
 describe('PDFSplitter', () => {
   const uploadsDir = '/mock/uploads';
@@ -34,6 +43,12 @@ describe('PDFSplitter', () => {
 
     // Reset mocks
     vi.clearAllMocks();
+
+    // Setup default mocks for PDFDocument
+    vi.mocked(fs.readFile).mockResolvedValue(Buffer.from('mock-pdf-bytes'));
+    vi.mocked(PDFDocument.load).mockResolvedValue({
+      getPageCount: () => 3,
+    } as any);
   });
 
   afterEach(() => {
@@ -48,11 +63,7 @@ describe('PDFSplitter', () => {
         page_range: '',
       };
 
-      // Mock pdfToPng to return 3 pages
-      vi.mocked(pdfToPng).mockResolvedValueOnce([
-        { pageCount: 3, path: '/tmp/page-1.png', name: 'page-1.png', page: 1, content: Buffer.from('') },
-      ]);
-
+      // Mock pdfToPng to return 3 pages (PDFDocument.load already mocked in beforeEach)
       vi.mocked(pdfToPng).mockResolvedValueOnce([
         { path: '/tmp/page-1.png', name: 'page-1.png', page: 1, content: Buffer.from('') },
         { path: '/tmp/page-2.png', name: 'page-2.png', page: 2, content: Buffer.from('') },
@@ -61,7 +72,6 @@ describe('PDFSplitter', () => {
 
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
       vi.mocked(fs.rename).mockResolvedValue(undefined);
-      vi.mocked(fs.unlink).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 

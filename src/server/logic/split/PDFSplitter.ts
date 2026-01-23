@@ -1,4 +1,5 @@
 import { pdfToPng } from 'pdf-to-png-converter';
+import { PDFDocument } from 'pdf-lib';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { ISplitter, SplitResult, PageInfo } from './ISplitter.js';
@@ -44,13 +45,19 @@ export class PDFSplitter implements ISplitter {
 
     try {
       // Step 1: Get total page count with retry
-      const totalPages = await this.getPDFPageCountWithRetry(sourcePath, taskId);
+      const totalPages = await this.getPDFPageCountWithRetry(sourcePath);
 
       // Step 2: Parse page range (defaults to all pages if not specified)
       const pageNumbers = PageRangeParser.parse(task.page_range, totalPages);
 
       // Step 3: Convert specified pages with retry
-      const pages = await this.convertPagesWithRetry(sourcePath, taskId, pageNumbers);
+      // Pass the page_range string to determine if user explicitly specified pages
+      const pages = await this.convertPagesWithRetry(
+        sourcePath,
+        taskId,
+        pageNumbers,
+        task.page_range
+      );
 
       return {
         pages,
@@ -63,35 +70,26 @@ export class PDFSplitter implements ISplitter {
 
   /**
    * Get PDF page count with retry logic.
+   * Uses pdf-lib for accurate page count without converting pages.
    */
-  private async getPDFPageCountWithRetry(pdfPath: string, taskId: string): Promise<number> {
+  private async getPDFPageCountWithRetry(pdfPath: string): Promise<number> {
     return this.withRetry(async () => {
-      // Use task's split directory for temporary output
-      const taskDir = ImagePathUtil.getTaskDir(taskId);
-      await fs.mkdir(taskDir, { recursive: true });
+      // Read the PDF file
+      const pdfBytes = await fs.readFile(pdfPath);
 
-      // Convert first page to get metadata
-      const result = await pdfToPng(pdfPath, {
-        outputFolder: taskDir,
-        viewportScale: WORKER_CONFIG.splitter.viewportScale,
-        pagesToProcess: [1], // Array of page numbers, not a number
-        strictPagesToProcess: false,
-        verbosityLevel: 0,
+      // Load the PDF document using pdf-lib
+      const pdfDoc = await PDFDocument.load(pdfBytes, {
+        ignoreEncryption: false, // Will throw error for encrypted PDFs
       });
 
-      if (!result || result.length === 0) {
-        throw new Error('Failed to get PDF metadata');
+      // Get the total number of pages
+      const pageCount = pdfDoc.getPageCount();
+
+      if (pageCount < 1) {
+        throw new Error('PDF has no pages');
       }
 
-      // Clean up the temporary file (we only need the page count)
-      if (result[0].path) {
-        await fs.unlink(result[0].path).catch(() => {
-          // Ignore cleanup errors
-        });
-      }
-
-      // The library returns page info with total page count
-      return result[0].pageCount || 1;
+      return pageCount;
     }, 'get PDF page count');
   }
 
@@ -101,7 +99,8 @@ export class PDFSplitter implements ISplitter {
   private async convertPagesWithRetry(
     pdfPath: string,
     taskId: string,
-    pageNumbers: number[]
+    pageNumbers: number[],
+    pageRange?: string | null
   ): Promise<PageInfo[]> {
     const taskDir = ImagePathUtil.getTaskDir(taskId);
 
@@ -117,11 +116,12 @@ export class PDFSplitter implements ISplitter {
         verbosityLevel: 0,
       };
 
-      // Only add pagesToProcess if specific pages are requested
-      if (pageNumbers.length > 0) {
+      // Only add pagesToProcess if user explicitly specified a page range
+      // If pageRange is empty/null, let pdf-to-png-converter process all pages
+      if (pageRange && pageRange.trim() !== '') {
         options.pagesToProcess = pageNumbers; // Array of page numbers
       }
-      // If empty, convert all pages (don't specify pagesToProcess)
+      // Otherwise, don't specify pagesToProcess to convert all pages
 
       const result = await pdfToPng(pdfPath, options);
 
@@ -134,7 +134,8 @@ export class PDFSplitter implements ISplitter {
 
       for (let i = 0; i < result.length; i++) {
         const pageNum = i + 1; // Sequential numbering
-        const sourcePageNum = pageNumbers.length > 0 ? pageNumbers[i] : pageNum;
+        // If page range was specified, use the mapped page numbers; otherwise use sequential numbering
+        const sourcePageNum = pageRange && pageRange.trim() !== '' ? pageNumbers[i] : pageNum;
         const targetPath = ImagePathUtil.getPath(taskId, pageNum);
 
         // Rename from temporary name to standard format
