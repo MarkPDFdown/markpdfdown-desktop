@@ -6,7 +6,10 @@
   "author": "MarkPDFdown",
   "main": "dist/main/index.js",
   "type": "module",
-  "homepage": "https://github.com/markpdfdown/desktop",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "homepage": "https://github.com/markpdfdown/markpdfdown-desktop",
   "scripts": {
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
     "dev": "npm run generate && electron-vite dev",
