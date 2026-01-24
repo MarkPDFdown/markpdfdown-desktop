@@ -9,4 +9,5 @@ export interface Task {
     model_name?: string;
     progress?: number;
     status?: number;
+    error?: string | null;
 }

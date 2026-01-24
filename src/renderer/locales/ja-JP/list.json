@@ -15,6 +15,7 @@
     "completed": "完了",
     "cancelled": "キャンセル済み",
     "failed": "失敗",
+    "partial_failed": "一部失敗",
     "unknown": "不明"
   },
   "actions": {

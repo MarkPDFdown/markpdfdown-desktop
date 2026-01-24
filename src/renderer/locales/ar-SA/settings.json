@@ -16,6 +16,29 @@
   "preview": {
     "back": "رجوع",
     "download": "تحميل .md",
-    "delete": "حذف"
+    "delete": "حذف",
+    "cancel": "إلغاء",
+    "retry": "إعادة المحاولة",
+    "regenerate": "إعادة إنشاء",
+    "regenerate_tooltip": "إعادة إنشاء الصفحة الحالية",
+    "confirm_delete": "تأكيد الحذف",
+    "confirm_delete_content": "هل أنت متأكد من حذف هذه المهمة؟ لا يمكن التراجع عن هذا الإجراء.",
+    "delete_success": "تم الحذف بنجاح",
+    "delete_failed": "فشل الحذف",
+    "confirm_cancel": "تأكيد الإلغاء",
+    "confirm_cancel_content": "هل أنت متأكد من إلغاء هذه المهمة؟",
+    "cancel_success": "تم الإلغاء بنجاح",
+    "cancel_failed": "فشل الإلغاء",
+    "confirm_retry": "تأكيد إعادة المحاولة",
+    "confirm_retry_content": "هل أنت متأكد من إعادة محاولة هذه المهمة؟",
+    "retry_success": "تمت إضافة المهمة إلى قائمة إعادة المحاولة",
+    "retry_failed": "فشلت إعادة المحاولة",
+    "status": {
+      "failed": "فشل التحويل",
+      "pending": "في الانتظار",
+      "processing": "جاري التحويل",
+      "completed": "مكتمل",
+      "retrying": "إعادة المحاولة"
+    }
   }
 }

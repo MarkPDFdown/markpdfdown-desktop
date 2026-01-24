@@ -16,6 +16,29 @@
   "preview": {
     "back": "بازگشت",
     "download": "دانلود .md",
-    "delete": "حذف"
+    "delete": "حذف",
+    "cancel": "لغو",
+    "retry": "تلاش مجدد",
+    "regenerate": "بازتولید",
+    "regenerate_tooltip": "بازتولید صفحه فعلی",
+    "confirm_delete": "تأیید حذف",
+    "confirm_delete_content": "آیا مطمئن هستید که می‌خواهید این وظیفه را حذف کنید؟ این عمل قابل بازگشت نیست.",
+    "delete_success": "با موفقیت حذف شد",
+    "delete_failed": "حذف ناموفق بود",
+    "confirm_cancel": "تأیید لغو",
+    "confirm_cancel_content": "آیا مطمئن هستید که می‌خواهید این وظیفه را لغو کنید؟",
+    "cancel_success": "با موفقیت لغو شد",
+    "cancel_failed": "لغو ناموفق بود",
+    "confirm_retry": "تأیید تلاش مجدد",
+    "confirm_retry_content": "آیا مطمئن هستید که می‌خواهید این وظیفه را مجدداً تلاش کنید؟",
+    "retry_success": "وظیفه به صف تلاش مجدد اضافه شد",
+    "retry_failed": "تلاش مجدد ناموفق بود",
+    "status": {
+      "failed": "تبدیل ناموفق",
+      "pending": "در انتظار",
+      "processing": "در حال تبدیل",
+      "completed": "تکمیل شده",
+      "retrying": "در حال تلاش مجدد"
+    }
   }
 }

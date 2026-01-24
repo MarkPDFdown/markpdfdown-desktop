@@ -22,6 +22,12 @@
   },
   "common": {
     "copyright": "Copyright © {{year}} MarkPDFdown All Rights Reserved.",
-    "pages": "{{count}}页"
+    "pages": "{{count}}页",
+    "confirm": "确定",
+    "cancel": "取消"
+  },
+  "closeConfirm": {
+    "title": "确认退出",
+    "content": "当前有 {{count}} 个任务正在进行中，关闭将中断任务。确认退出吗？"
   }
 }

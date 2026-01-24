@@ -12,10 +12,26 @@ vi.mock('electron', () => ({
   },
 }));
 
+// Mock fileLogic to ensure consistent paths across platforms
+vi.mock('../File.js', () => ({
+  default: {
+    getUploadDir: vi.fn(() => '/mock/userdata/files'),
+    getTempDir: vi.fn(() => '/mock/userdata/temp'),
+    getSplitDir: vi.fn((taskId: string) => `/mock/userdata/files/${taskId}/split`),
+    deleteTaskFiles: vi.fn(),
+  },
+}));
+
 // Mock workers
 vi.mock('../../workers/index.js', () => ({
   SplitterWorker: vi.fn().mockImplementation(() => ({
     getWorkerId: vi.fn(() => 'mock-worker-id'),
+    getIsRunning: vi.fn(() => true),
+    run: vi.fn().mockResolvedValue(undefined),
+    stop: vi.fn(),
+  })),
+  ConverterWorker: vi.fn().mockImplementation(() => ({
+    getWorkerId: vi.fn(() => 'mock-converter-id'),
     getIsRunning: vi.fn(() => true),
     run: vi.fn().mockResolvedValue(undefined),
     stop: vi.fn(),
@@ -35,6 +51,8 @@ import TaskLogic from '../Task.js';
 import { SplitterWorker } from '../../workers/index.js';
 import { ImagePathUtil } from '../split/index.js';
 
+const MOCK_UPLOADS_DIR = '/mock/userdata/files';
+
 describe('TaskLogic', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -48,13 +66,13 @@ describe('TaskLogic', () => {
     it('should initialize ImagePathUtil with uploads directory', async () => {
       await TaskLogic.start();
 
-      expect(ImagePathUtil.init).toHaveBeenCalledWith('/mock/userdata/files');
+      expect(ImagePathUtil.init).toHaveBeenCalledWith(MOCK_UPLOADS_DIR);
     });
 
     it('should create and start SplitterWorker', async () => {
       await TaskLogic.start();
 
-      expect(SplitterWorker).toHaveBeenCalledWith('/mock/userdata/files');
+      expect(SplitterWorker).toHaveBeenCalledWith(MOCK_UPLOADS_DIR);
 
       const mockWorkerInstance = vi.mocked(SplitterWorker).mock.results[0].value;
       expect(mockWorkerInstance.run).toHaveBeenCalled();
@@ -136,28 +154,24 @@ describe('TaskLogic', () => {
 
       const info = TaskLogic.getWorkerInfo();
 
-      expect(info).toMatchObject({
-        isRunning: true,
-        splitterWorker: {
-          id: 'mock-worker-id',
-          running: true,
-        },
-        directories: {
-          uploads: '/mock/userdata/files',
-        },
+      expect(info.isRunning).toBe(true);
+      expect(info.splitterWorker).toMatchObject({
+        id: 'mock-worker-id',
+        running: true,
+      });
+      expect(info.converterWorkers).toHaveLength(3); // Default count from config
+      expect(info.converterWorkers[0]).toMatchObject({
+        id: 'mock-con', // First 8 chars of 'mock-converter-id'
+        running: true,
       });
     });
 
     it('should return null for worker when not running', () => {
       const info = TaskLogic.getWorkerInfo();
 
-      expect(info).toMatchObject({
-        isRunning: false,
-        splitterWorker: null,
-        directories: {
-          uploads: '/mock/userdata/files',
-        },
-      });
+      expect(info.isRunning).toBe(false);
+      expect(info.splitterWorker).toBeNull();
+      expect(info.converterWorkers).toHaveLength(0);
     });
   });
 
@@ -165,13 +179,13 @@ describe('TaskLogic', () => {
     it('should use correct uploads directory for workers', async () => {
       await TaskLogic.start();
 
-      expect(SplitterWorker).toHaveBeenCalledWith('/mock/userdata/files');
+      expect(SplitterWorker).toHaveBeenCalledWith(MOCK_UPLOADS_DIR);
     });
 
     it('should initialize ImagePathUtil with uploads directory', async () => {
       await TaskLogic.start();
 
-      expect(ImagePathUtil.init).toHaveBeenCalledWith('/mock/userdata/files');
+      expect(ImagePathUtil.init).toHaveBeenCalledWith(MOCK_UPLOADS_DIR);
     });
   });
 });

@@ -1,7 +1,14 @@
 import {
   ArrowLeftOutlined,
+  CheckCircleFilled,
+  ClockCircleFilled,
+  CloseCircleFilled,
+  DeleteOutlined,
   FileMarkdownOutlined,
   FilePdfTwoTone,
+  LoadingOutlined,
+  ReloadOutlined,
+  StopOutlined,
 } from "@ant-design/icons";
 import {
   App,
@@ -34,6 +41,7 @@ const Preview: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   // 获取任务元数据
   const fetchTask = useCallback(async () => {
@@ -158,24 +166,77 @@ const Preview: React.FC = () => {
     if (!id) return;
 
     modal.confirm({
-      title: '确认删除',
-      content: '确定要删除此任务吗?此操作不可恢复。',
-      okText: '确定',
-      cancelText: '取消',
+      title: t('preview.confirm_delete'),
+      content: t('preview.confirm_delete_content'),
+      okText: tCommon('common.confirm'),
+      cancelText: tCommon('common.cancel'),
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
           const result = await window.api.task.delete(id);
 
           if (result.success) {
-            message.success('删除成功');
+            message.success(t('preview.delete_success'));
             navigate('/list');
           } else {
-            message.error(result.error || '删除失败');
+            message.error(result.error || t('preview.delete_failed'));
           }
         } catch (error) {
           console.error('删除失败:', error);
-          message.error('删除失败');
+          message.error(t('preview.delete_failed'));
+        }
+      }
+    });
+  };
+
+  // 取消任务
+  const handleCancel = async () => {
+    if (!id) return;
+
+    modal.confirm({
+      title: t('preview.confirm_cancel'),
+      content: t('preview.confirm_cancel_content'),
+      okText: tCommon('common.confirm'),
+      cancelText: tCommon('common.cancel'),
+      onOk: async () => {
+        try {
+          const result = await window.api.task.update(id, { status: 7 }); // CANCELLED = 7
+
+          if (result.success) {
+            message.success(t('preview.cancel_success'));
+            navigate('/list');
+          } else {
+            message.error(result.error || t('preview.cancel_failed'));
+          }
+        } catch (error) {
+          console.error('取消失败:', error);
+          message.error(t('preview.cancel_failed'));
+        }
+      }
+    });
+  };
+
+  // 重试任务
+  const handleRetryTask = async () => {
+    if (!id) return;
+
+    modal.confirm({
+      title: t('preview.confirm_retry'),
+      content: t('preview.confirm_retry_content'),
+      okText: tCommon('common.confirm'),
+      cancelText: tCommon('common.cancel'),
+      onOk: async () => {
+        try {
+          const result = await window.api.task.update(id, { status: 1 }); // PENDING = 1
+
+          if (result.success) {
+            message.success(t('preview.retry_success'));
+          } else {
+            message.error(result.error || t('preview.retry_failed'));
+          }
+        } catch (error) {
+          console.error('重试失败:', error);
+          message.error(t('preview.retry_failed'));
         }
       }
     });
@@ -186,6 +247,72 @@ const Preview: React.FC = () => {
     setCurrentPage(page);
   };
 
+  // 重试当前页
+  const handleRetryPage = async () => {
+    if (!taskDetail?.id) return;
+
+    setRetrying(true);
+    try {
+      const result = await window.api.taskDetail.retry(taskDetail.id);
+
+      if (result.success) {
+        message.success('页面已加入重试队列');
+        // 重新获取页面详情
+        fetchPageDetail(currentPage);
+      } else {
+        message.error(result.error || '重试失败');
+      }
+    } catch (error) {
+      console.error('重试页面失败:', error);
+      message.error('重试失败');
+    } finally {
+      setRetrying(false);
+    }
+  };
+
+  // 获取页面状态信息
+  const getPageStatusInfo = () => {
+    const status = taskDetail?.status;
+    const iconStyle = { fontSize: 14 };
+    // PageStatus: FAILED = -1, PENDING = 0, PROCESSING = 1, COMPLETED = 2, RETRYING = 3
+    switch (status) {
+      case -1: // FAILED
+        return {
+          icon: <CloseCircleFilled style={{ ...iconStyle, color: '#ff4d4f' }} />,
+          text: t('preview.status.failed'),
+          color: '#ff4d4f',
+        };
+      case 0: // PENDING
+        return {
+          icon: <ClockCircleFilled style={{ ...iconStyle, color: '#faad14' }} />,
+          text: t('preview.status.pending'),
+          color: '#faad14',
+        };
+      case 1: // PROCESSING
+        return {
+          icon: <LoadingOutlined style={{ ...iconStyle, color: '#1890ff' }} spin />,
+          text: t('preview.status.processing'),
+          color: '#1890ff',
+        };
+      case 2: // COMPLETED
+        return {
+          icon: <CheckCircleFilled style={{ ...iconStyle, color: '#52c41a' }} />,
+          text: t('preview.status.completed'),
+          color: '#52c41a',
+        };
+      case 3: // RETRYING
+        return {
+          icon: <LoadingOutlined style={{ ...iconStyle, color: '#faad14' }} spin />,
+          text: t('preview.status.retrying'),
+          color: '#faad14',
+        };
+      default:
+        return null;
+    }
+  };
+
+  const pageStatusInfo = getPageStatusInfo();
+
   return (
     <App>
       <div
@@ -194,6 +321,7 @@ const Preview: React.FC = () => {
           display: "flex",
           flexDirection: "column",
           gap: "18px",
+          overflow: "hidden",
         }}
       >
         {/* Header */}
@@ -240,6 +368,7 @@ const Preview: React.FC = () => {
           </div>
 
           <Space>
+            {/* 下载: 始终显示，但仅在 COMPLETED(6) 且有 merged_path 时启用 */}
             <Button
               color="primary"
               icon={<FileMarkdownOutlined />}
@@ -249,13 +378,38 @@ const Preview: React.FC = () => {
             >
               {t('preview.download')}
             </Button>
-            <Button
-              color="danger"
-              variant="filled"
-              onClick={handleDelete}
-            >
-              {t('preview.delete')}
-            </Button>
+            {/* 取消: status > 0 && status < 6 (PENDING, SPLITTING, PROCESSING, READY_TO_MERGE, MERGING) */}
+            {task?.status && task.status > 0 && task.status < 6 && (
+              <Button
+                icon={<StopOutlined />}
+                variant="filled"
+                onClick={handleCancel}
+              >
+                {t('preview.cancel')}
+              </Button>
+            )}
+            {/* 重试: status === 0 (FAILED) */}
+            {task?.status === 0 && (
+              <Button
+                color="primary"
+                icon={<ReloadOutlined />}
+                variant="filled"
+                onClick={handleRetryTask}
+              >
+                {t('preview.retry')}
+              </Button>
+            )}
+            {/* 删除: status === 0 || status >= 6 (FAILED, COMPLETED, CANCELLED, PARTIAL_FAILED) */}
+            {(task?.status === 0 || (task?.status && task.status >= 6)) && (
+              <Button
+                color="danger"
+                icon={<DeleteOutlined />}
+                variant="filled"
+                onClick={handleDelete}
+              >
+                {t('preview.delete')}
+              </Button>
+            )}
           </Space>
         </div>
 
@@ -264,45 +418,106 @@ const Preview: React.FC = () => {
           style={{
             flex: 1,
             width: "100%",
+            minWidth: 0,
             height: "calc(100vh - 224px)",
             border: "2px solid rgba(0, 0, 0, 0.05)",
+            overflow: "hidden",
           }}
         >
           {/* Image Panel */}
           <Splitter.Panel
-            defaultSize="40%"
+            defaultSize="35%"
             min="30%"
             max="70%"
             style={{
               display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
+              flexDirection: "column",
               padding: "12px",
             }}
           >
-            {loading ? (
-              <Spin size="large" />
-            ) : imageError || !taskDetail?.imagePath ? (
-              <div style={{ textAlign: 'center', color: '#999' }}>
-                <Text type="secondary">图片加载失败或不存在</Text>
-              </div>
-            ) : (
-              <img
-                src={`local-file://${taskDetail.imagePath}`}
-                alt={`Page ${currentPage}`}
-                draggable={false}
+            {/* 图片区域 */}
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                overflow: "hidden",
+              }}
+            >
+              {loading ? (
+                <Spin size="large" />
+              ) : imageError || !taskDetail?.imagePath ? (
+                <div style={{ textAlign: 'center', color: '#999' }}>
+                  <Text type="secondary">图片加载失败或不存在</Text>
+                </div>
+              ) : (
+                <img
+                  src={`local-file:///${taskDetail.imagePath.replace(/\\/g, '/')}`}
+                  alt={`Page ${currentPage}`}
+                  draggable={false}
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "100%",
+                    objectFit: "contain",
+                  }}
+                  onError={() => setImageError(true)}
+                />
+              )}
+            </div>
+            {/* 底部状态栏 */}
+            {!loading && (
+              <div
                 style={{
-                  maxWidth: "100%",
-                  maxHeight: "100%",
-                  objectFit: "contain",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  paddingTop: 12,
+                  borderTop: "1px solid rgba(0, 0, 0, 0.06)",
+                  marginTop: 12,
                 }}
-                onError={() => setImageError(true)}
-              />
+              >
+                {/* 状态显示 */}
+                {pageStatusInfo ? (
+                  taskDetail?.status === -1 && taskDetail?.error ? (
+                    <Tooltip title={taskDetail.error}>
+                      <Space size={6} style={{ cursor: 'help' }}>
+                        {pageStatusInfo.icon}
+                        <Text style={{ fontSize: 13, color: pageStatusInfo.color }}>
+                          {pageStatusInfo.text}
+                        </Text>
+                      </Space>
+                    </Tooltip>
+                  ) : (
+                    <Space size={6}>
+                      {pageStatusInfo.icon}
+                      <Text style={{ fontSize: 13, color: pageStatusInfo.color }}>
+                        {pageStatusInfo.text}
+                      </Text>
+                    </Space>
+                  )
+                ) : (
+                  <span />
+                )}
+                {/* 重新生成按钮 */}
+                <Tooltip title={t('preview.regenerate_tooltip')}>
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={retrying ? <LoadingOutlined /> : <ReloadOutlined />}
+                    onClick={handleRetryPage}
+                    disabled={!taskDetail?.id || retrying}
+                    style={{ color: '#666' }}
+                  >
+                    {t('preview.regenerate')}
+                  </Button>
+                </Tooltip>
+              </div>
             )}
           </Splitter.Panel>
 
           {/* Markdown Panel */}
-          <Splitter.Panel>
+          <Splitter.Panel style={{ overflow: "auto", minWidth: 0 }}>
             <MarkdownPreview content={taskDetail?.content || ''} />
           </Splitter.Panel>
         </Splitter>

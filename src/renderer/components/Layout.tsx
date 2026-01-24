@@ -1,5 +1,5 @@
 import React, { CSSProperties, useState } from "react";
-import { ConfigProvider, Layout, Menu, theme } from "antd";
+import { ConfigProvider, Layout, Menu, Modal, theme } from "antd";
 import {
   HomeOutlined,
   UnorderedListOutlined,
@@ -29,7 +29,7 @@ interface CustomCSSProperties extends CSSProperties {
 }
 
 // macOS 风格的窗口控制按钮组件
-const WindowControls: React.FC = () => {
+const WindowControls: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
 
   const buttonBaseStyle: CSSProperties = {
@@ -46,9 +46,7 @@ const WindowControls: React.FC = () => {
   };
 
   const handleClose = () => {
-    if (window.api?.window) {
-      window.api.window.close();
-    }
+    onClose();
   };
 
   const handleMinimize = () => {
@@ -125,6 +123,30 @@ const AppLayout: React.FC = () => {
 
   // 检测平台，非 macOS 平台显示自定义窗口控制按钮
   const isNotMac = window.api?.platform !== 'darwin';
+
+  // 处理窗口关闭，检查是否有进行中的任务
+  const handleWindowClose = async () => {
+    try {
+      const result = await window.api?.task?.hasRunningTasks();
+      if (result?.success && result.data?.hasRunning) {
+        Modal.confirm({
+          title: t('closeConfirm.title'),
+          content: t('closeConfirm.content', { count: result.data.count }),
+          okText: t('common.confirm'),
+          cancelText: t('common.cancel'),
+          okButtonProps: { danger: true },
+          onOk: () => {
+            window.api?.window?.close();
+          },
+        });
+      } else {
+        window.api?.window?.close();
+      }
+    } catch (error) {
+      // 如果检查失败，直接关闭
+      window.api?.window?.close();
+    }
+  };
 
   const menuItems: MenuItem[] = [
     {
@@ -220,7 +242,7 @@ const AppLayout: React.FC = () => {
           zIndex: 10
         }}>
           {/* Windows/Linux 显示自定义窗口控制按钮 */}
-          {isNotMac && <WindowControls />}
+          {isNotMac && <WindowControls onClose={handleWindowClose} />}
 
           <div
             style={{
@@ -285,7 +307,7 @@ const AppLayout: React.FC = () => {
           </div>
         </Sider>
 
-        <Layout style={{ flex: "1 1 auto", width: "100%", marginLeft: '80px' }}>
+        <Layout style={{ flex: "1 1 auto", marginLeft: '80px', minWidth: 0, overflow: "hidden" }}>
           <Header style={{
             ...headerStyle,
             position: 'fixed',
@@ -304,9 +326,10 @@ const AppLayout: React.FC = () => {
               background: colorBgContainer,
               borderRadius: borderRadiusLG,
               flex: "1 1 auto",
+              overflow: "hidden",
             }}
           >
-            <div style={{ padding: 24, height: "100%" }}>
+            <div style={{ padding: 24, height: "100%", overflow: "hidden" }}>
               <Outlet />
             </div>
           </Content>

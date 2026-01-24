@@ -62,7 +62,7 @@ export class OpenAIClient extends LLMClient {
         },
         body: JSON.stringify(requestBody)
       });
-      console.log(`[${new Date().toISOString()}] POST ${this.baseUrl} ${response.status} - ${response.statusText}`);
+      console.log(`[${new Date().toISOString()}] POST ${this.baseUrl} (model: ${requestBody.model}) ${response.status} - ${response.statusText}`);
 
       if (!response.ok) {
         const error = await response.json();

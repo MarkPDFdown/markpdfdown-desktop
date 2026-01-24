@@ -71,7 +71,7 @@ export class AnthropicClient extends LLMClient {
         },
         body: JSON.stringify(requestBody)
       });
-      console.log(`[${new Date().toISOString()}] POST ${endpoint} ${response.status} - ${response.statusText}`);
+      console.log(`[${new Date().toISOString()}] POST ${endpoint} (model: ${modelName}) ${response.status} - ${response.statusText}`);
 
       if (!response.ok) {
         const error = await response.json();

@@ -38,6 +38,7 @@ contextBridge.exposeInMainWorld("api", {
     update: (id: string, data: any) =>
       ipcRenderer.invoke("task:update", id, data),
     delete: (id: string) => ipcRenderer.invoke("task:delete", id),
+    hasRunningTasks: () => ipcRenderer.invoke("task:hasRunningTasks"),
   },
 
   // ==================== TaskDetail APIs ====================
@@ -46,6 +47,8 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("taskDetail:getByPage", taskId, page),
     getAllByTask: (taskId: string) =>
       ipcRenderer.invoke("taskDetail:getAllByTask", taskId),
+    retry: (pageId: number) =>
+      ipcRenderer.invoke("taskDetail:retry", pageId),
   },
 
   // ==================== File APIs ====================

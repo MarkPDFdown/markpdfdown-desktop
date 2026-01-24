@@ -22,6 +22,12 @@
   },
   "common": {
     "copyright": "Copyright © {{year}} MarkPDFdown All Rights Reserved.",
-    "pages": "{{count}} ページ"
+    "pages": "{{count}} ページ",
+    "confirm": "確認",
+    "cancel": "キャンセル"
+  },
+  "closeConfirm": {
+    "title": "終了の確認",
+    "content": "現在 {{count}} 件のタスクが進行中です。終了するとタスクが中断されます。終了してもよろしいですか？"
   }
 }

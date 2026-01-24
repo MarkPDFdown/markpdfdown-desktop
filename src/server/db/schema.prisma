@@ -84,6 +84,15 @@ model TaskDetail {
   error       String? // 错误信息
   retry_count Int     @default(0) // 重试次数
 
+  // 成本追踪
+  input_tokens    Int      @default(0)
+  output_tokens   Int      @default(0)
+
+  // 性能指标
+  conversion_time Int      @default(0)
+  started_at      DateTime?
+  completed_at    DateTime?
+
   // 注意：不存储 image_path，图片路径通过 ImagePathUtil.getPath(task, page) 动态计算
   // 格式：{tempDir}/{taskId}/page-{page}.png
 

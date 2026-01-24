@@ -16,6 +16,29 @@
   "preview": {
     "back": "Back",
     "download": "Download .md",
-    "delete": "Delete"
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "retry": "Retry",
+    "regenerate": "Regenerate",
+    "regenerate_tooltip": "Regenerate current page",
+    "confirm_delete": "Confirm Delete",
+    "confirm_delete_content": "Are you sure you want to delete this task? This action cannot be undone.",
+    "delete_success": "Deleted successfully",
+    "delete_failed": "Delete failed",
+    "confirm_cancel": "Confirm Cancel",
+    "confirm_cancel_content": "Are you sure you want to cancel this task?",
+    "cancel_success": "Cancelled successfully",
+    "cancel_failed": "Cancel failed",
+    "confirm_retry": "Confirm Retry",
+    "confirm_retry_content": "Are you sure you want to retry this task?",
+    "retry_success": "Task has been added to retry queue",
+    "retry_failed": "Retry failed",
+    "status": {
+      "failed": "Conversion failed",
+      "pending": "Pending",
+      "processing": "Converting",
+      "completed": "Completed",
+      "retrying": "Retrying"
+    }
   }
 }

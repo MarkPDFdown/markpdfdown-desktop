@@ -58,10 +58,11 @@ const completion = async (providerId: number, options: CompletionOptions) => {
     return llmClient.completion(options);
 }
 
-// 输入图片文件路径，返回图片的base64编码
-const getImageBase64 = async (imagePath: string) => {
+// 输入图片文件路径，返回图片的base64编码字符串
+const getImageBase64 = async (imagePath: string): Promise<string> => {
     const image = sharp(imagePath);
-    return image.toBuffer();
+    const buffer = await image.toBuffer();
+    return buffer.toString('base64');
 }
 
 // 输入图片文件路径，构造Message

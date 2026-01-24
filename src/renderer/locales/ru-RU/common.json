@@ -22,6 +22,12 @@
   },
   "common": {
     "copyright": "Copyright © {{year}} MarkPDFdown All Rights Reserved.",
-    "pages": "{{count}} страниц"
+    "pages": "{{count}} страниц",
+    "confirm": "Подтвердить",
+    "cancel": "Отмена"
+  },
+  "closeConfirm": {
+    "title": "Подтверждение выхода",
+    "content": "В данный момент выполняется {{count}} задач. Закрытие приведёт к их прерыванию. Вы уверены, что хотите выйти?"
   }
 }

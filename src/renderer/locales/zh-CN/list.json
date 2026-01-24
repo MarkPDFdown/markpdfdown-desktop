@@ -15,6 +15,7 @@
     "completed": "已完成",
     "cancelled": "已取消",
     "failed": "失败",
+    "partial_failed": "部分失败",
     "unknown": "未知"
   },
   "actions": {

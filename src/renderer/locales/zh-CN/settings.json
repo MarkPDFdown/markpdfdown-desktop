@@ -16,6 +16,29 @@
   "preview": {
     "back": "返回",
     "download": "下载 .md",
-    "delete": "删除"
+    "delete": "删除",
+    "cancel": "取消",
+    "retry": "重试",
+    "regenerate": "重新生成",
+    "regenerate_tooltip": "重新生成当前页",
+    "confirm_delete": "确认删除",
+    "confirm_delete_content": "确定要删除此任务吗？此操作不可恢复。",
+    "delete_success": "删除成功",
+    "delete_failed": "删除失败",
+    "confirm_cancel": "确认取消",
+    "confirm_cancel_content": "确定要取消此任务吗？",
+    "cancel_success": "取消成功",
+    "cancel_failed": "取消失败",
+    "confirm_retry": "确认重试",
+    "confirm_retry_content": "确定要重试此任务吗？",
+    "retry_success": "任务已加入重试队列",
+    "retry_failed": "重试失败",
+    "status": {
+      "failed": "转换失败",
+      "pending": "等待转换",
+      "processing": "转换中",
+      "completed": "转换完成",
+      "retrying": "重试中"
+    }
   }
 }

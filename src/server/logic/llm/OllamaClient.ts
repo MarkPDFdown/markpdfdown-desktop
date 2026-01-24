@@ -64,7 +64,7 @@ export class OllamaClient extends LLMClient {
         },
         body: JSON.stringify(requestBody)
       });
-      console.log(`[${new Date().toISOString()}] POST ${this.baseUrl} ${response.status} - ${response.statusText}`);
+      console.log(`[${new Date().toISOString()}] POST ${this.baseUrl} (model: ${requestBody.model}) ${response.status} - ${response.statusText}`);
       // console.log(JSON.stringify(requestBody));
 
       if (!response.ok) {

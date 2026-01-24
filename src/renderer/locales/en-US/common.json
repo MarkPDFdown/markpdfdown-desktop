@@ -22,6 +22,12 @@
   },
   "common": {
     "copyright": "Copyright © {{year}} MarkPDFdown All Rights Reserved.",
-    "pages": "{{count}} pages"
+    "pages": "{{count}} pages",
+    "confirm": "Confirm",
+    "cancel": "Cancel"
+  },
+  "closeConfirm": {
+    "title": "Confirm Exit",
+    "content": "There are {{count}} tasks in progress. Closing will interrupt them. Are you sure you want to exit?"
   }
 }
