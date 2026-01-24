@@ -969,6 +969,37 @@ export function registerIpcHandlers() {
     }
   );
 
+  // ==================== Task Status Handlers ====================
+
+  /**
+   * 检查是否有进行中的任务
+   * 进行中的任务状态：PENDING, SPLITTING, PROCESSING, READY_TO_MERGE, MERGING
+   */
+  ipcMain.handle("task:hasRunningTasks", async (): Promise<IpcResponse> => {
+    try {
+      const runningStatuses = [
+        TaskStatus.PENDING,
+        TaskStatus.SPLITTING,
+        TaskStatus.PROCESSING,
+        TaskStatus.READY_TO_MERGE,
+        TaskStatus.MERGING,
+      ];
+
+      const count = await prisma.task.count({
+        where: {
+          status: {
+            in: runningStatuses,
+          },
+        },
+      });
+
+      return { success: true, data: { hasRunning: count > 0, count } };
+    } catch (error: any) {
+      console.error("[IPC] task:hasRunningTasks error:", error);
+      return { success: false, error: error.message };
+    }
+  });
+
   // ==================== Completion Handlers ====================
 
   /**
