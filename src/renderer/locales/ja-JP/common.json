@@ -22,6 +22,8 @@
   },
   "common": {
     "copyright": "Copyright © {{year}} MarkPDFdown All Rights Reserved.",
-    "pages": "{{count}} ページ"
+    "pages": "{{count}} ページ",
+    "confirm": "確認",
+    "cancel": "キャンセル"
   }
 }

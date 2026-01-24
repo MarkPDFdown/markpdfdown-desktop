@@ -3,10 +3,12 @@ import {
   CheckCircleFilled,
   ClockCircleFilled,
   CloseCircleFilled,
+  DeleteOutlined,
   FileMarkdownOutlined,
   FilePdfTwoTone,
   LoadingOutlined,
   ReloadOutlined,
+  StopOutlined,
 } from "@ant-design/icons";
 import {
   App,
@@ -164,24 +166,77 @@ const Preview: React.FC = () => {
     if (!id) return;
 
     modal.confirm({
-      title: '确认删除',
-      content: '确定要删除此任务吗?此操作不可恢复。',
-      okText: '确定',
-      cancelText: '取消',
+      title: t('preview.confirm_delete'),
+      content: t('preview.confirm_delete_content'),
+      okText: tCommon('common.confirm'),
+      cancelText: tCommon('common.cancel'),
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
           const result = await window.api.task.delete(id);
 
           if (result.success) {
-            message.success('删除成功');
+            message.success(t('preview.delete_success'));
             navigate('/list');
           } else {
-            message.error(result.error || '删除失败');
+            message.error(result.error || t('preview.delete_failed'));
           }
         } catch (error) {
           console.error('删除失败:', error);
-          message.error('删除失败');
+          message.error(t('preview.delete_failed'));
+        }
+      }
+    });
+  };
+
+  // 取消任务
+  const handleCancel = async () => {
+    if (!id) return;
+
+    modal.confirm({
+      title: t('preview.confirm_cancel'),
+      content: t('preview.confirm_cancel_content'),
+      okText: tCommon('common.confirm'),
+      cancelText: tCommon('common.cancel'),
+      onOk: async () => {
+        try {
+          const result = await window.api.task.update(id, { status: 7 }); // CANCELLED = 7
+
+          if (result.success) {
+            message.success(t('preview.cancel_success'));
+            navigate('/list');
+          } else {
+            message.error(result.error || t('preview.cancel_failed'));
+          }
+        } catch (error) {
+          console.error('取消失败:', error);
+          message.error(t('preview.cancel_failed'));
+        }
+      }
+    });
+  };
+
+  // 重试任务
+  const handleRetryTask = async () => {
+    if (!id) return;
+
+    modal.confirm({
+      title: t('preview.confirm_retry'),
+      content: t('preview.confirm_retry_content'),
+      okText: tCommon('common.confirm'),
+      cancelText: tCommon('common.cancel'),
+      onOk: async () => {
+        try {
+          const result = await window.api.task.update(id, { status: 1 }); // PENDING = 1
+
+          if (result.success) {
+            message.success(t('preview.retry_success'));
+          } else {
+            message.error(result.error || t('preview.retry_failed'));
+          }
+        } catch (error) {
+          console.error('重试失败:', error);
+          message.error(t('preview.retry_failed'));
         }
       }
     });
@@ -312,6 +367,7 @@ const Preview: React.FC = () => {
           </div>
 
           <Space>
+            {/* 下载: 始终显示，但仅在 COMPLETED(6) 且有 merged_path 时启用 */}
             <Button
               color="primary"
               icon={<FileMarkdownOutlined />}
@@ -321,13 +377,38 @@ const Preview: React.FC = () => {
             >
               {t('preview.download')}
             </Button>
-            <Button
-              color="danger"
-              variant="filled"
-              onClick={handleDelete}
-            >
-              {t('preview.delete')}
-            </Button>
+            {/* 取消: status > 0 && status < 6 (PENDING, SPLITTING, PROCESSING, READY_TO_MERGE, MERGING) */}
+            {task?.status && task.status > 0 && task.status < 6 && (
+              <Button
+                icon={<StopOutlined />}
+                variant="filled"
+                onClick={handleCancel}
+              >
+                {t('preview.cancel')}
+              </Button>
+            )}
+            {/* 重试: status === 0 (FAILED) */}
+            {task?.status === 0 && (
+              <Button
+                color="primary"
+                icon={<ReloadOutlined />}
+                variant="filled"
+                onClick={handleRetryTask}
+              >
+                {t('preview.retry')}
+              </Button>
+            )}
+            {/* 删除: status === 0 || status >= 6 (FAILED, COMPLETED, CANCELLED, PARTIAL_FAILED) */}
+            {(task?.status === 0 || (task?.status && task.status >= 6)) && (
+              <Button
+                color="danger"
+                icon={<DeleteOutlined />}
+                variant="filled"
+                onClick={handleDelete}
+              >
+                {t('preview.delete')}
+              </Button>
+            )}
           </Space>
         </div>
 
@@ -395,17 +476,28 @@ const Preview: React.FC = () => {
               >
                 {/* 状态显示 */}
                 {pageStatusInfo ? (
-                  <Space size={6}>
-                    {pageStatusInfo.icon}
-                    <Text style={{ fontSize: 13, color: pageStatusInfo.color }}>
-                      {pageStatusInfo.text}
-                    </Text>
-                  </Space>
+                  taskDetail?.status === -1 && taskDetail?.error ? (
+                    <Tooltip title={taskDetail.error}>
+                      <Space size={6} style={{ cursor: 'help' }}>
+                        {pageStatusInfo.icon}
+                        <Text style={{ fontSize: 13, color: pageStatusInfo.color }}>
+                          {pageStatusInfo.text}
+                        </Text>
+                      </Space>
+                    </Tooltip>
+                  ) : (
+                    <Space size={6}>
+                      {pageStatusInfo.icon}
+                      <Text style={{ fontSize: 13, color: pageStatusInfo.color }}>
+                        {pageStatusInfo.text}
+                      </Text>
+                    </Space>
+                  )
                 ) : (
                   <span />
                 )}
                 {/* 重新生成按钮 */}
-                <Tooltip title={t('preview.regenerate')}>
+                <Tooltip title={t('preview.regenerate_tooltip')}>
                   <Button
                     type="text"
                     size="small"

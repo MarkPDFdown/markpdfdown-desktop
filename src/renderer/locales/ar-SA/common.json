@@ -22,6 +22,8 @@
   },
   "common": {
     "copyright": "حقوق النشر © {{year}} MarkPDFdown جميع الحقوق محفوظة.",
-    "pages": "{{count}} صفحات"
+    "pages": "{{count}} صفحات",
+    "confirm": "تأكيد",
+    "cancel": "إلغاء"
   }
 }

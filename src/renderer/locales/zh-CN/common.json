@@ -22,6 +22,8 @@
   },
   "common": {
     "copyright": "Copyright © {{year}} MarkPDFdown All Rights Reserved.",
-    "pages": "{{count}}页"
+    "pages": "{{count}}页",
+    "confirm": "确定",
+    "cancel": "取消"
   }
 }

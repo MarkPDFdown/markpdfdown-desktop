@@ -22,6 +22,8 @@
   },
   "common": {
     "copyright": "Copyright © {{year}} MarkPDFdown All Rights Reserved.",
-    "pages": "{{count}} pages"
+    "pages": "{{count}} pages",
+    "confirm": "Confirm",
+    "cancel": "Cancel"
   }
 }
