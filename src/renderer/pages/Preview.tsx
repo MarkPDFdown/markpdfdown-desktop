@@ -426,7 +426,7 @@ const Preview: React.FC = () => {
         >
           {/* Image Panel */}
           <Splitter.Panel
-            defaultSize="40%"
+            defaultSize="35%"
             min="30%"
             max="70%"
             style={{
