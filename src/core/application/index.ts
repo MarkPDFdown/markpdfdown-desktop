@@ -22,9 +22,4 @@ export type {
   WorkerInfo,
   WorkerStatus,
   CleanupResult,
-  ITaskService,
-  TaskInput,
-  IFileService,
-  FileInfo,
-  ImagePathInfo,
 } from './services/interfaces/index.js';
