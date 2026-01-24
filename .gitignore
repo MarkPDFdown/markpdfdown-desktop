@@ -28,3 +28,5 @@ files
 *.sw?
 
 coverage
+
+settings.local.json
