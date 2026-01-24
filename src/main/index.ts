@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, shell, protocol } from "electron";
 import path from "path";
 import fs from "fs";
 import isDev from "electron-is-dev";
-import taskLogic from "../core/logic/Task.js";
+import { workerOrchestrator } from "../core/services/index.js";
 import { initDatabase, disconnect } from "../core/db/index.js";
 import { registerIpcHandlers } from "./ipc/handlers.js";
 import { windowManager } from './WindowManager.js';
@@ -68,12 +68,12 @@ function registerLocalFileProtocol() {
 
 // 启动任务
 async function startTask() {
-  await taskLogic.start();
+  await workerOrchestrator.start();
 }
 
 // 停止任务
 async function stopTask() {
-  await taskLogic.stop();
+  await workerOrchestrator.stop();
 }
 
 function createWindow() {
@@ -228,7 +228,7 @@ async function initializeBackgroundServices() {
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
-    if (taskLogic.getStatus()) {
+    if (workerOrchestrator.getStatus()) {
       stopTask();
     }
     eventBridge.cleanup();
@@ -241,7 +241,7 @@ app.on("activate", async () => {
   if (mainWindow === null) {
     try {
       createWindow();
-      if (!taskLogic.getStatus()) {
+      if (!workerOrchestrator.getStatus()) {
         await startTask();
       }
     } catch (error) {
