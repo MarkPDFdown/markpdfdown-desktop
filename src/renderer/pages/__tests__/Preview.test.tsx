@@ -52,22 +52,8 @@ vi.mock('../../components/MarkdownPreview', () => ({
   )
 }))
 
-// Mock window.api.events
+// Mock window.api.events - extend the existing mock from setup
 const mockEventListeners: Record<string, (event: any) => void> = {}
-
-vi.stubGlobal('api', {
-  ...window.api,
-  events: {
-    onTaskEvent: vi.fn((callback) => {
-      mockEventListeners['task'] = callback
-      return () => { delete mockEventListeners['task'] }
-    }),
-    onTaskDetailEvent: vi.fn((callback) => {
-      mockEventListeners['taskDetail'] = callback
-      return () => { delete mockEventListeners['taskDetail'] }
-    })
-  }
-})
 
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
   <MemoryRouter initialEntries={['/preview/task-1']}>
@@ -158,6 +144,17 @@ describe('Preview', () => {
     vi.mocked(window.api.taskDetail.retry).mockResolvedValue({
       success: true,
       data: { id: 'detail-1' }
+    })
+
+    // Setup event listener mocks
+    vi.mocked(window.api.events.onTaskEvent).mockImplementation((callback) => {
+      mockEventListeners['task'] = callback
+      return () => { delete mockEventListeners['task'] }
+    })
+
+    vi.mocked(window.api.events.onTaskDetailEvent).mockImplementation((callback) => {
+      mockEventListeners['taskDetail'] = callback
+      return () => { delete mockEventListeners['taskDetail'] }
     })
   })
 

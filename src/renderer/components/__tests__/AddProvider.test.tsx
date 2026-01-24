@@ -212,10 +212,17 @@ describe('AddProvider', () => {
       const submitButton = screen.getByRole('button', { name: 'Add Provider' })
       fireEvent.click(submitButton)
 
+      // Wait for the API call to complete and form to reset
       await waitFor(() => {
-        // Form should be reset
-        expect(nameInput).toHaveValue('')
+        expect(window.api.provider.create).toHaveBeenCalled()
       })
+
+      // After successful API call, form should be reset
+      await waitFor(() => {
+        // Re-query the input as it may have been re-rendered
+        const resetNameInput = screen.getByPlaceholderText('Enter provider name')
+        expect(resetNameInput).toHaveValue('')
+      }, { timeout: 2000 })
     })
   })
 

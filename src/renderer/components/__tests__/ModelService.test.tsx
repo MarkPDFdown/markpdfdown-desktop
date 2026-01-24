@@ -134,7 +134,9 @@ describe('ModelService', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText('Add Provider')).toBeInTheDocument()
+        // There may be multiple "Add Provider" elements (tab label and button)
+        const addProviderElements = screen.getAllByText('Add Provider')
+        expect(addProviderElements.length).toBeGreaterThan(0)
       })
     })
   })
@@ -153,7 +155,9 @@ describe('ModelService', () => {
       )
 
       await waitFor(() => {
-        const addProviderTab = screen.getByText('Add Provider').closest('.ant-tabs-tab')
+        // Find the Add Provider tab specifically (not the button)
+        const tabs = document.querySelectorAll('.ant-tabs-tab')
+        const addProviderTab = Array.from(tabs).find(tab => tab.textContent?.includes('Add Provider'))
         expect(addProviderTab).toHaveClass('ant-tabs-tab-active')
       })
     })
@@ -205,7 +209,9 @@ describe('ModelService', () => {
       )
 
       await waitFor(() => {
-        const addTab = screen.getByText('Add Provider').closest('.ant-tabs-tab')
+        // Find the Add Provider tab specifically
+        const tabs = document.querySelectorAll('.ant-tabs-tab')
+        const addTab = Array.from(tabs).find(tab => tab.textContent?.includes('Add Provider'))
         const icon = addTab?.querySelector('[aria-label="plus-square"]')
         expect(icon).toBeInTheDocument()
       })

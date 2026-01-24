@@ -3,6 +3,7 @@ import { vi } from 'vitest'
 
 // Mock window.api for renderer process
 const mockWindowApi = {
+  platform: 'win32',
   provider: {
     getAll: vi.fn(),
     getById: vi.fn(),
@@ -20,17 +21,33 @@ const mockWindowApi = {
   task: {
     create: vi.fn(),
     getAll: vi.fn(),
+    getById: vi.fn(),
     update: vi.fn(),
-    delete: vi.fn()
+    delete: vi.fn(),
+    hasRunningTasks: vi.fn()
+  },
+  taskDetail: {
+    getByPage: vi.fn(),
+    retry: vi.fn()
   },
   file: {
     selectDialog: vi.fn(),
     upload: vi.fn(),
-    uploadMultiple: vi.fn()
+    uploadMultiple: vi.fn(),
+    downloadMarkdown: vi.fn()
   },
   completion: {
     markImagedown: vi.fn(),
     testConnection: vi.fn()
+  },
+  window: {
+    minimize: vi.fn(),
+    maximize: vi.fn(),
+    close: vi.fn()
+  },
+  events: {
+    onTaskEvent: vi.fn(() => () => {}),
+    onTaskDetailEvent: vi.fn(() => () => {})
   }
 }
 

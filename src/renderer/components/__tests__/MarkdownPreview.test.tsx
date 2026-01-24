@@ -79,9 +79,12 @@ describe('MarkdownPreview', () => {
     })
 
     it('should render multiple headings', () => {
+      const content = `# H1
+## H2
+### H3`
       render(
         <Wrapper>
-          <MarkdownPreview content="# H1\n## H2\n### H3" />
+          <MarkdownPreview content={content} />
         </Wrapper>
       )
 
@@ -91,9 +94,12 @@ describe('MarkdownPreview', () => {
     })
 
     it('should render paragraphs', () => {
+      const content = `First paragraph
+
+Second paragraph`
       render(
         <Wrapper>
-          <MarkdownPreview content="First paragraph\n\nSecond paragraph" />
+          <MarkdownPreview content={content} />
         </Wrapper>
       )
 
@@ -138,9 +144,12 @@ describe('MarkdownPreview', () => {
     })
 
     it('should render unordered lists', () => {
+      const content = `- Item 1
+- Item 2
+- Item 3`
       render(
         <Wrapper>
-          <MarkdownPreview content="- Item 1\n- Item 2\n- Item 3" />
+          <MarkdownPreview content={content} />
         </Wrapper>
       )
 
@@ -152,9 +161,12 @@ describe('MarkdownPreview', () => {
     })
 
     it('should render ordered lists', () => {
+      const content = `1. First
+2. Second
+3. Third`
       render(
         <Wrapper>
-          <MarkdownPreview content="1. First\n2. Second\n3. Third" />
+          <MarkdownPreview content={content} />
         </Wrapper>
       )
 
@@ -175,9 +187,12 @@ describe('MarkdownPreview', () => {
     })
 
     it('should render code blocks', () => {
+      const content = `\`\`\`javascript
+const x = 1;
+\`\`\``
       render(
         <Wrapper>
-          <MarkdownPreview content="```javascript\nconst x = 1;\n```" />
+          <MarkdownPreview content={content} />
         </Wrapper>
       )
 
@@ -228,9 +243,11 @@ describe('MarkdownPreview', () => {
     })
 
     it('should render task lists', () => {
+      const content = `- [ ] Unchecked
+- [x] Checked`
       render(
         <Wrapper>
-          <MarkdownPreview content="- [ ] Unchecked\n- [x] Checked" />
+          <MarkdownPreview content={content} />
         </Wrapper>
       )
 
@@ -253,9 +270,12 @@ describe('MarkdownPreview', () => {
     })
 
     it('should render block math', () => {
+      const content = `$$
+E = mc^2
+$$`
       render(
         <Wrapper>
-          <MarkdownPreview content="$$\nE = mc^2\n$$" />
+          <MarkdownPreview content={content} />
         </Wrapper>
       )
 
