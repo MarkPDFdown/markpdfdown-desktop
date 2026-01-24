@@ -263,6 +263,13 @@ export class ConverterWorker extends WorkerBase {
 
         // Check if we have retries left
         if (attempt < this.maxRetries) {
+          // Check if task has been cancelled before retrying
+          const taskStatus = await this.checkTaskStatus(page.task);
+          if (taskStatus === TaskStatus.CANCELLED) {
+            console.log(`[Converter-${this.workerId.slice(0, 8)}] Task cancelled, stopping retries`);
+            return; // Exit without marking as failed - task is already cancelled
+          }
+
           // Increment retry count in database
           await this.incrementRetryCount(page.id);
 
@@ -528,6 +535,17 @@ export class ConverterWorker extends WorkerBase {
         throw error;
       }
     }
+  }
+
+  /**
+   * Check task status from database.
+   */
+  private async checkTaskStatus(taskId: string): Promise<number | null> {
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      select: { status: true },
+    });
+    return task?.status ?? null;
   }
 
   /**
