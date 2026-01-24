@@ -6,7 +6,7 @@ import { ISplitter, SplitResult, PageInfo } from './ISplitter.js';
 import { Task } from '../../../shared/types/index.js';
 import { PageRangeParser } from './PageRangeParser.js';
 import { ImagePathUtil } from './ImagePathUtil.js';
-import { WORKER_CONFIG } from '../../config/worker.config.js';
+import { WORKER_CONFIG } from '../../infrastructure/config/worker.config.js';
 
 /**
  * PDF splitter implementation using pdf-to-png-converter.
