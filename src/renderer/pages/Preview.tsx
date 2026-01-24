@@ -321,6 +321,7 @@ const Preview: React.FC = () => {
           display: "flex",
           flexDirection: "column",
           gap: "18px",
+          overflow: "hidden",
         }}
       >
         {/* Header */}
@@ -417,8 +418,10 @@ const Preview: React.FC = () => {
           style={{
             flex: 1,
             width: "100%",
+            minWidth: 0,
             height: "calc(100vh - 224px)",
             border: "2px solid rgba(0, 0, 0, 0.05)",
+            overflow: "hidden",
           }}
         >
           {/* Image Panel */}
@@ -514,7 +517,7 @@ const Preview: React.FC = () => {
           </Splitter.Panel>
 
           {/* Markdown Panel */}
-          <Splitter.Panel>
+          <Splitter.Panel style={{ overflow: "auto", minWidth: 0 }}>
             <MarkdownPreview content={taskDetail?.content || ''} />
           </Splitter.Panel>
         </Splitter>

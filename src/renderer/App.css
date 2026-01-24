@@ -45,3 +45,17 @@
   max-height: 180px;
   overflow-y: auto;
 }
+
+/* Splitter Panel 溢出控制 */
+.ant-splitter {
+  overflow: hidden !important;
+}
+
+.ant-splitter-panel {
+  overflow: hidden !important;
+}
+
+/* Markdown 预览面板滚动 */
+.ant-splitter-panel:last-child {
+  overflow: auto !important;
+}

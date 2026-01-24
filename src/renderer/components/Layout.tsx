@@ -285,7 +285,7 @@ const AppLayout: React.FC = () => {
           </div>
         </Sider>
 
-        <Layout style={{ flex: "1 1 auto", width: "100%", marginLeft: '80px' }}>
+        <Layout style={{ flex: "1 1 auto", marginLeft: '80px', minWidth: 0, overflow: "hidden" }}>
           <Header style={{
             ...headerStyle,
             position: 'fixed',
@@ -304,9 +304,10 @@ const AppLayout: React.FC = () => {
               background: colorBgContainer,
               borderRadius: borderRadiusLG,
               flex: "1 1 auto",
+              overflow: "hidden",
             }}
           >
-            <div style={{ padding: 24, height: "100%" }}>
+            <div style={{ padding: 24, height: "100%", overflow: "hidden" }}>
               <Outlet />
             </div>
           </Content>

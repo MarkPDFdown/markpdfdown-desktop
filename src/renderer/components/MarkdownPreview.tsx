@@ -19,8 +19,11 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ content }) => {
       style={{
         padding: "24px",
         height: "100%",
-        overflowY: "auto",
+        width: "100%",
+        minWidth: 0,
+        overflow: "auto",
         backgroundColor: "#fffbe6",
+        boxSizing: "border-box",
       }}
     >
       <ReactMarkdown
