@@ -1,0 +1,214 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, cleanup, waitFor } from '@testing-library/react'
+import { BrowserRouter } from 'react-router-dom'
+import { App } from 'antd'
+import ModelService from '../ModelService'
+
+// Mock react-i18next
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const translations: Record<string, string> = {
+        'add_provider.tab_label': 'Add Provider',
+        'add_provider.name_label': 'Name',
+        'add_provider.name_placeholder': 'Enter provider name',
+        'add_provider.type_label': 'Type',
+        'add_provider.type_placeholder': 'Select provider type',
+        'add_provider.submit_button': 'Add Provider'
+      }
+      return translations[key] || key
+    },
+    i18n: {
+      changeLanguage: vi.fn()
+    }
+  })
+}))
+
+const Wrapper = ({ children }: { children: React.ReactNode }) => (
+  <BrowserRouter>
+    <App>{children}</App>
+  </BrowserRouter>
+)
+
+describe('ModelService', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    // Mock provider.getAll to return providers
+    vi.mocked(window.api.provider.getAll).mockResolvedValue({
+      success: true,
+      data: [
+        { id: 1, name: 'OpenAI', type: 'openai', api_key: '', base_url: '', suffix: '', status: 0 },
+        { id: 2, name: 'Anthropic', type: 'anthropic', api_key: '', base_url: '', suffix: '', status: 0 }
+      ]
+    })
+  })
+
+  afterEach(() => {
+    cleanup()
+  })
+
+  describe('Component Rendering', () => {
+    it('should render without crashing', async () => {
+      render(
+        <Wrapper>
+          <ModelService />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        expect(window.api.provider.getAll).toHaveBeenCalled()
+      })
+    })
+
+    it('should render tabs component', async () => {
+      render(
+        <Wrapper>
+          <ModelService />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        const tabs = document.querySelector('.ant-tabs')
+        expect(tabs).toBeInTheDocument()
+      })
+    })
+
+    it('should use left tab position', async () => {
+      render(
+        <Wrapper>
+          <ModelService />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        const tabs = document.querySelector('.ant-tabs-left')
+        expect(tabs).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Provider Tabs', () => {
+    it('should fetch providers on mount', async () => {
+      render(
+        <Wrapper>
+          <ModelService />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        expect(window.api.provider.getAll).toHaveBeenCalled()
+      })
+    })
+
+    it('should display provider tabs when providers exist', async () => {
+      render(
+        <Wrapper>
+          <ModelService />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('OpenAI')).toBeInTheDocument()
+        expect(screen.getByText('Anthropic')).toBeInTheDocument()
+      })
+    })
+
+    it('should select first provider by default when providers exist', async () => {
+      render(
+        <Wrapper>
+          <ModelService />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        const openaiTab = screen.getByText('OpenAI').closest('.ant-tabs-tab')
+        expect(openaiTab).toHaveClass('ant-tabs-tab-active')
+      })
+    })
+
+    it('should display Add Provider tab', async () => {
+      render(
+        <Wrapper>
+          <ModelService />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Add Provider')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Empty State', () => {
+    it('should show Add Provider tab when no providers exist', async () => {
+      vi.mocked(window.api.provider.getAll).mockResolvedValue({
+        success: true,
+        data: []
+      })
+
+      render(
+        <Wrapper>
+          <ModelService />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        const addProviderTab = screen.getByText('Add Provider').closest('.ant-tabs-tab')
+        expect(addProviderTab).toHaveClass('ant-tabs-tab-active')
+      })
+    })
+  })
+
+  describe('Error Handling', () => {
+    it('should handle API error gracefully', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      vi.mocked(window.api.provider.getAll).mockResolvedValue({
+        success: false,
+        error: 'Failed to fetch providers'
+      })
+
+      render(
+        <Wrapper>
+          <ModelService />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalled()
+      })
+
+      consoleSpy.mockRestore()
+    })
+  })
+
+  describe('Tab Icons', () => {
+    it('should display cloud icon for provider tabs', async () => {
+      render(
+        <Wrapper>
+          <ModelService />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        const openaiTab = screen.getByText('OpenAI').closest('.ant-tabs-tab')
+        const icon = openaiTab?.querySelector('[aria-label="cloud"]')
+        expect(icon).toBeInTheDocument()
+      })
+    })
+
+    it('should display plus icon for Add Provider tab', async () => {
+      render(
+        <Wrapper>
+          <ModelService />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        const addTab = screen.getByText('Add Provider').closest('.ant-tabs-tab')
+        const icon = addTab?.querySelector('[aria-label="plus-square"]')
+        expect(icon).toBeInTheDocument()
+      })
+    })
+  })
+})
