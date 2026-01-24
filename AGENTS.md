@@ -174,45 +174,76 @@ import './styles.css';
 ```
 
 ### Backend Architecture (Clean Architecture)
-The backend follows clean architecture principles with clear separation of concerns:
+The backend follows clean architecture principles with clear separation of concerns, organized into four layers:
 
-- **IPC Handlers** (`src/main/ipc/handlers/`): Handle IPC requests from renderer process
-  - Modular handler files: `provider.handler.ts`, `model.handler.ts`, `task.handler.ts`, etc.
-  - All handlers use `ipcMain.handle()` for async request-response pattern
-  - Return unified format: `{ success: boolean, data?: any, error?: string }`
-  - Handle errors gracefully with try-catch
+#### Layer Structure
+```
+src/core/
+├── infrastructure/     # External dependencies (database, config, adapters)
+│   ├── db/            # Prisma database client and migrations
+│   ├── config/        # Worker configuration
+│   ├── services/      # Infrastructure services (FileService)
+│   └── adapters/      # External service adapters
+│       └── llm/       # LLM client implementations
+├── application/       # Application-specific business logic
+│   ├── services/      # Application services (WorkerOrchestrator, ModelService)
+│   └── workers/       # Background processing workers
+├── domain/            # Core business logic
+│   ├── repositories/  # Data access layer
+│   └── split/         # PDF/Image splitting logic
+└── shared/            # Cross-cutting concerns
+    ├── events/        # Event bus for worker coordination
+    └── di/            # Dependency injection container
+```
 
-- **Repositories** (`src/core/repositories/`): Data access layer (preferred)
+#### Infrastructure Layer (`src/core/infrastructure/`)
+- **Database** (`db/`): Prisma client and migration runner
+- **Config** (`config/`): Worker configuration (`worker.config.ts`)
+- **Services** (`services/`): Infrastructure services
+  - `FileService.ts`: File handling logic (upload directory management, file deletion)
+- **Adapters** (`adapters/llm/`): LLM client implementations
+  - `LLMClient.ts`: Abstract base class and factory
+  - `OpenAIClient.ts`, `AnthropicClient.ts`, `GeminiClient.ts`, `OllamaClient.ts`, `OpenAIResponsesClient.ts`
+
+#### Application Layer (`src/core/application/`)
+- **Services** (`services/`):
+  - `WorkerOrchestrator.ts`: Manages worker lifecycle and coordination
+  - `ModelService.ts`: Model-related business logic (LLM client factory)
+- **Workers** (`workers/`): Background processing
+  - `WorkerBase.ts`: Abstract base class with graceful shutdown support
+  - `SplitterWorker.ts`: Splits PDFs/images into pages
+  - `ConverterWorker.ts`: Converts pages to markdown via LLM
+  - `MergerWorker.ts`: Merges converted pages into final output
+
+#### Domain Layer (`src/core/domain/`)
+- **Repositories** (`repositories/`): Data access layer
   - Implement repository interfaces for testability
   - Export default object with CRUD methods (`findAll`, `findById`, `create`, `update`, `remove`, etc.)
   - `ProviderRepository`, `ModelRepository`, `TaskRepository`, `TaskDetailRepository`
+- **Split** (`split/`): File splitting logic
+  - `ISplitter.ts`: Splitter interface
+  - `PDFSplitter.ts`, `ImageSplitter.ts`: Concrete implementations
+  - `SplitterFactory.ts`: Factory for creating splitters
+  - `PageRangeParser.ts`: Page range parsing
+  - `ImagePathUtil.ts`: Image path utilities
 
-- **DAL** (`src/core/dal/`): Legacy data access layer
-  - Still functional but prefer repositories for new code
-
-- **Logic** (`src/core/logic/`): Business logic layer
-  - `File.ts`: File handling logic (upload directory management, file deletion)
-  - `Task.ts`: Task-related business logic
-  - `Model.ts`: Model-related business logic (LLM client factory)
-  - `llm/`: LLM client implementations (OpenAI, Anthropic, Gemini, Ollama, OpenAI Responses)
-  - `split/`: File splitting logic (PDF/Image splitters, page range parsing)
-
-- **Services** (`src/core/services/`): Application services
-  - `WorkerOrchestrator`: Manages worker lifecycle and coordination
-
-- **Workers** (`src/core/workers/`): Background processing
-  - `WorkerBase`: Abstract base class with graceful shutdown support
-  - `SplitterWorker`: Splits PDFs/images into pages
-  - `ConverterWorker`: Converts pages to markdown via LLM
-  - `MergerWorker`: Merges converted pages into final output
-
-- **Events** (`src/core/events/`): Event-driven communication
-  - `EventBus`: Pub/sub system for worker coordination
-
-- **DI Container** (`src/core/di/`): Dependency injection
+#### Shared Layer (`src/core/shared/`)
+- **Events** (`events/`): Event-driven communication
+  - `EventBus.ts`: Pub/sub system for worker coordination
+- **DI** (`di/`): Dependency injection
   - `Container.ts`: Creates and manages dependencies
   - `getContainer()`: Get singleton container instance
   - `setContainer()`: Override for testing
+
+#### IPC Handlers (`src/main/ipc/handlers/`)
+- Handle IPC requests from renderer process
+- Modular handler files: `provider.handler.ts`, `model.handler.ts`, `task.handler.ts`, etc.
+- All handlers use `ipcMain.handle()` for async request-response pattern
+- Return unified format: `{ success: boolean, data?: any, error?: string }`
+- Handle errors gracefully with try-catch
+
+#### Backward Compatibility
+Original import paths (e.g., `src/core/logic/`, `src/core/workers/`) continue to work through re-exports, allowing gradual migration.
 
 - **No HTTP Server**: All communication via Electron IPC (no Express, no ports, no HTTP)
 
@@ -307,97 +338,99 @@ src/
 │   ├── ipc/        # IPC channel definitions
 │   └── types/      # Shared TypeScript types
 ├── renderer/       # React frontend
-│   ├── components/ # Reusable UI components (About, AddProvider, Layout, MarkdownPreview, ModelService, Provider, UploadPanel, LanguageSwitcher)
+│   ├── components/ # Reusable UI components
 │   ├── pages/      # Route pages (Home, List, Preview, Settings)
-│   ├── contexts/   # React contexts (I18nContext for internationalization)
-│   ├── hooks/      # Custom React hooks (useLanguage for i18n)
+│   ├── contexts/   # React contexts (I18nContext)
+│   ├── hooks/      # Custom React hooks (useLanguage)
 │   ├── locales/    # Translation files (zh-CN, en-US)
-│   │   ├── index.ts
-│   │   ├── zh-CN/  # Chinese translations (common, home, list, upload, provider, settings)
-│   │   └── en-US/  # English translations (common, home, list, upload, provider, settings)
 │   ├── electron.d.ts # TypeScript definitions for window.api
-│   ├── App.tsx     # Root component (wrapped with I18nProvider)
+│   ├── App.tsx     # Root component
 │   └── main.tsx    # Frontend entry point
-└── core/           # Core business logic (clean architecture)
-    ├── config/     # Configuration (worker.config.ts)
-    ├── dal/        # Data access layer (legacy, prefer repositories)
-    │   └── __tests__/ # DAL tests
-    ├── db/         # Prisma schema + migrations
-    │   ├── schema.prisma # Database schema
-    │   ├── migrations/   # Migration files
-    │   ├── index.ts      # Prisma client export
-    │   └── Migration.ts  # Migration runner
-    ├── di/         # Dependency injection
-    │   ├── Container.ts  # DI container (createContainer, getContainer)
-    │   └── index.ts      # DI exports
-    ├── events/     # Event system
-    │   ├── EventBus.ts   # Pub/sub event bus for worker communication
-    │   └── __tests__/    # Event tests
-    ├── logic/      # Business logic
-    │   ├── llm/    # LLM client implementations
-    │   │   ├── LLMClient.ts         # Abstract base class
-    │   │   ├── OpenAIClient.ts      # OpenAI implementation
-    │   │   ├── OpenAIResponsesClient.ts # OpenAI Responses API
-    │   │   ├── AnthropicClient.ts   # Anthropic implementation
-    │   │   ├── GeminiClient.ts      # Google Gemini implementation
-    │   │   ├── OllamaClient.ts      # Ollama implementation
-    │   │   └── __tests__/           # LLM client tests
-    │   ├── split/  # File splitting logic
-    │   │   ├── ISplitter.ts         # Splitter interface
-    │   │   ├── PDFSplitter.ts       # PDF page splitter
-    │   │   ├── ImageSplitter.ts     # Image splitter
-    │   │   ├── SplitterFactory.ts   # Factory for splitters
-    │   │   ├── PageRangeParser.ts   # Page range parsing
-    │   │   ├── ImagePathUtil.ts     # Image path utilities
-    │   │   └── __tests__/           # Splitter tests
-    │   ├── File.ts # File handling logic
-    │   ├── Model.ts # Model business logic
-    │   ├── Task.ts # Task business logic
-    │   └── __tests__/ # Logic tests
-    ├── repositories/ # Repository pattern (preferred over DAL)
-    │   ├── interfaces/ # Repository interfaces
-    │   │   ├── IProviderRepository.ts
-    │   │   ├── IModelRepository.ts
-    │   │   ├── ITaskRepository.ts
-    │   │   ├── ITaskDetailRepository.ts
-    │   │   └── index.ts
-    │   ├── ProviderRepository.ts
-    │   ├── ModelRepository.ts
-    │   ├── TaskRepository.ts
-    │   ├── TaskDetailRepository.ts
+└── core/           # Core business logic (Clean Architecture)
+    ├── index.ts    # Top-level exports
+    │
+    ├── infrastructure/  # External dependencies layer
     │   ├── index.ts
-    │   └── __tests__/ # Repository tests
-    ├── services/   # Application services
-    │   ├── interfaces/ # Service interfaces
-    │   │   ├── IWorkerOrchestrator.ts
-    │   │   ├── ITaskService.ts
-    │   │   ├── IFileService.ts
-    │   │   └── index.ts
-    │   ├── WorkerOrchestrator.ts # Manages worker lifecycle
-    │   └── index.ts
-    ├── types/      # TypeScript types
-    │   ├── Provider.ts
-    │   ├── Task.ts
-    │   ├── TaskStatus.ts
-    │   ├── PageStatus.ts
-    │   └── index.ts
-    └── workers/    # Background workers
-        ├── WorkerBase.ts      # Abstract worker base class
-        ├── SplitterWorker.ts  # PDF/Image splitting worker
-        ├── ConverterWorker.ts # LLM conversion worker
-        ├── MergerWorker.ts    # Result merging worker
-        ├── index.ts
-        └── __tests__/         # Worker tests
+    │   ├── db/          # Database
+    │   │   ├── schema.prisma
+    │   │   ├── migrations/
+    │   │   ├── index.ts      # Prisma client export
+    │   │   └── Migration.ts
+    │   ├── config/      # Configuration
+    │   │   └── worker.config.ts
+    │   ├── services/    # Infrastructure services
+    │   │   ├── FileService.ts
+    │   │   └── __tests__/
+    │   └── adapters/    # External adapters
+    │       └── llm/     # LLM client implementations
+    │           ├── LLMClient.ts
+    │           ├── OpenAIClient.ts
+    │           ├── AnthropicClient.ts
+    │           ├── GeminiClient.ts
+    │           ├── OllamaClient.ts
+    │           ├── OpenAIResponsesClient.ts
+    │           └── __tests__/
+    │
+    ├── application/     # Application logic layer
+    │   ├── index.ts
+    │   ├── services/    # Application services
+    │   │   ├── WorkerOrchestrator.ts
+    │   │   ├── ModelService.ts
+    │   │   ├── interfaces/
+    │   │   └── __tests__/
+    │   └── workers/     # Background workers
+    │       ├── WorkerBase.ts
+    │       ├── SplitterWorker.ts
+    │       ├── ConverterWorker.ts
+    │       ├── MergerWorker.ts
+    │       └── __tests__/
+    │
+    ├── domain/          # Domain logic layer
+    │   ├── index.ts
+    │   ├── repositories/ # Data access
+    │   │   ├── ProviderRepository.ts
+    │   │   ├── ModelRepository.ts
+    │   │   ├── TaskRepository.ts
+    │   │   ├── TaskDetailRepository.ts
+    │   │   ├── interfaces/
+    │   │   └── __tests__/
+    │   └── split/       # Splitting logic
+    │       ├── ISplitter.ts
+    │       ├── PDFSplitter.ts
+    │       ├── ImageSplitter.ts
+    │       ├── SplitterFactory.ts
+    │       ├── PageRangeParser.ts
+    │       ├── ImagePathUtil.ts
+    │       └── __tests__/
+    │
+    ├── shared/          # Cross-cutting concerns
+    │   ├── index.ts
+    │   ├── events/      # Event system
+    │   │   ├── EventBus.ts
+    │   │   └── __tests__/
+    │   └── di/          # Dependency injection
+    │       ├── Container.ts
+    │       └── __tests__/
+    │
+    │   # Legacy paths (backward-compatible re-exports)
+    ├── config/          # → infrastructure/config/
+    ├── db/              # → infrastructure/db/
+    ├── di/              # → shared/di/
+    ├── events/          # → shared/events/
+    ├── logic/           # → various layers
+    ├── repositories/    # → domain/repositories/
+    ├── services/        # → application/services/
+    └── workers/         # → application/workers/
 ```
 
 ### Adding New Features
-1. Create Prisma schema changes in `src/core/db/schema.prisma`
+1. Create Prisma schema changes in `src/core/infrastructure/db/schema.prisma`
 2. Run `npm run migrate:dev` to create migration
 3. Run `npm run generate` to update Prisma client
-4. Add Repository in `src/core/repositories/` (preferred) or DAL in `src/core/dal/`:
+4. Add Repository in `src/core/domain/repositories/`:
    ```typescript
-   // Example: FeatureRepository.ts
-   import { prisma } from '../db/index.js';
+   // Example: src/core/domain/repositories/FeatureRepository.ts
+   import { prisma } from '../../infrastructure/db/index.js';
    import type { IFeatureRepository } from './interfaces/IFeatureRepository.js';
 
    export const featureRepository: IFeatureRepository = {
@@ -410,7 +443,7 @@ src/
 
    export default featureRepository;
    ```
-5. **Add tests for Repository** in `src/core/repositories/__tests__/`:
+5. **Add tests for Repository** in `src/core/domain/repositories/__tests__/`:
    ```typescript
    // Example: FeatureRepository.test.ts
    import { describe, it, expect, beforeEach, vi } from 'vitest'
@@ -419,7 +452,7 @@ src/
    import featureRepository from '../FeatureRepository.js'
 
    const prismaMock = mockDeep<PrismaClient>()
-   vi.mock('../../db/index.js', () => ({ prisma: prismaMock }))
+   vi.mock('../../../infrastructure/db/index.js', () => ({ prisma: prismaMock }))
 
    describe('featureRepository', () => {
      beforeEach(() => { mockReset(prismaMock) })
@@ -431,12 +464,12 @@ src/
      })
    })
    ```
-6. Add business logic in `src/core/logic/` if needed
-7. **Add tests for business logic** in `src/core/logic/__tests__/` if applicable
+6. Add application services in `src/core/application/services/` if needed
+7. **Add tests for services** in `src/core/application/services/__tests__/` if applicable
 8. **Add IPC handler** in `src/main/ipc/handlers/feature.handler.ts`:
    ```typescript
    import { ipcMain } from 'electron';
-   import featureRepository from '../../../core/repositories/FeatureRepository.js';
+   import featureRepository from '../../../core/domain/repositories/FeatureRepository.js';
 
    export function registerFeatureHandlers() {
      ipcMain.handle('feature:action', async (_, params) => {
