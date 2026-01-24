@@ -2,6 +2,7 @@ import path from "path";
 import fs from "fs";
 import isDev from "electron-is-dev";
 import { app } from "electron";
+import { fileURLToPath } from "url";
 
 // 获取迁移文件目录
 const getMigrationsDir = (): string => {
@@ -18,13 +19,37 @@ const getMigrationsDir = (): string => {
   }
 
   // 在打包环境中，确保使用正确的路径
-  // 使用app.getAppPath()获取应用根目录
-  if (app) {
+  // 使用 app.getAppPath() 获取应用根目录
+  if (app.isPackaged) {
+    // 完全打包的应用（如 .exe 安装后），migrations 在 resources 目录
     return path.join(app.getAppPath(), "..", "migrations");
   }
 
-  // 回退到__dirname相对路径
-  return path.join(__dirname, "migrations");
+  // npx 模式：未打包但 isDev=false，migrations 在源码目录中
+  // 由于 package.json 的 files 字段包含了 src/core/infrastructure/db/migrations
+  // 我们需要从当前文件位置向上找到项目根目录
+  const currentDir = typeof __dirname !== 'undefined'
+    ? __dirname
+    : path.dirname(fileURLToPath(import.meta.url));
+
+  // 从 dist/main 向上找到项目根目录，然后定位到 migrations
+  const projectRoot = path.resolve(currentDir, "..", "..");
+  const migrationsPath = path.join(
+    projectRoot,
+    "src",
+    "core",
+    "infrastructure",
+    "db",
+    "migrations",
+  );
+
+  // 如果在项目源码目录找到，直接返回
+  if (fs.existsSync(migrationsPath)) {
+    return migrationsPath;
+  }
+
+  // 回退：尝试相对于 dist 目录
+  return path.join(currentDir, "migrations");
 };
 
 // 创建 _prisma_migrations 表的SQL

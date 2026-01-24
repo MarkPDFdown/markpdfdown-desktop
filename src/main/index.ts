@@ -1,4 +1,19 @@
 import { app, BrowserWindow, ipcMain, shell, protocol } from "electron";
+
+// 在 app ready 之前设置应用名称，确保 userData 路径正确
+// 这必须在所有其他模块导入之前执行，因为一些模块在导入时就会读取 app.getPath('userData')
+// 这对于 npx 方式运行非常重要，否则 userData 会指向 Electron 默认目录
+if (!app.isPackaged) {
+  app.setName('MarkPDFdown');
+  // 在非打包模式下，需要手动设置 userData 路径，因为 setName 不会自动更新它
+  const userDataPath = app.getPath('userData');
+  // 如果路径仍然指向 Electron 默认目录，则修正它
+  if (userDataPath.endsWith('Electron')) {
+    const newPath = userDataPath.replace(/Electron$/, 'MarkPDFdown');
+    app.setPath('userData', newPath);
+  }
+}
+
 import path from "path";
 import fs from "fs";
 import isDev from "electron-is-dev";

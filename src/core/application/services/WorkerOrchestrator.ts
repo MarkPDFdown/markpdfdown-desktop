@@ -20,16 +20,26 @@ export class WorkerOrchestrator implements IWorkerOrchestrator {
   private splitterWorker: SplitterWorker | null;
   private converterWorkers: ConverterWorker[];
   private mergerWorker: MergerWorker | null;
-  private uploadsDir: string;
+  private uploadsDir: string | null;
 
   constructor() {
     this.isRunning = false;
     this.splitterWorker = null;
     this.converterWorkers = [];
     this.mergerWorker = null;
+    // uploadsDir 延迟初始化，确保在 app.setPath() 之后获取正确的路径
+    this.uploadsDir = null;
+  }
 
-    // Use FileLogic for consistent directory paths across dev/prod
-    this.uploadsDir = fileLogic.getUploadDir();
+  /**
+   * Get uploads directory (lazy initialization)
+   * Must be called after app.setPath() has been configured
+   */
+  private getUploadsDir(): string {
+    if (!this.uploadsDir) {
+      this.uploadsDir = fileLogic.getUploadDir();
+    }
+    return this.uploadsDir;
   }
 
   /**
@@ -47,13 +57,16 @@ export class WorkerOrchestrator implements IWorkerOrchestrator {
       // Clean up orphaned tasks/pages from previous abnormal shutdown
       await this.cleanupOrphanedWork();
 
+      // Get uploads directory (lazy initialization to ensure correct path after app.setPath())
+      const uploadsDir = this.getUploadsDir();
+
       // Initialize ImagePathUtil (critical for image path calculation)
       // Split results are stored in: {uploadsDir}/{taskId}/split/
-      ImagePathUtil.init(this.uploadsDir);
-      console.log(`[WorkerOrchestrator] ImagePathUtil initialized with uploadsDir: ${this.uploadsDir}`);
+      ImagePathUtil.init(uploadsDir);
+      console.log(`[WorkerOrchestrator] ImagePathUtil initialized with uploadsDir: ${uploadsDir}`);
 
       // Start SplitterWorker
-      this.splitterWorker = new SplitterWorker(this.uploadsDir);
+      this.splitterWorker = new SplitterWorker(uploadsDir);
       console.log(`[WorkerOrchestrator] SplitterWorker created (ID: ${this.splitterWorker.getWorkerId()})`);
 
       // Run worker in background (non-blocking)
@@ -75,7 +88,7 @@ export class WorkerOrchestrator implements IWorkerOrchestrator {
       }
 
       // Start MergerWorker
-      this.mergerWorker = new MergerWorker(this.uploadsDir);
+      this.mergerWorker = new MergerWorker(uploadsDir);
       console.log(`[WorkerOrchestrator] MergerWorker created (ID: ${this.mergerWorker.getWorkerId().slice(0, 8)})`);
 
       this.mergerWorker.run().catch((error) => {
