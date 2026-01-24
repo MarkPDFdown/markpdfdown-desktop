@@ -16,6 +16,14 @@
   "preview": {
     "back": "Back",
     "download": "Download .md",
-    "delete": "Delete"
+    "delete": "Delete",
+    "regenerate": "Regenerate current page",
+    "status": {
+      "failed": "Conversion failed",
+      "pending": "Pending",
+      "processing": "Converting",
+      "completed": "Completed",
+      "retrying": "Retrying"
+    }
   }
 }

@@ -182,6 +182,7 @@ interface ElectronAPI {
   taskDetail: {
     getByPage: (taskId: string, page: number) => Promise<IpcResponse<TaskDetailWithImage>>;
     getAllByTask: (taskId: string) => Promise<IpcResponse<TaskDetail[]>>;
+    retry: (pageId: number) => Promise<IpcResponse<TaskDetail>>;
   };
 
   file: {

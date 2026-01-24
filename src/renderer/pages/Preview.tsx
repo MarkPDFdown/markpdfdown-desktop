@@ -1,7 +1,11 @@
 import {
   ArrowLeftOutlined,
+  CheckCircleFilled,
+  ClockCircleFilled,
+  CloseCircleFilled,
   FileMarkdownOutlined,
   FilePdfTwoTone,
+  LoadingOutlined,
 } from "@ant-design/icons";
 import {
   App,
@@ -34,6 +38,7 @@ const Preview: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   // 获取任务元数据
   const fetchTask = useCallback(async () => {
@@ -186,6 +191,67 @@ const Preview: React.FC = () => {
     setCurrentPage(page);
   };
 
+  // 重试当前页
+  const handleRetryPage = async () => {
+    if (!taskDetail?.id) return;
+
+    setRetrying(true);
+    try {
+      const result = await window.api.taskDetail.retry(taskDetail.id);
+
+      if (result.success) {
+        message.success('页面已加入重试队列');
+        // 重新获取页面详情
+        fetchPageDetail(currentPage);
+      } else {
+        message.error(result.error || '重试失败');
+      }
+    } catch (error) {
+      console.error('重试页面失败:', error);
+      message.error('重试失败');
+    } finally {
+      setRetrying(false);
+    }
+  };
+
+  // 获取页面状态信息
+  const getPageStatusInfo = () => {
+    const status = taskDetail?.status;
+    const iconStyle = { fontSize: 20 };
+    // PageStatus: FAILED = -1, PENDING = 0, PROCESSING = 1, COMPLETED = 2, RETRYING = 3
+    switch (status) {
+      case -1: // FAILED
+        return {
+          icon: <CloseCircleFilled style={{ ...iconStyle, color: '#ff4d4f' }} />,
+          text: t('preview.status.failed'),
+        };
+      case 0: // PENDING
+        return {
+          icon: <ClockCircleFilled style={{ ...iconStyle, color: '#faad14' }} />,
+          text: t('preview.status.pending'),
+        };
+      case 1: // PROCESSING
+        return {
+          icon: <LoadingOutlined style={{ ...iconStyle, color: '#1890ff' }} spin />,
+          text: t('preview.status.processing'),
+        };
+      case 2: // COMPLETED
+        return {
+          icon: <CheckCircleFilled style={{ ...iconStyle, color: '#52c41a' }} />,
+          text: t('preview.status.completed'),
+        };
+      case 3: // RETRYING
+        return {
+          icon: <LoadingOutlined style={{ ...iconStyle, color: '#faad14' }} spin />,
+          text: t('preview.status.retrying'),
+        };
+      default:
+        return null;
+    }
+  };
+
+  const pageStatusInfo = getPageStatusInfo();
+
   return (
     <App>
       <div
@@ -302,8 +368,48 @@ const Preview: React.FC = () => {
           </Splitter.Panel>
 
           {/* Markdown Panel */}
-          <Splitter.Panel>
+          <Splitter.Panel style={{ position: 'relative' }}>
             <MarkdownPreview content={taskDetail?.content || ''} />
+            {/* 悬浮操作按钮 */}
+            {pageStatusInfo && !loading && (
+              <Tooltip
+                title={
+                  <span>
+                    {pageStatusInfo.text}
+                    {(taskDetail?.status === -1 || taskDetail?.status === 2) && (
+                      <span style={{ opacity: 0.7 }}> · {t('preview.regenerate')}</span>
+                    )}
+                  </span>
+                }
+                placement="left"
+              >
+                <Button
+                  type="text"
+                  shape="circle"
+                  icon={
+                    retrying ? (
+                      <LoadingOutlined style={{ fontSize: 20, color: '#1890ff' }} />
+                    ) : (
+                      pageStatusInfo.icon
+                    )
+                  }
+                  onClick={handleRetryPage}
+                  disabled={!taskDetail?.id || retrying}
+                  style={{
+                    position: 'absolute',
+                    bottom: 20,
+                    right: 20,
+                    width: 44,
+                    height: 44,
+                    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                    backdropFilter: 'blur(8px)',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                    border: 'none',
+                    transition: 'all 0.2s ease',
+                  }}
+                />
+              </Tooltip>
+            )}
           </Splitter.Panel>
         </Splitter>
 

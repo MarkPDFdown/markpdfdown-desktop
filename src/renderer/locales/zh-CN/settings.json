@@ -16,6 +16,14 @@
   "preview": {
     "back": "返回",
     "download": "下载 .md",
-    "delete": "删除"
+    "delete": "删除",
+    "regenerate": "重新生成当前页",
+    "status": {
+      "failed": "转换失败",
+      "pending": "等待转换",
+      "processing": "转换中",
+      "completed": "转换完成",
+      "retrying": "重试中"
+    }
   }
 }

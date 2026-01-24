@@ -16,6 +16,14 @@
   "preview": {
     "back": "戻る",
     "download": ".md形式でダウンロード",
-    "delete": "削除"
+    "delete": "削除",
+    "regenerate": "現在のページを再生成",
+    "status": {
+      "failed": "変換失敗",
+      "pending": "変換待ち",
+      "processing": "変換中",
+      "completed": "変換完了",
+      "retrying": "再試行中"
+    }
   }
 }

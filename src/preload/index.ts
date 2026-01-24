@@ -46,6 +46,8 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("taskDetail:getByPage", taskId, page),
     getAllByTask: (taskId: string) =>
       ipcRenderer.invoke("taskDetail:getAllByTask", taskId),
+    retry: (pageId: number) =>
+      ipcRenderer.invoke("taskDetail:retry", pageId),
   },
 
   // ==================== File APIs ====================

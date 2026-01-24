@@ -16,6 +16,14 @@
   "preview": {
     "back": "بازگشت",
     "download": "دانلود .md",
-    "delete": "حذف"
+    "delete": "حذف",
+    "regenerate": "بازتولید صفحه فعلی",
+    "status": {
+      "failed": "تبدیل ناموفق",
+      "pending": "در انتظار",
+      "processing": "در حال تبدیل",
+      "completed": "تکمیل شده",
+      "retrying": "در حال تلاش مجدد"
+    }
   }
 }

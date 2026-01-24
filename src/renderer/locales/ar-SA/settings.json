@@ -16,6 +16,14 @@
   "preview": {
     "back": "رجوع",
     "download": "تحميل .md",
-    "delete": "حذف"
+    "delete": "حذف",
+    "regenerate": "إعادة إنشاء الصفحة الحالية",
+    "status": {
+      "failed": "فشل التحويل",
+      "pending": "في الانتظار",
+      "processing": "جاري التحويل",
+      "completed": "مكتمل",
+      "retrying": "إعادة المحاولة"
+    }
   }
 }
