@@ -33,6 +33,12 @@ export const WORKER_CONFIG = {
     pollInterval: 2000,
     /** Timeout for LLM conversion (ms) */
     timeout: 120000, // 2 minutes
+    /** Maximum retry attempts for transient errors */
+    maxRetries: 3,
+    /** Base retry delay in milliseconds (exponential backoff) */
+    retryDelayBase: 1000,
+    /** Maximum content length in characters */
+    maxContentLength: 500000,
   },
 
   /**
