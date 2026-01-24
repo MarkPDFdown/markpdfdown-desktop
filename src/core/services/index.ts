@@ -1,4 +1,5 @@
-export { WorkerOrchestrator, workerOrchestrator } from './WorkerOrchestrator.js';
+// Backward-compatible re-export from new location
+export { WorkerOrchestrator, workerOrchestrator } from '../application/services/index.js';
 
 // Re-export interfaces
 export type {
@@ -11,4 +12,4 @@ export type {
   IFileService,
   FileInfo,
   ImagePathInfo,
-} from './interfaces/index.js';
+} from '../application/services/interfaces/index.js';

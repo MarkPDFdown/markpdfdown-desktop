@@ -1,4 +1,2 @@
-export { WorkerBase } from './WorkerBase.js';
-export { SplitterWorker } from './SplitterWorker.js';
-export { ConverterWorker } from './ConverterWorker.js';
-export { MergerWorker } from './MergerWorker.js';
+// Backward-compatible re-export from new location
+export { WorkerBase, SplitterWorker, ConverterWorker, MergerWorker } from '../application/workers/index.js';
