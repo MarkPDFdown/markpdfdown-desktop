@@ -1,20 +1,13 @@
-/**
- * LLM客户端模块导出
- */
-
-// 导出接口和基类
-export { LLMClient, LLMClientFactory } from './LLMClient.js';
-export type { CompletionOptions, CompletionResponse } from './LLMClient.js';
-
-// 导出具体实现类
-export { OpenAIClient } from './OpenAIClient.js';
-export { OpenAIResponsesClient } from './OpenAIResponsesClient.js';
-export { GeminiClient } from './GeminiClient.js';
-export { AnthropicClient } from './AnthropicClient.js';
-export { OllamaClient } from './OllamaClient.js';
-
-// 导入工厂类以供默认导出
-import { LLMClientFactory } from './LLMClient.js';
-
-// 默认导出工厂类
-export default LLMClientFactory; 
+// Backward-compatible re-export from new location
+export {
+  LLMClient,
+  LLMClientFactory,
+  type CompletionOptions,
+  type CompletionResponse,
+  OpenAIClient,
+  OpenAIResponsesClient,
+  GeminiClient,
+  AnthropicClient,
+  OllamaClient,
+  default,
+} from '../../infrastructure/adapters/llm/index.js';
