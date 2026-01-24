@@ -168,15 +168,18 @@ export class ConverterWorker extends WorkerBase {
    * Order: retry_count ASC, page ASC (prioritize fresh pages)
    */
   private async claimPage(): Promise<PageWithTask | null> {
-    const maxAttempts = 3;
+    const maxAttempts = 5;
+    const checkedTaskIds: string[] = []; // Track tasks we've already checked and skipped
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
-        // Step 1: Find a candidate page
+        // Step 1: Find a candidate page, excluding tasks we've already checked
         const candidate = await prisma.taskDetail.findFirst({
           where: {
             status: PageStatus.PENDING,
             worker_id: null,
+            // Exclude pages from tasks we've already checked and found not in PROCESSING state
+            ...(checkedTaskIds.length > 0 && { task: { notIn: checkedTaskIds } }),
           },
           orderBy: [
             { retry_count: 'asc' },
@@ -188,14 +191,15 @@ export class ConverterWorker extends WorkerBase {
           return null;
         }
 
-        // Step 2: Verify the parent task is in PROCESSING state and not CANCELLED
+        // Step 2: Verify the parent task is in PROCESSING state
         const task = await prisma.task.findUnique({
           where: { id: candidate.task },
           select: { status: true },
         });
 
         if (!task || task.status !== TaskStatus.PROCESSING) {
-          // Task not in correct state, try next
+          // Task not in correct state, remember it and try next
+          checkedTaskIds.push(candidate.task);
           continue;
         }
 
