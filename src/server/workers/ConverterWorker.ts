@@ -401,8 +401,8 @@ export class ConverterWorker extends WorkerBase {
               });
             }
 
-            // Step 6: Update progress
-            const progress = Math.round((finishedCount / task.pages) * 100);
+            // Step 6: Update progress (only count successful pages)
+            const progress = Math.round((updatedTask.completed_count / task.pages) * 100);
             await tx.task.update({
               where: { id: page.task },
               data: { progress },
@@ -490,19 +490,21 @@ export class ConverterWorker extends WorkerBase {
             // Step 5: Check if task is complete
             const finishedCount = task.completed_count + updatedTask.failed_count;
             if (finishedCount >= task.pages) {
-              // All pages finished
-              const newStatus = TaskStatus.PARTIAL_FAILED;
+              // All pages finished - FAILED if all pages failed, PARTIAL_FAILED otherwise
+              const newStatus = task.completed_count > 0 ? TaskStatus.PARTIAL_FAILED : TaskStatus.FAILED;
               await tx.task.update({
                 where: { id: page.task },
                 data: {
                   status: newStatus,
                   worker_id: null,
+                  // Write page error to task when all pages failed
+                  error: newStatus === TaskStatus.FAILED ? errorMessage : undefined,
                 },
               });
             }
 
-            // Step 6: Update progress
-            const progress = Math.round((finishedCount / task.pages) * 100);
+            // Step 6: Update progress (only count successful pages)
+            const progress = Math.round((task.completed_count / task.pages) * 100);
             await tx.task.update({
               where: { id: page.task },
               data: { progress },

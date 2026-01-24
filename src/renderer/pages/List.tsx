@@ -350,9 +350,14 @@ const List: React.FC = () => {
       title: t('columns.status'),
       dataIndex: "status",
       width: 100,
-      render: (status: number) => (
-        <Tag color={getStatusColor(status)}>{getStatusText(status)}</Tag>
-      ),
+      render: (status: number, record: Task) => {
+        const tag = <Tag color={getStatusColor(status)}>{getStatusText(status)}</Tag>;
+        // Show error tooltip for failed status
+        if (status === 0 && record.error) {
+          return <Tooltip title={record.error}>{tag}</Tooltip>;
+        }
+        return tag;
+      },
     },
     {
       title: t('columns.action'),
