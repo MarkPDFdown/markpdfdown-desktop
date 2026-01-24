@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // Mock all dependencies before imports
-vi.mock('../../../db/index.js', () => ({
+vi.mock('../../../infrastructure/db/index.js', () => ({
   prisma: { task: {}, taskDetail: {}, provider: {}, model: {} }
 }))
 
@@ -12,7 +12,7 @@ vi.mock('../../events/EventBus.js', () => ({
   }
 }))
 
-vi.mock('../../../services/WorkerOrchestrator.js', () => ({
+vi.mock('../../../application/services/WorkerOrchestrator.js', () => ({
   WorkerOrchestrator: vi.fn().mockImplementation(() => ({
     start: vi.fn(),
     stop: vi.fn(),
@@ -22,27 +22,27 @@ vi.mock('../../../services/WorkerOrchestrator.js', () => ({
   }))
 }))
 
-vi.mock('../../../repositories/ProviderRepository.js', () => ({
+vi.mock('../../../domain/repositories/ProviderRepository.js', () => ({
   default: { findAll: vi.fn(), findById: vi.fn() }
 }))
 
-vi.mock('../../../repositories/ModelRepository.js', () => ({
+vi.mock('../../../domain/repositories/ModelRepository.js', () => ({
   default: { findAll: vi.fn(), findByProviderId: vi.fn() }
 }))
 
-vi.mock('../../../repositories/TaskRepository.js', () => ({
+vi.mock('../../../domain/repositories/TaskRepository.js', () => ({
   default: { findAll: vi.fn(), create: vi.fn() }
 }))
 
-vi.mock('../../../repositories/TaskDetailRepository.js', () => ({
+vi.mock('../../../domain/repositories/TaskDetailRepository.js', () => ({
   default: { findByTaskId: vi.fn(), findByTaskAndPage: vi.fn() }
 }))
 
-vi.mock('../../../logic/File.js', () => ({
+vi.mock('../../../infrastructure/services/FileService.js', () => ({
   default: { getUploadDir: vi.fn(() => '/uploads') }
 }))
 
-vi.mock('../../../logic/Model.js', () => ({
+vi.mock('../../../application/services/ModelService.js', () => ({
   default: { completion: vi.fn() }
 }))
 
@@ -90,7 +90,7 @@ describe('Container', () => {
     })
 
     it('should create a new WorkerOrchestrator instance', async () => {
-      const { WorkerOrchestrator } = await import('../../../services/WorkerOrchestrator.js')
+      const { WorkerOrchestrator } = await import('../../../application/services/WorkerOrchestrator.js')
       const { createContainer } = await import('../Container.js')
 
       createContainer()

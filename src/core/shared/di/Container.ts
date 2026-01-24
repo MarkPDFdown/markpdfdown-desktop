@@ -1,16 +1,16 @@
-import { prisma } from '../../db/index.js';
+import { prisma } from '../../infrastructure/db/index.js';
 import { eventBus } from '../events/EventBus.js';
-import { WorkerOrchestrator } from '../../services/WorkerOrchestrator.js';
+import { WorkerOrchestrator } from '../../application/services/WorkerOrchestrator.js';
 
 // Import repositories
-import providerRepository from '../../repositories/ProviderRepository.js';
-import modelRepository from '../../repositories/ModelRepository.js';
-import taskRepository from '../../repositories/TaskRepository.js';
-import taskDetailRepository from '../../repositories/TaskDetailRepository.js';
+import providerRepository from '../../domain/repositories/ProviderRepository.js';
+import modelRepository from '../../domain/repositories/ModelRepository.js';
+import taskRepository from '../../domain/repositories/TaskRepository.js';
+import taskDetailRepository from '../../domain/repositories/TaskDetailRepository.js';
 
-// Import logic/services
-import fileLogic from '../../logic/File.js';
-import modelLogic from '../../logic/Model.js';
+// Import services
+import fileLogic from '../../infrastructure/services/FileService.js';
+import modelLogic from '../../application/services/ModelService.js';
 
 /**
  * Application Configuration
