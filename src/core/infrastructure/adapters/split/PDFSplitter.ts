@@ -2,11 +2,11 @@ import { pdfToPng } from 'pdf-to-png-converter';
 import { PDFDocument } from 'pdf-lib';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { ISplitter, SplitResult, PageInfo } from './ISplitter.js';
-import { Task } from '../../../shared/types/index.js';
-import { PageRangeParser } from './PageRangeParser.js';
+import { ISplitter, SplitResult, PageInfo } from '../../../domain/split/ISplitter.js';
+import { Task } from '../../../../shared/types/index.js';
+import { PageRangeParser } from '../../../domain/split/PageRangeParser.js';
 import { ImagePathUtil } from './ImagePathUtil.js';
-import { WORKER_CONFIG } from '../../infrastructure/config/worker.config.js';
+import { WORKER_CONFIG } from '../../config/worker.config.js';
 
 /**
  * PDF splitter implementation using pdf-to-png-converter.

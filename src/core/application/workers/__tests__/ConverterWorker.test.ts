@@ -20,7 +20,7 @@ vi.mock('../../../infrastructure/db/index.js', () => ({
   },
 }));
 
-vi.mock('../../../domain/split/ImagePathUtil.js', () => ({
+vi.mock('../../../infrastructure/adapters/split/index.js', () => ({
   ImagePathUtil: {
     getPath: vi.fn().mockImplementation((taskId: string, page: number) => `/mock/path/${taskId}/page-${page}.png`),
   },

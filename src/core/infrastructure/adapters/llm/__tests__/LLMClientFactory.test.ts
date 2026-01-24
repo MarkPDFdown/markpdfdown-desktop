@@ -36,7 +36,7 @@ describe('LLMClientFactory', () => {
     it('should throw error for unsupported client type', async () => {
       await expect(
         LLMClientFactory.createClient('unsupported', 'key', 'url')
-      ).rejects.toThrow('不支持的LLM客户端类型: unsupported')
+      ).rejects.toThrow('Unsupported LLM client type: unsupported')
     })
 
     it('should handle empty baseUrl', async () => {

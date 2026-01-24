@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { ISplitter, SplitResult, PageInfo } from './ISplitter.js';
-import { Task } from '../../../shared/types/index.js';
+import { ISplitter, SplitResult, PageInfo } from '../../../domain/split/ISplitter.js';
+import { Task } from '../../../../shared/types/index.js';
 import { ImagePathUtil } from './ImagePathUtil.js';
 
 /**

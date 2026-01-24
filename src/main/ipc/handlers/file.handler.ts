@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs";
 import taskRepository from "../../../core/domain/repositories/TaskRepository.js";
 import fileLogic from "../../../core/infrastructure/services/FileService.js";
-import { ImagePathUtil } from "../../../core/domain/split/ImagePathUtil.js";
+import { ImagePathUtil } from "../../../core/infrastructure/adapters/split/index.js";
 import { IPC_CHANNELS } from "../../../shared/ipc/channels.js";
 import type { IpcResponse } from "../../../shared/ipc/responses.js";
 

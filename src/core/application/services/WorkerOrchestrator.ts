@@ -1,5 +1,5 @@
 import { SplitterWorker, ConverterWorker, MergerWorker } from '../workers/index.js';
-import { ImagePathUtil } from '../../domain/split/index.js';
+import { ImagePathUtil } from '../../infrastructure/adapters/split/index.js';
 import fileLogic from '../../infrastructure/services/FileService.js';
 import { WORKER_CONFIG } from '../../infrastructure/config/worker.config.js';
 import { prisma } from '../../infrastructure/db/index.js';

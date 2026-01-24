@@ -1,7 +1,7 @@
 import { ipcMain } from "electron";
 import fs from "fs";
 import taskDetailRepository from "../../../core/domain/repositories/TaskDetailRepository.js";
-import { ImagePathUtil } from "../../../core/domain/split/ImagePathUtil.js";
+import { ImagePathUtil } from "../../../core/infrastructure/adapters/split/index.js";
 import { eventBus, TaskEventType } from '../../../core/shared/events/EventBus.js';
 import { prisma } from '../../../core/infrastructure/db/index.js';
 import { TaskStatus } from '../../../shared/types/TaskStatus.js';

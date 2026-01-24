@@ -1,5 +1,5 @@
 import path from 'path';
-import { ISplitter } from './ISplitter.js';
+import { ISplitter } from '../../../domain/split/ISplitter.js';
 import { PDFSplitter } from './PDFSplitter.js';
 import { ImageSplitter } from './ImageSplitter.js';
 

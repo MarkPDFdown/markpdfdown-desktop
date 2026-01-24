@@ -40,7 +40,7 @@ vi.mock('../../workers/index.js', () => ({
   MergerWorker: vi.fn().mockImplementation(() => mockMergerWorker)
 }))
 
-vi.mock('../../../domain/split/index.js', () => ({
+vi.mock('../../../infrastructure/adapters/split/index.js', () => ({
   ImagePathUtil: {
     init: vi.fn()
   }
@@ -62,7 +62,7 @@ vi.mock('../../../infrastructure/config/worker.config.js', () => ({
 
 import { WorkerOrchestrator } from '../WorkerOrchestrator.js'
 import { SplitterWorker, ConverterWorker, MergerWorker } from '../../workers/index.js'
-import { ImagePathUtil } from '../../../domain/split/index.js'
+import { ImagePathUtil } from '../../../infrastructure/adapters/split/index.js'
 import { prisma } from '../../../infrastructure/db/index.js'
 
 // Cast to mock type for type safety

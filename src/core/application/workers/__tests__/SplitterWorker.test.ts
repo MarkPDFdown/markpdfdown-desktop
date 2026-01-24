@@ -13,7 +13,7 @@ vi.mock('../../../infrastructure/db/index.js', () => ({
   },
 }));
 
-vi.mock('../../../domain/split/SplitterFactory.js', () => ({
+vi.mock('../../../infrastructure/adapters/split/index.js', () => ({
   SplitterFactory: vi.fn().mockImplementation(() => ({
     createFromFilename: vi.fn(),
   })),

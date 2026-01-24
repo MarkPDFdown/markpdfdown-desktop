@@ -1,125 +1,35 @@
 /**
- * LLM客户端接口定义
+ * LLM Client Base Class and Factory
+ * Infrastructure layer - contains implementation logic
  */
 
-/**
- * 消息内容类型
- */
-export type ContentType = 'text' | 'image_url' | 'tool_call' | 'tool_result';
+import type {
+  ILLMClient,
+  CompletionOptions,
+  CompletionResponse,
+  Message,
+} from '../../../domain/llm/ILLMClient.js';
+
+// Re-export types from domain for backward compatibility
+export type {
+  ContentType,
+  MessageRole,
+  TextContent,
+  ImageContent,
+  ToolCallContent,
+  ToolResultContent,
+  MessageContent,
+  Message,
+  ToolDefinition,
+  CompletionOptions,
+  ToolCall,
+  CompletionResponse,
+} from '../../../domain/llm/ILLMClient.js';
 
 /**
- * 消息角色
+ * LLM Client abstract base class
  */
-export type MessageRole = 'system' | 'user' | 'assistant' | 'tool';
-
-/**
- * 文本内容
- */
-export interface TextContent {
-  type: 'text';
-  text: string;
-}
-
-/**
- * 图片内容
- */
-export interface ImageContent {
-  type: 'image_url';
-  image_url: { url: string }; // 可以是URL或base64编码的数据URI
-}
-
-/**
- * 工具调用内容
- */
-export interface ToolCallContent {
-  type: 'tool_call';
-  tool_call_id: string;
-  function: {
-    name: string;
-    arguments: string; // JSON字符串
-  };
-}
-
-/**
- * 工具结果内容
- */
-export interface ToolResultContent {
-  type: 'tool_result';
-  tool_call_id: string;
-  content: string;
-}
-
-/**
- * 消息内容
- */
-export type MessageContent = TextContent | ImageContent | ToolCallContent | ToolResultContent;
-
-/**
- * 对话消息
- */
-export interface Message {
-  role: MessageRole;
-  content: MessageContent | MessageContent[];
-  name?: string; // 用于区分不同的用户或工具
-}
-
-/**
- * 工具定义
- */
-export interface ToolDefinition {
-  type: 'function';
-  function: {
-    name: string;
-    description: string;
-    parameters: Record<string, any>; // JSON Schema对象
-  };
-}
-
-/**
- * 补全选项
- */
-export interface CompletionOptions {
-  messages: Message[]; // 替代原有的单一prompt字段
-  maxTokens?: number;
-  temperature?: number;
-  model?: string;
-  apiKey?: string;
-  stream?: boolean;
-  onUpdate?: (content: string) => void;
-  tools?: ToolDefinition[]; // 可用工具定义
-  tool_choice?: 'auto' | 'none' | { type: 'function'; function: { name: string } }; // 工具选择
-  response_format?: { type: 'text' | 'json_object' }; // 响应格式
-  systemPrompt?: string; // 系统提示（向后兼容，会被转换为system角色消息）
-}
-
-/**
- * 工具调用响应
- */
-export interface ToolCall {
-  id: string;
-  type: 'function';
-  function: {
-    name: string;
-    arguments: string;
-  };
-}
-
-/**
- * 补全响应
- */
-export interface CompletionResponse {
-  content: string;
-  model: string;
-  finishReason?: string;
-  toolCalls?: ToolCall[]; // 工具调用
-  responseFormat?: 'text' | 'json_object'; // 响应格式
-  rawResponse?: any; // 原始响应，用于调试
-}
-
-/**
- * LLM客户端基类
- */
-export abstract class LLMClient {
+export abstract class LLMClient implements ILLMClient {
   protected apiKey: string;
   protected baseUrl: string;
 
@@ -129,21 +39,20 @@ export abstract class LLMClient {
   }
 
   /**
-   * 执行文本补全
+   * Execute text completion
    */
   abstract completion(options: CompletionOptions): Promise<CompletionResponse>;
 
   /**
-   * 向后兼容处理单一prompt
-   * @param options 可能包含旧格式prompt的选项
-   * @returns 标准化后的选项
+   * Normalize options for backward compatibility with single prompt
+   * @param options Options that may contain old prompt format
+   * @returns Normalized options
    */
   protected normalizeOptions(options: CompletionOptions & { prompt?: string }): CompletionOptions {
     const normalizedOptions = { ...options };
 
-    // 如果存在旧的prompt字段，将其转换为消息格式
+    // Convert old prompt field to message format
     if ('prompt' in normalizedOptions && normalizedOptions.prompt) {
-      // 如果没有messages字段或为空数组，则使用prompt创建一个用户消息
       if (!normalizedOptions.messages || normalizedOptions.messages.length === 0) {
         normalizedOptions.messages = [{
           role: 'user',
@@ -154,11 +63,10 @@ export abstract class LLMClient {
         }];
       }
 
-      // 删除原始prompt字段
       delete normalizedOptions.prompt;
     }
 
-    // 如果有systemPrompt但没有system角色消息，添加一个system角色消息
+    // Add system message if systemPrompt is provided but no system message exists
     if (normalizedOptions.systemPrompt &&
         (!normalizedOptions.messages || !normalizedOptions.messages.some(m => m.role === 'system'))) {
       const systemMessage: Message = {
@@ -172,7 +80,6 @@ export abstract class LLMClient {
       normalizedOptions.messages = normalizedOptions.messages || [];
       normalizedOptions.messages.unshift(systemMessage);
 
-      // 删除原始systemPrompt字段
       delete normalizedOptions.systemPrompt;
     }
 
@@ -181,14 +88,15 @@ export abstract class LLMClient {
 }
 
 /**
- * LLM客户端工厂类，用于创建不同的LLM客户端实例
+ * LLM Client Factory
+ * Creates appropriate client instances based on provider type
  */
 export class LLMClientFactory {
   /**
-   * 创建LLM客户端实例
-   * @param type LLM客户端类型
-   * @param apiKey API密钥
-   * @param baseUrl 基础URL，某些服务需要自定义
+   * Create LLM client instance
+   * @param type LLM client type
+   * @param apiKey API key
+   * @param baseUrl Base URL (some services need custom URL)
    */
   static async createClient(type: string, apiKey: string, baseUrl?: string): Promise<LLMClient> {
     switch (type) {
@@ -213,7 +121,7 @@ export class LLMClientFactory {
         return new OllamaModule.OllamaClient(apiKey, baseUrl || '');
       }
       default:
-        throw new Error(`不支持的LLM客户端类型: ${type}`);
+        throw new Error(`Unsupported LLM client type: ${type}`);
     }
   }
 }

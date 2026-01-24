@@ -1,7 +1,7 @@
 import { WorkerBase } from './WorkerBase.js';
 import { TaskStatus } from '../../../shared/types/TaskStatus.js';
 import { PageStatus } from '../../../shared/types/PageStatus.js';
-import { ImagePathUtil } from '../../domain/split/ImagePathUtil.js';
+import { ImagePathUtil } from '../../infrastructure/adapters/split/index.js';
 import modelLogic from '../services/ModelService.js';
 import { eventBus, TaskEventType } from '../../shared/events/EventBus.js';
 import { prisma } from '../../infrastructure/db/index.js';

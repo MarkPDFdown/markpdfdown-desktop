@@ -1,5 +1,5 @@
 // Domain Layer
-// Contains core business logic: repositories, split logic
+// Contains core business logic: repositories, interfaces, pure logic
 
 // Repositories
 export {
@@ -15,17 +15,28 @@ export {
   default as taskDetailRepository,
 } from './repositories/TaskDetailRepository.js';
 
-// Split Logic
-export {
-  PDFSplitter,
-  ImageSplitter,
-  SplitterFactory,
-  PageRangeParser,
-  ImagePathUtil,
-} from './split/index.js';
+// Split - interfaces and pure logic only
+export { PageRangeParser } from './split/index.js';
 
 export type {
   ISplitter,
   SplitResult,
   PageInfo,
 } from './split/index.js';
+
+// LLM - interfaces and types only
+export type {
+  ContentType,
+  MessageRole,
+  TextContent,
+  ImageContent,
+  ToolCallContent,
+  ToolResultContent,
+  MessageContent,
+  Message,
+  ToolDefinition,
+  CompletionOptions,
+  ToolCall,
+  CompletionResponse,
+  ILLMClient,
+} from './llm/index.js';

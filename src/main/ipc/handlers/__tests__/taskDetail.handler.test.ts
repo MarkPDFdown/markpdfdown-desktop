@@ -39,7 +39,7 @@ vi.mock('../../../../core/domain/repositories/TaskDetailRepository.js', () => ({
   default: mockTaskDetailRepository
 }))
 
-vi.mock('../../../../core/domain/split/ImagePathUtil.js', () => ({
+vi.mock('../../../../core/infrastructure/adapters/split/index.js', () => ({
   ImagePathUtil: {
     getPath: vi.fn((taskId: string, page: number) => `/uploads/${taskId}/split/page-${page}.png`)
   }
