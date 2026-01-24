@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client'
 
 const prismaMock = mockDeep<PrismaClient>()
 
-vi.mock('../../db/index.js', () => ({
+vi.mock('../../../infrastructure/db/index.js', () => ({
   prisma: prismaMock
 }))
 

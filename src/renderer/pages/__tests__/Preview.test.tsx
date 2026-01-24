@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react'
-import { BrowserRouter, MemoryRouter, Routes, Route } from 'react-router-dom'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { App } from 'antd'
 import Preview from '../Preview'
 
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
-  useTranslation: (namespace?: string) => ({
+  useTranslation: () => ({
     t: (key: string, params?: any) => {
       const translations: Record<string, string> = {
         'preview.back': 'Back',

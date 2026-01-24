@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { OpenAIResponsesClient } from '../OpenAIResponsesClient.js'
-import { mockFetchSuccess, mockFetchError } from '../../../../../tests/helpers/mock-llm.js'
+import { mockFetchSuccess, mockFetchError } from '../../../../../../tests/helpers/mock-llm.js'
 
 describe('OpenAIResponsesClient', () => {
   let client: OpenAIResponsesClient

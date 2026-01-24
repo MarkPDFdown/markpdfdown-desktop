@@ -15,9 +15,9 @@
     "build:mac": "npm run build && electron-builder --mac --x64 --arm64",
     "build:win": "npm run build && electron-builder --win --x64 --arm64",
     "build:linux": "npm run build && electron-builder --linux --x64 --arm64",
-    "migrate:dev": "prisma migrate dev --schema=./src/core/db/schema.prisma",
-    "migrate:reset": "prisma migrate reset --schema=./src/core/db/schema.prisma",
-    "generate": "prisma generate --schema=./src/core/db/schema.prisma",
+    "migrate:dev": "prisma migrate dev --schema=./src/core/infrastructure/db/schema.prisma",
+    "migrate:reset": "prisma migrate reset --schema=./src/core/infrastructure/db/schema.prisma",
+    "generate": "prisma generate --schema=./src/core/infrastructure/db/schema.prisma",
     "logo": "electron-icon-builder --input=./src/renderer/assets/logo.png --output=./public",
     "test": "vitest",
     "test:unit": "vitest run --config vitest.config.ts",
@@ -40,7 +40,7 @@
       "node_modules/.prisma/**/*",
       "node_modules/@prisma/client/**/*",
       {
-        "from": "src/core/db/migrations",
+        "from": "src/core/infrastructure/db/migrations",
         "to": "migrations",
         "filter": [
           "**/*.sql"

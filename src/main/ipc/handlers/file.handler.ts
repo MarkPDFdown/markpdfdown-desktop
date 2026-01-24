@@ -1,9 +1,9 @@
 import { ipcMain, dialog } from "electron";
 import path from "path";
 import fs from "fs";
-import taskRepository from "../../../core/repositories/TaskRepository.js";
-import fileLogic from "../../../core/logic/File.js";
-import { ImagePathUtil } from "../../../core/logic/split/ImagePathUtil.js";
+import taskRepository from "../../../core/domain/repositories/TaskRepository.js";
+import fileLogic from "../../../core/infrastructure/services/FileService.js";
+import { ImagePathUtil } from "../../../core/domain/split/ImagePathUtil.js";
 import { IPC_CHANNELS } from "../../../shared/ipc/channels.js";
 import type { IpcResponse } from "../../../shared/ipc/responses.js";
 

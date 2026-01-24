@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { mockDeep, mockReset, DeepMockProxy } from 'vitest-mock-extended'
+import { mockReset, DeepMockProxy } from 'vitest-mock-extended'
 import type { PrismaClient } from '@prisma/client'
-import { TaskStatus } from '../../../shared/types/TaskStatus.js'
-import { PageStatus } from '../../../shared/types/PageStatus.js'
+import { TaskStatus } from '../../../../shared/types/TaskStatus.js'
+import { PageStatus } from '../../../../shared/types/PageStatus.js'
 
 // Mock prisma module
-vi.mock('../../db/index.js', async () => {
+vi.mock('../../../infrastructure/db/index.js', async () => {
   const { mockDeep } = await import('vitest-mock-extended')
   return {
     prisma: mockDeep()
@@ -40,19 +40,19 @@ vi.mock('../../workers/index.js', () => ({
   MergerWorker: vi.fn().mockImplementation(() => mockMergerWorker)
 }))
 
-vi.mock('../../logic/split/index.js', () => ({
+vi.mock('../../../domain/split/index.js', () => ({
   ImagePathUtil: {
     init: vi.fn()
   }
 }))
 
-vi.mock('../../logic/File.js', () => ({
+vi.mock('../../../infrastructure/services/FileService.js', () => ({
   default: {
     getUploadDir: vi.fn().mockReturnValue('/mock/uploads')
   }
 }))
 
-vi.mock('../../config/worker.config.js', () => ({
+vi.mock('../../../infrastructure/config/worker.config.js', () => ({
   WORKER_CONFIG: {
     converter: {
       count: 3
@@ -62,8 +62,8 @@ vi.mock('../../config/worker.config.js', () => ({
 
 import { WorkerOrchestrator } from '../WorkerOrchestrator.js'
 import { SplitterWorker, ConverterWorker, MergerWorker } from '../../workers/index.js'
-import { ImagePathUtil } from '../../logic/split/index.js'
-import { prisma } from '../../db/index.js'
+import { ImagePathUtil } from '../../../domain/split/index.js'
+import { prisma } from '../../../infrastructure/db/index.js'
 
 // Cast to mock type for type safety
 const prismaMock = prisma as unknown as DeepMockProxy<PrismaClient>

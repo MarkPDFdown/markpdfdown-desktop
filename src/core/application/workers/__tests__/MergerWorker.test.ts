@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { MergerWorker } from '../MergerWorker.js';
-import { TaskStatus } from '../../../shared/types/TaskStatus.js';
-import { PageStatus } from '../../../shared/types/PageStatus.js';
+import { TaskStatus } from '../../../../shared/types/TaskStatus.js';
+import { PageStatus } from '../../../../shared/types/PageStatus.js';
 
 // Mock dependencies
 vi.mock('fs/promises', () => ({
@@ -12,7 +12,7 @@ vi.mock('fs/promises', () => ({
   },
 }));
 
-vi.mock('../../db/index.js', () => ({
+vi.mock('../../../infrastructure/db/index.js', () => ({
   prisma: {
     $transaction: vi.fn(),
     task: {
@@ -25,7 +25,7 @@ vi.mock('../../db/index.js', () => ({
   },
 }));
 
-vi.mock('../../events/EventBus.js', () => ({
+vi.mock('../../../shared/events/EventBus.js', () => ({
   eventBus: {
     emitTaskEvent: vi.fn(),
   },
@@ -36,7 +36,7 @@ vi.mock('../../events/EventBus.js', () => ({
   },
 }));
 
-vi.mock('../../config/worker.config.js', () => ({
+vi.mock('../../../infrastructure/config/worker.config.js', () => ({
   WORKER_CONFIG: {
     merger: {
       pollInterval: 100, // Short for tests
@@ -45,8 +45,8 @@ vi.mock('../../config/worker.config.js', () => ({
 }));
 
 import fs from 'fs/promises';
-import { prisma } from '../../db/index.js';
-import { eventBus, TaskEventType } from '../../events/EventBus.js';
+import { prisma } from '../../../infrastructure/db/index.js';
+import { eventBus, TaskEventType } from '../../../shared/events/EventBus.js';
 
 describe('MergerWorker', () => {
   const uploadsDir = '/mock/uploads';

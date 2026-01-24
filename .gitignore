@@ -12,8 +12,8 @@ dist
 release
 dist-ssr
 *.local
-src/server/db/*.db
-src/server/db/*.db-journal
+*.db
+*.db-journal
 files
 
 # Editor directories and files

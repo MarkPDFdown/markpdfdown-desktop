@@ -4,10 +4,9 @@
 // Events
 export {
   eventBus,
-  EventBus,
   TaskEventType,
-  type TaskEventPayload,
-  type TaskDetailEventPayload,
+  type TaskEventData,
+  type TaskDetailEventData,
 } from './events/EventBus.js';
 
 // Dependency Injection

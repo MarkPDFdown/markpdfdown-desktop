@@ -1,23 +1,30 @@
-import path from 'path';
-import fs from 'fs';
-import isDev from 'electron-is-dev';
-import { app } from 'electron';
+import path from "path";
+import fs from "fs";
+import isDev from "electron-is-dev";
+import { app } from "electron";
 
 // 获取迁移文件目录
 const getMigrationsDir = (): string => {
   // 在开发环境使用项目目录
   if (isDev) {
-    return path.join(process.cwd(), 'src', 'server', 'db', 'migrations');
+    return path.join(
+      process.cwd(),
+      "src",
+      "core",
+      "infrastructure",
+      "db",
+      "migrations",
+    );
   }
 
   // 在打包环境中，确保使用正确的路径
   // 使用app.getAppPath()获取应用根目录
   if (app) {
-    return path.join(app.getAppPath(), '..', 'migrations');
+    return path.join(app.getAppPath(), "..", "migrations");
   }
 
   // 回退到__dirname相对路径
-  return path.join(__dirname, 'migrations');
+  return path.join(__dirname, "migrations");
 };
 
 // 创建 _prisma_migrations 表的SQL
@@ -35,7 +42,11 @@ CREATE TABLE IF NOT EXISTS _prisma_migrations (
 `;
 
 // 记录已应用的迁移
-const recordMigration = async (prisma: any, migrationName: string, checksum: string): Promise<void> => {
+const recordMigration = async (
+  prisma: any,
+  migrationName: string,
+  checksum: string,
+): Promise<void> => {
   const id = generateUUID();
   const now = new Date().toISOString();
 
@@ -55,9 +66,9 @@ const recordMigration = async (prisma: any, migrationName: string, checksum: str
 
 // 生成UUID
 const generateUUID = (): string => {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
 };
@@ -65,13 +76,17 @@ const generateUUID = (): string => {
 // 计算迁移文件的checksum
 const calculateChecksum = async (content: string): Promise<string> => {
   // 使用ESM方式导入crypto
-  const crypto = await import('crypto');
-  return crypto.default.createHash('sha256').update(content).digest('hex');
+  const crypto = await import("crypto");
+  return crypto.default.createHash("sha256").update(content).digest("hex");
 };
 
 // 应用单个迁移
-const applyMigration = async (prisma: any, migrationDir: string, migrationName: string): Promise<boolean> => {
-  const sqlFilePath = path.join(migrationDir, migrationName, 'migration.sql');
+const applyMigration = async (
+  prisma: any,
+  migrationDir: string,
+  migrationName: string,
+): Promise<boolean> => {
+  const sqlFilePath = path.join(migrationDir, migrationName, "migration.sql");
 
   try {
     if (!fs.existsSync(sqlFilePath)) {
@@ -79,8 +94,8 @@ const applyMigration = async (prisma: any, migrationDir: string, migrationName: 
       return false;
     }
 
-    const sqlContent = fs.readFileSync(sqlFilePath, 'utf8');
-    const sqlStatements = sqlContent.split(';').filter(stmt => stmt.trim());
+    const sqlContent = fs.readFileSync(sqlFilePath, "utf8");
+    const sqlStatements = sqlContent.split(";").filter((stmt) => stmt.trim());
 
     // 应用每条SQL语句
     for (const statement of sqlStatements) {
@@ -122,7 +137,7 @@ const getAppliedMigrations = async (prisma: any): Promise<Set<string>> => {
 
     return new Set(migrations.map((m: any) => m.migration_name));
   } catch (error) {
-    console.error('Error getting applied migrations:', error);
+    console.error("Error getting applied migrations:", error);
     return new Set();
   }
 };
@@ -130,14 +145,14 @@ const getAppliedMigrations = async (prisma: any): Promise<Set<string>> => {
 // 主要的迁移函数（性能优化版）
 const runMigrations = async (prisma: any = null): Promise<boolean> => {
   const startTime = Date.now();
-  console.log('Running database migrations...');
+  console.log("Running database migrations...");
 
   try {
     // 确保_prisma_migrations表存在
     await prisma.$executeRawUnsafe(createMigrationsTableSQL);
 
     const migrationsDir = getMigrationsDir();
-    console.log('Migrations directory:', migrationsDir);
+    console.log("Migrations directory:", migrationsDir);
     if (!fs.existsSync(migrationsDir)) {
       console.error(`Migrations directory not found: ${migrationsDir}`);
       return false;
@@ -149,8 +164,11 @@ const runMigrations = async (prisma: any = null): Promise<boolean> => {
     // 读取所有迁移目录并按名称排序（优化：减少 stat 调用）
     const migrationDirs = fs
       .readdirSync(migrationsDir, { withFileTypes: true })
-      .filter(dirent => dirent.isDirectory() && dirent.name !== 'migration_lock.toml')
-      .map(dirent => dirent.name)
+      .filter(
+        (dirent) =>
+          dirent.isDirectory() && dirent.name !== "migration_lock.toml",
+      )
+      .map((dirent) => dirent.name)
       .sort(); // 按名称排序，确保按正确顺序应用
 
     let migrationsApplied = 0;
@@ -162,7 +180,11 @@ const runMigrations = async (prisma: any = null): Promise<boolean> => {
 
       if (!isApplied) {
         console.log(`Applying migration: ${migrationName}`);
-        const success = await applyMigration(prisma, migrationsDir, migrationName);
+        const success = await applyMigration(
+          prisma,
+          migrationsDir,
+          migrationName,
+        );
         if (success) migrationsApplied++;
       } else {
         console.log(`Migration already applied: ${migrationName}`);
@@ -170,14 +192,14 @@ const runMigrations = async (prisma: any = null): Promise<boolean> => {
     }
 
     const elapsed = Date.now() - startTime;
-    console.log(`Database migration complete. Applied ${migrationsApplied} migrations in ${elapsed}ms`);
+    console.log(
+      `Database migration complete. Applied ${migrationsApplied} migrations in ${elapsed}ms`,
+    );
     return migrationsApplied > 0;
   } catch (error) {
-    console.error('Migration error:', error);
+    console.error("Migration error:", error);
     return false;
   }
 };
 
-export {
-  runMigrations
-};
+export { runMigrations };

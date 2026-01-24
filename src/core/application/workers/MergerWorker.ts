@@ -1,10 +1,10 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { WorkerBase } from './WorkerBase.js';
-import { prisma } from '../../db/index.js';
+import { prisma } from '../../infrastructure/db/index.js';
 import { Task, TaskStatus } from '../../../shared/types/index.js';
 import { PageStatus } from '../../../shared/types/PageStatus.js';
-import { WORKER_CONFIG } from '../../config/worker.config.js';
+import { WORKER_CONFIG } from '../../infrastructure/config/worker.config.js';
 
 /**
  * 已完成页面的精简类型（仅包含合并所需字段）

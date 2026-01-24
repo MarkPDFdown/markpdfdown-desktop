@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
-import { prisma } from '../../db/index.js';
+import { prisma } from '../../infrastructure/db/index.js';
 import { Task, TaskStatus } from '../../../shared/types/index.js';
-import { eventBus, TaskEventType } from '../../events/EventBus.js';
+import { eventBus, TaskEventType } from '../../shared/events/EventBus.js';
 
 /**
  * Abstract base class for all workers.

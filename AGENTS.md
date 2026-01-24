@@ -60,7 +60,7 @@ Create `.env` file in project root (optional, for database URL override):
 ```env
 DATABASE_URL="file:./dev.db"
 ```
-Default SQLite database location: `src/server/db/dev.db` (gitignored)
+Default SQLite database location: `src/core/infrastructure/db/dev.db` (gitignored)
 
 ## Testing
 
@@ -217,7 +217,6 @@ src/core/
 
 #### Domain Layer (`src/core/domain/`)
 - **Repositories** (`repositories/`): Data access layer
-  - Implement repository interfaces for testability
   - Export default object with CRUD methods (`findAll`, `findById`, `create`, `update`, `remove`, etc.)
   - `ProviderRepository`, `ModelRepository`, `TaskRepository`, `TaskDetailRepository`
 - **Split** (`split/`): File splitting logic
@@ -241,9 +240,6 @@ src/core/
 - All handlers use `ipcMain.handle()` for async request-response pattern
 - Return unified format: `{ success: boolean, data?: any, error?: string }`
 - Handle errors gracefully with try-catch
-
-#### Backward Compatibility
-Original import paths (e.g., `src/core/logic/`, `src/core/workers/`) continue to work through re-exports, allowing gradual migration.
 
 - **No HTTP Server**: All communication via Electron IPC (no Express, no ports, no HTTP)
 
@@ -392,7 +388,6 @@ src/
     │   │   ├── ModelRepository.ts
     │   │   ├── TaskRepository.ts
     │   │   ├── TaskDetailRepository.ts
-    │   │   ├── interfaces/
     │   │   └── __tests__/
     │   └── split/       # Splitting logic
     │       ├── ISplitter.ts
@@ -411,16 +406,6 @@ src/
     │   └── di/          # Dependency injection
     │       ├── Container.ts
     │       └── __tests__/
-    │
-    │   # Legacy paths (backward-compatible re-exports)
-    ├── config/          # → infrastructure/config/
-    ├── db/              # → infrastructure/db/
-    ├── di/              # → shared/di/
-    ├── events/          # → shared/events/
-    ├── logic/           # → various layers
-    ├── repositories/    # → domain/repositories/
-    ├── services/        # → application/services/
-    └── workers/         # → application/workers/
 ```
 
 ### Adding New Features
@@ -431,9 +416,8 @@ src/
    ```typescript
    // Example: src/core/domain/repositories/FeatureRepository.ts
    import { prisma } from '../../infrastructure/db/index.js';
-   import type { IFeatureRepository } from './interfaces/IFeatureRepository.js';
 
-   export const featureRepository: IFeatureRepository = {
+   const featureRepository = {
      findAll: () => prisma.feature.findMany(),
      findById: (id: number) => prisma.feature.findUnique({ where: { id } }),
      create: (data) => prisma.feature.create({ data }),

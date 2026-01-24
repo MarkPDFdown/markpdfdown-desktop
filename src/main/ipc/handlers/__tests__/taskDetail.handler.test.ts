@@ -35,17 +35,17 @@ vi.mock('fs', () => ({
   default: mockFs
 }))
 
-vi.mock('../../../../core/repositories/TaskDetailRepository.js', () => ({
+vi.mock('../../../../core/domain/repositories/TaskDetailRepository.js', () => ({
   default: mockTaskDetailRepository
 }))
 
-vi.mock('../../../../core/logic/split/ImagePathUtil.js', () => ({
+vi.mock('../../../../core/domain/split/ImagePathUtil.js', () => ({
   ImagePathUtil: {
     getPath: vi.fn((taskId: string, page: number) => `/uploads/${taskId}/split/page-${page}.png`)
   }
 }))
 
-vi.mock('../../../../core/events/EventBus.js', () => ({
+vi.mock('../../../../core/shared/events/EventBus.js', () => ({
   eventBus: mockEventBus,
   TaskEventType: {
     TASK_UPDATED: 'task:updated',
@@ -53,18 +53,18 @@ vi.mock('../../../../core/events/EventBus.js', () => ({
   }
 }))
 
-vi.mock('../../../../core/db/index.js', () => ({
+vi.mock('../../../../core/infrastructure/db/index.js', () => ({
   prisma: mockPrisma
 }))
 
-vi.mock('../../../../core/types/TaskStatus.js', () => ({
+vi.mock('../../../../shared/types/TaskStatus.js', () => ({
   TaskStatus: {
     PROCESSING: 3,
     CANCELLED: 7
   }
 }))
 
-vi.mock('../../../../core/types/PageStatus.js', () => ({
+vi.mock('../../../../shared/types/PageStatus.js', () => ({
   PageStatus: {
     FAILED: -1,
     PENDING: 0,

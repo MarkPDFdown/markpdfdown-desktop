@@ -1,8 +1,8 @@
 import { SplitterWorker, ConverterWorker, MergerWorker } from '../workers/index.js';
-import { ImagePathUtil } from '../../logic/split/index.js';
-import fileLogic from '../../logic/File.js';
-import { WORKER_CONFIG } from '../../config/worker.config.js';
-import { prisma } from '../../db/index.js';
+import { ImagePathUtil } from '../../domain/split/index.js';
+import fileLogic from '../../infrastructure/services/FileService.js';
+import { WORKER_CONFIG } from '../../infrastructure/config/worker.config.js';
+import { prisma } from '../../infrastructure/db/index.js';
 import { TaskStatus } from '../../../shared/types/TaskStatus.js';
 import { PageStatus } from '../../../shared/types/PageStatus.js';
 import type { IWorkerOrchestrator, WorkerStatus, CleanupResult } from './interfaces/IWorkerOrchestrator.js';

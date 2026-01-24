@@ -1,4 +1,4 @@
-import { prisma } from "../../db/index.js";
+import { prisma } from "../../infrastructure/db/index.js";
 import { Provider } from "../../../shared/types/Provider.js";
 
 // 查找所有启用的提供商

@@ -19,7 +19,7 @@ vi.mock('electron', () => ({
   ipcMain: mockIpcMain
 }))
 
-vi.mock('../../../../core/repositories/ProviderRepository.js', () => ({
+vi.mock('../../../../core/domain/repositories/ProviderRepository.js', () => ({
   default: mockProviderRepository
 }))
 

@@ -1,12 +1,12 @@
 import { WorkerBase } from './WorkerBase.js';
 import { TaskStatus } from '../../../shared/types/TaskStatus.js';
 import { PageStatus } from '../../../shared/types/PageStatus.js';
-import { ImagePathUtil } from '../../logic/split/ImagePathUtil.js';
-import modelLogic from '../../logic/Model.js';
-import { eventBus, TaskEventType } from '../../events/EventBus.js';
-import { prisma } from '../../db/index.js';
-import { WORKER_CONFIG } from '../../config/worker.config.js';
-import type { CompletionResponse } from '../../logic/llm/LLMClient.js';
+import { ImagePathUtil } from '../../domain/split/ImagePathUtil.js';
+import modelLogic from '../services/ModelService.js';
+import { eventBus, TaskEventType } from '../../shared/events/EventBus.js';
+import { prisma } from '../../infrastructure/db/index.js';
+import { WORKER_CONFIG } from '../../infrastructure/config/worker.config.js';
+import type { CompletionResponse } from '../../infrastructure/adapters/llm/LLMClient.js';
 
 /**
  * Error types for classification and retry decisions.

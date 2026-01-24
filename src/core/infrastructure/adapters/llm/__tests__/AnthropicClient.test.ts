@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { AnthropicClient } from '../AnthropicClient.js'
-import { mockFetchSuccess, mockFetchError, createMockAnthropicResponse } from '../../../../../tests/helpers/mock-llm.js'
+import { mockFetchSuccess, mockFetchError, createMockAnthropicResponse } from '../../../../../../tests/helpers/mock-llm.js'
 
 describe('AnthropicClient', () => {
   let client: AnthropicClient

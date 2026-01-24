@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SplitterWorker } from '../SplitterWorker.js';
-import { TaskStatus, PageStatus } from '../../../shared/types/index.js';
+import { TaskStatus, PageStatus } from '../../../../shared/types/index.js';
 
 // Mock dependencies
-vi.mock('../../db/index.js', () => ({
+vi.mock('../../../infrastructure/db/index.js', () => ({
   prisma: {
     $transaction: vi.fn(),
     task: {
@@ -13,13 +13,13 @@ vi.mock('../../db/index.js', () => ({
   },
 }));
 
-vi.mock('../../logic/split/SplitterFactory.js', () => ({
+vi.mock('../../../domain/split/SplitterFactory.js', () => ({
   SplitterFactory: vi.fn().mockImplementation(() => ({
     createFromFilename: vi.fn(),
   })),
 }));
 
-import { prisma } from '../../db/index.js';
+import { prisma } from '../../../infrastructure/db/index.js';
 
 describe('SplitterWorker', () => {
   const uploadsDir = '/mock/uploads';

@@ -1,9 +1,9 @@
 import { ipcMain } from "electron";
 import { v4 as uuidv4 } from "uuid";
-import taskRepository from "../../../core/repositories/TaskRepository.js";
-import fileLogic from "../../../core/logic/File.js";
-import { eventBus, TaskEventType } from '../../../core/events/EventBus.js';
-import { prisma } from '../../../core/db/index.js';
+import taskRepository from "../../../core/domain/repositories/TaskRepository.js";
+import fileLogic from "../../../core/infrastructure/services/FileService.js";
+import { eventBus, TaskEventType } from '../../../core/shared/events/EventBus.js';
+import { prisma } from '../../../core/infrastructure/db/index.js';
 import { TaskStatus } from '../../../shared/types/TaskStatus.js';
 import { IPC_CHANNELS } from "../../../shared/ipc/channels.js";
 import type { IpcResponse } from "../../../shared/ipc/responses.js";

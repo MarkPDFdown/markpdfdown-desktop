@@ -1,5 +1,5 @@
 import { ipcMain } from "electron";
-import modelLogic from "../../../core/logic/Model.js";
+import modelLogic from "../../../core/application/services/ModelService.js";
 import { IPC_CHANNELS } from "../../../shared/ipc/channels.js";
 import type { IpcResponse } from "../../../shared/ipc/responses.js";
 

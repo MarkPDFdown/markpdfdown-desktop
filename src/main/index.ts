@@ -2,12 +2,12 @@ import { app, BrowserWindow, ipcMain, shell, protocol } from "electron";
 import path from "path";
 import fs from "fs";
 import isDev from "electron-is-dev";
-import { workerOrchestrator } from "../core/services/index.js";
-import { initDatabase, disconnect } from "../core/db/index.js";
+import { workerOrchestrator } from "../core/application/services/index.js";
+import { initDatabase, disconnect } from "../core/infrastructure/db/index.js";
 import { registerIpcHandlers } from "./ipc/handlers.js";
 import { windowManager } from './WindowManager.js';
 import { eventBridge } from './ipc/eventBridge.js';
-import fileLogic from "../core/logic/File.js";
+import fileLogic from "../core/infrastructure/services/FileService.js";
 
 // 在 app ready 之前注册自定义协议的权限
 protocol.registerSchemesAsPrivileged([

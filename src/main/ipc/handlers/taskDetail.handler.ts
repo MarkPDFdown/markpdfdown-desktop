@@ -1,9 +1,9 @@
 import { ipcMain } from "electron";
 import fs from "fs";
-import taskDetailRepository from "../../../core/repositories/TaskDetailRepository.js";
-import { ImagePathUtil } from "../../../core/logic/split/ImagePathUtil.js";
-import { eventBus, TaskEventType } from '../../../core/events/EventBus.js';
-import { prisma } from '../../../core/db/index.js';
+import taskDetailRepository from "../../../core/domain/repositories/TaskDetailRepository.js";
+import { ImagePathUtil } from "../../../core/domain/split/ImagePathUtil.js";
+import { eventBus, TaskEventType } from '../../../core/shared/events/EventBus.js';
+import { prisma } from '../../../core/infrastructure/db/index.js';
 import { TaskStatus } from '../../../shared/types/TaskStatus.js';
 import { PageStatus } from '../../../shared/types/PageStatus.js';
 import { IPC_CHANNELS } from "../../../shared/ipc/channels.js";

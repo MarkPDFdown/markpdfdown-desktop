@@ -1,10 +1,10 @@
 import { WorkerBase } from './WorkerBase.js';
 import { Task, TaskStatus, PageStatus } from '../../../shared/types/index.js';
-import { SplitterFactory } from '../../logic/split/index.js';
-import { WORKER_CONFIG } from '../../config/worker.config.js';
-import { prisma } from '../../db/index.js';
-import type { SplitResult } from '../../logic/split/ISplitter.js';
-import { eventBus, TaskEventType } from '../../events/EventBus.js';
+import { SplitterFactory } from '../../domain/split/index.js';
+import { WORKER_CONFIG } from '../../infrastructure/config/worker.config.js';
+import { prisma } from '../../infrastructure/db/index.js';
+import type { SplitResult } from '../../domain/split/ISplitter.js';
+import { eventBus, TaskEventType } from '../../shared/events/EventBus.js';
 
 /**
  * Worker for splitting PDF/image files into individual pages.

@@ -33,15 +33,15 @@ vi.mock('electron', () => ({
   ipcMain: mockIpcMain
 }))
 
-vi.mock('../../../../core/repositories/TaskRepository.js', () => ({
+vi.mock('../../../../core/domain/repositories/TaskRepository.js', () => ({
   default: mockTaskRepository
 }))
 
-vi.mock('../../../../core/logic/File.js', () => ({
+vi.mock('../../../../core/infrastructure/services/FileService.js', () => ({
   default: mockFileLogic
 }))
 
-vi.mock('../../../../core/events/EventBus.js', () => ({
+vi.mock('../../../../core/shared/events/EventBus.js', () => ({
   eventBus: mockEventBus,
   TaskEventType: {
     TASK_UPDATED: 'task:updated',
@@ -50,11 +50,11 @@ vi.mock('../../../../core/events/EventBus.js', () => ({
   }
 }))
 
-vi.mock('../../../../core/db/index.js', () => ({
+vi.mock('../../../../core/infrastructure/db/index.js', () => ({
   prisma: mockPrisma
 }))
 
-vi.mock('../../../../core/types/TaskStatus.js', () => ({
+vi.mock('../../../../shared/types/TaskStatus.js', () => ({
   TaskStatus: {
     CREATED: -1,
     FAILED: 0,

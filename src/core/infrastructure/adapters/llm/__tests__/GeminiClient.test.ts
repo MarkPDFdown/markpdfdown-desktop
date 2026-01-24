@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { GeminiClient } from '../GeminiClient.js'
-import { mockFetchSuccess, mockFetchError, createMockGeminiResponse } from '../../../../../tests/helpers/mock-llm.js'
+import { mockFetchSuccess, mockFetchError, createMockGeminiResponse } from '../../../../../../tests/helpers/mock-llm.js'
 
 describe('GeminiClient', () => {
   let client: GeminiClient

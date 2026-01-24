@@ -1,4 +1,4 @@
-import { eventBus, TaskEventType, TaskEventData, TaskDetailEventData } from '../../core/events/EventBus.js';
+import { eventBus, TaskEventType, TaskEventData, TaskDetailEventData } from '../../core/shared/events/EventBus.js';
 import { windowManager } from '../WindowManager.js';
 
 export class EventBridge {

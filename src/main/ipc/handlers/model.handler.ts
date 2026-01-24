@@ -1,6 +1,6 @@
 import { ipcMain } from "electron";
-import providerRepository from "../../../core/repositories/ProviderRepository.js";
-import modelRepository from "../../../core/repositories/ModelRepository.js";
+import providerRepository from "../../../core/domain/repositories/ProviderRepository.js";
+import modelRepository from "../../../core/domain/repositories/ModelRepository.js";
 import { IPC_CHANNELS } from "../../../shared/ipc/channels.js";
 import type { IpcResponse } from "../../../shared/ipc/responses.js";
 

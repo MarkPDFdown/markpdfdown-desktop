@@ -48,35 +48,35 @@ vi.mock('electron', () => ({
   dialog: mockDialog
 }))
 
-vi.mock('../../../core/repositories/ProviderRepository.js', () => ({
+vi.mock('../../../core/domain/repositories/ProviderRepository.js', () => ({
   default: mockProviderDal
 }))
 
-vi.mock('../../../core/repositories/ModelRepository.js', () => ({
+vi.mock('../../../core/domain/repositories/ModelRepository.js', () => ({
   default: mockModelDal
 }))
 
-vi.mock('../../../core/repositories/TaskRepository.js', () => ({
+vi.mock('../../../core/domain/repositories/TaskRepository.js', () => ({
   default: mockTaskDal
 }))
 
-vi.mock('../../../core/repositories/TaskDetailRepository.js', () => ({
+vi.mock('../../../core/domain/repositories/TaskDetailRepository.js', () => ({
   default: { findByTaskAndPage: vi.fn(), findByTaskId: vi.fn() }
 }))
 
-vi.mock('../../../core/logic/File.js', () => ({
+vi.mock('../../../core/infrastructure/services/FileService.js', () => ({
   default: mockFileLogic
 }))
 
-vi.mock('../../../core/logic/Model.js', () => ({
+vi.mock('../../../core/application/services/ModelService.js', () => ({
   default: mockModelLogic
 }))
 
-vi.mock('../../../core/logic/split/ImagePathUtil.js', () => ({
+vi.mock('../../../core/domain/split/ImagePathUtil.js', () => ({
   ImagePathUtil: { getPath: vi.fn(() => '/test/image/path.png') }
 }))
 
-vi.mock('../../../core/events/EventBus.js', () => ({
+vi.mock('../../../core/shared/events/EventBus.js', () => ({
   eventBus: {
     emitTaskEvent: vi.fn(),
   },
@@ -87,7 +87,7 @@ vi.mock('../../../core/events/EventBus.js', () => ({
   },
 }))
 
-vi.mock('../../../core/db/index.js', () => ({
+vi.mock('../../../core/infrastructure/db/index.js', () => ({
   prisma: {
     task: { count: vi.fn().mockResolvedValue(0) },
     taskDetail: {

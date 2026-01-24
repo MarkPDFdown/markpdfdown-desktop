@@ -45,15 +45,15 @@ vi.mock('fs', () => ({
   default: mockFs
 }))
 
-vi.mock('../../../../core/repositories/TaskRepository.js', () => ({
+vi.mock('../../../../core/domain/repositories/TaskRepository.js', () => ({
   default: mockTaskRepository
 }))
 
-vi.mock('../../../../core/logic/File.js', () => ({
+vi.mock('../../../../core/infrastructure/services/FileService.js', () => ({
   default: mockFileLogic
 }))
 
-vi.mock('../../../../core/logic/split/ImagePathUtil.js', () => ({
+vi.mock('../../../../core/domain/split/ImagePathUtil.js', () => ({
   ImagePathUtil: {
     getPath: vi.fn((taskId: string, page: number) => `/uploads/${taskId}/split/page-${page}.png`)
   }

@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { WorkerBase } from '../WorkerBase.js';
-import { TaskStatus } from '../../../shared/types/index.js';
+import { TaskStatus } from '../../../../shared/types/index.js';
 
 // Mock Prisma
-vi.mock('../../db/index.js', () => ({
+vi.mock('../../../infrastructure/db/index.js', () => ({
   prisma: {
     $transaction: vi.fn(),
     task: {
@@ -14,7 +14,7 @@ vi.mock('../../db/index.js', () => ({
 }));
 
 // Mock EventBus
-vi.mock('../../events/EventBus.js', () => ({
+vi.mock('../../../shared/events/EventBus.js', () => ({
   eventBus: {
     emitTaskEvent: vi.fn(),
     onTaskEvent: vi.fn(),
@@ -27,8 +27,8 @@ vi.mock('../../events/EventBus.js', () => ({
   },
 }));
 
-import { prisma } from '../../db/index.js';
-import { eventBus, TaskEventType } from '../../events/EventBus.js';
+import { prisma } from '../../../infrastructure/db/index.js';
+import { eventBus, TaskEventType } from '../../../shared/events/EventBus.js';
 
 // Concrete implementation for testing
 class TestWorker extends WorkerBase {

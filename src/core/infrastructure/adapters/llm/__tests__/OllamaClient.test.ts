@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { OllamaClient } from '../OllamaClient.js'
-import { mockFetchSuccess, mockFetchError, createMockOllamaResponse } from '../../../../../tests/helpers/mock-llm.js'
+import { mockFetchSuccess, mockFetchError, createMockOllamaResponse } from '../../../../../../tests/helpers/mock-llm.js'
 
 describe('OllamaClient', () => {
   let client: OllamaClient

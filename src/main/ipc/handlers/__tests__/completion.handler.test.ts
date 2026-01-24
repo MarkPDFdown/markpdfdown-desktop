@@ -14,7 +14,7 @@ vi.mock('electron', () => ({
   ipcMain: mockIpcMain
 }))
 
-vi.mock('../../../../core/logic/Model.js', () => ({
+vi.mock('../../../../core/application/services/ModelService.js', () => ({
   default: mockModelLogic
 }))
 

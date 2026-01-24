@@ -1,4 +1,4 @@
-import { prisma } from "../../db/index.js";
+import { prisma } from "../../infrastructure/db/index.js";
 
 interface ModelData {
     id: string;
