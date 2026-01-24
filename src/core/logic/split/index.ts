@@ -1,6 +1,12 @@
-export { ISplitter, PageInfo, SplitResult } from './ISplitter.js';
-export { ImagePathUtil } from './ImagePathUtil.js';
-export { PageRangeParser } from './PageRangeParser.js';
-export { PDFSplitter } from './PDFSplitter.js';
-export { ImageSplitter } from './ImageSplitter.js';
-export { SplitterFactory } from './SplitterFactory.js';
+// Backward-compatible re-export from new location
+export {
+  ISplitter,
+  PageInfo,
+  SplitResult,
+} from '../../domain/split/ISplitter.js';
+
+export { ImagePathUtil } from '../../domain/split/ImagePathUtil.js';
+export { PageRangeParser } from '../../domain/split/PageRangeParser.js';
+export { PDFSplitter } from '../../domain/split/PDFSplitter.js';
+export { ImageSplitter } from '../../domain/split/ImageSplitter.js';
+export { SplitterFactory } from '../../domain/split/SplitterFactory.js';
