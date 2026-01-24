@@ -4,6 +4,7 @@ import { registerTaskHandlers } from './task.handler.js';
 import { registerTaskDetailHandlers } from './taskDetail.handler.js';
 import { registerFileHandlers } from './file.handler.js';
 import { registerCompletionHandlers } from './completion.handler.js';
+import { registerAppHandlers } from './app.handler.js';
 
 /**
  * Register all IPC handlers
@@ -15,6 +16,7 @@ import { registerCompletionHandlers } from './completion.handler.js';
  * - TaskDetail: Page-level operations and retry
  * - File: File operations (upload, download, select)
  * - Completion: LLM API calls
+ * - App: Application info (version)
  */
 export function registerAllHandlers() {
   registerProviderHandlers();
@@ -23,6 +25,7 @@ export function registerAllHandlers() {
   registerTaskDetailHandlers();
   registerFileHandlers();
   registerCompletionHandlers();
+  registerAppHandlers();
 
   console.log("[IPC] All handlers registered successfully");
 }
@@ -35,4 +38,5 @@ export {
   registerTaskDetailHandlers,
   registerFileHandlers,
   registerCompletionHandlers,
+  registerAppHandlers,
 };

@@ -92,6 +92,9 @@ interface WindowAPI {
     onTaskDetailEvent: (callback: (event: TaskDetailEventData) => void) => () => void;
   };
   platform: NodeJS.Platform;
+  app: {
+    getVersion: () => Promise<string>;
+  };
 }
 
 declare interface Window {

@@ -121,6 +121,11 @@ contextBridge.exposeInMainWorld("api", {
 
   // ==================== Platform APIs ====================
   platform: process.platform,
+
+  // ==================== App APIs ====================
+  app: {
+    getVersion: () => ipcRenderer.invoke("app:getVersion"),
+  },
 });
 
 // 保留旧的 electron 对象以兼容 Layout.tsx（仅用于 shell.openExternal）

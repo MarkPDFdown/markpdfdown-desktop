@@ -4,7 +4,6 @@
     "about": "关于我们"
   },
   "about": {
-    "version": "v1.0.6",
     "subtitle": "一款基于大模型视觉识别的高质量PDF转Markdown工具",
     "buttons": {
       "website": "官方网址",

@@ -4,7 +4,6 @@
     "about": "About Us"
   },
   "about": {
-    "version": "v1.0.6",
     "subtitle": "A high-quality PDF to Markdown converter powered by large vision models",
     "buttons": {
       "website": "Official Website",

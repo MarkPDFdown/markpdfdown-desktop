@@ -1,11 +1,16 @@
 import { Flex, Typography, Button, Space, Badge } from "antd";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ImgLogo from "../assets/MarkPDFdown.png";
 
 const About: React.FC = () => {
   const { Text, Title } = Typography;
   const { t } = useTranslation('settings');
+  const [version, setVersion] = useState<string>("");
+
+  useEffect(() => {
+    window.api.app.getVersion().then((v) => setVersion(v));
+  }, []);
 
   const handleOpenLink = (url: string) => {
     window.open(url, '_blank');
@@ -37,7 +42,7 @@ const About: React.FC = () => {
           }}
           draggable={false}
         />
-        <Badge.Ribbon text={t('about.version')}>
+        <Badge.Ribbon text={version ? `v${version}` : ''}>
           <Title level={2}>MarkPDFdown</Title>
         </Badge.Ribbon>
         <Text type="secondary">

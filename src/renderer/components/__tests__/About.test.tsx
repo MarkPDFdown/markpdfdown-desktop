@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, cleanup, fireEvent } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { App } from 'antd'
 import About from '../About'
@@ -9,7 +9,6 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => {
       const translations: Record<string, string> = {
-        'about.version': 'v1.0.0',
         'about.subtitle': 'Convert PDF to Markdown with AI',
         'about.buttons.website': 'Website',
         'about.buttons.license': 'License',
@@ -23,6 +22,13 @@ vi.mock('react-i18next', () => ({
     }
   })
 }))
+
+// Mock window.api.app.getVersion
+vi.stubGlobal('api', {
+  app: {
+    getVersion: vi.fn().mockResolvedValue('1.0.0')
+  }
+})
 
 // Mock window.open
 const mockWindowOpen = vi.fn()
@@ -67,14 +73,16 @@ describe('About', () => {
       expect(logo).toHaveAttribute('height', '100')
     })
 
-    it('should display version badge', () => {
+    it('should display version badge', async () => {
       render(
         <Wrapper>
           <About />
         </Wrapper>
       )
 
-      expect(screen.getByText('v1.0.0')).toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.getByText('v1.0.0')).toBeInTheDocument()
+      })
     })
 
     it('should display subtitle', () => {
