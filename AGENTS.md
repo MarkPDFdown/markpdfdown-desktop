@@ -184,16 +184,17 @@ src/core/
 │   ├── config/        # Worker configuration
 │   ├── services/      # Infrastructure services (FileService)
 │   └── adapters/      # External service adapters
-│       └── llm/       # LLM client implementations
+│       ├── llm/       # LLM client implementations (OpenAI, Anthropic, etc.)
+│       └── split/     # File splitter implementations (PDFSplitter, ImageSplitter)
 ├── application/       # Application-specific business logic
 │   ├── services/      # Application services (WorkerOrchestrator, ModelService)
 │   └── workers/       # Background processing workers
-├── domain/            # Core business logic
+├── domain/            # Core business logic (interfaces and pure logic only)
 │   ├── repositories/  # Data access layer
-│   └── split/         # PDF/Image splitting logic
+│   ├── split/         # Splitter interface and pure logic (ISplitter, PageRangeParser)
+│   └── llm/           # LLM client interface and types (ILLMClient)
 └── shared/            # Cross-cutting concerns
-    ├── events/        # Event bus for worker coordination
-    └── di/            # Dependency injection container
+    └── events/        # Event bus for worker coordination
 ```
 
 #### Infrastructure Layer (`src/core/infrastructure/`)
@@ -201,9 +202,14 @@ src/core/
 - **Config** (`config/`): Worker configuration (`worker.config.ts`)
 - **Services** (`services/`): Infrastructure services
   - `FileService.ts`: File handling logic (upload directory management, file deletion)
-- **Adapters** (`adapters/llm/`): LLM client implementations
-  - `LLMClient.ts`: Abstract base class and factory
-  - `OpenAIClient.ts`, `AnthropicClient.ts`, `GeminiClient.ts`, `OllamaClient.ts`, `OpenAIResponsesClient.ts`
+- **Adapters** (`adapters/`): External service implementations
+  - `llm/`: LLM client implementations (depends on external SDKs)
+    - `LLMClient.ts`: Abstract base class and factory (implements `ILLMClient`)
+    - `OpenAIClient.ts`, `AnthropicClient.ts`, `GeminiClient.ts`, `OllamaClient.ts`, `OpenAIResponsesClient.ts`
+  - `split/`: File splitter implementations (depends on fs, pdf-lib, etc.)
+    - `PDFSplitter.ts`, `ImageSplitter.ts`: Concrete implementations (implement `ISplitter`)
+    - `SplitterFactory.ts`: Factory for creating splitters
+    - `ImagePathUtil.ts`: Image path utilities (uses `path` module)
 
 #### Application Layer (`src/core/application/`)
 - **Services** (`services/`):
@@ -216,23 +222,19 @@ src/core/
   - `MergerWorker.ts`: Merges converted pages into final output
 
 #### Domain Layer (`src/core/domain/`)
+The domain layer contains **only interfaces and pure business logic** with no external dependencies.
 - **Repositories** (`repositories/`): Data access layer
   - Export default object with CRUD methods (`findAll`, `findById`, `create`, `update`, `remove`, etc.)
   - `ProviderRepository`, `ModelRepository`, `TaskRepository`, `TaskDetailRepository`
-- **Split** (`split/`): File splitting logic
-  - `ISplitter.ts`: Splitter interface
-  - `PDFSplitter.ts`, `ImageSplitter.ts`: Concrete implementations
-  - `SplitterFactory.ts`: Factory for creating splitters
-  - `PageRangeParser.ts`: Page range parsing
-  - `ImagePathUtil.ts`: Image path utilities
+- **Split** (`split/`): Splitter interfaces and pure logic (no fs/path dependencies)
+  - `ISplitter.ts`: Splitter interface and types (`PageInfo`, `SplitResult`)
+  - `PageRangeParser.ts`: Pure string parsing logic for page ranges
+- **LLM** (`llm/`): LLM client interfaces and types (no SDK dependencies)
+  - `ILLMClient.ts`: Interface and all type definitions (`Message`, `CompletionOptions`, `CompletionResponse`, etc.)
 
 #### Shared Layer (`src/core/shared/`)
 - **Events** (`events/`): Event-driven communication
   - `EventBus.ts`: Pub/sub system for worker coordination
-- **DI** (`di/`): Dependency injection
-  - `Container.ts`: Creates and manages dependencies
-  - `getContainer()`: Get singleton container instance
-  - `setContainer()`: Override for testing
 
 #### IPC Handlers (`src/main/ipc/handlers/`)
 - Handle IPC requests from renderer process
@@ -358,13 +360,19 @@ src/
     │   │   ├── FileService.ts
     │   │   └── __tests__/
     │   └── adapters/    # External adapters
-    │       └── llm/     # LLM client implementations
-    │           ├── LLMClient.ts
-    │           ├── OpenAIClient.ts
-    │           ├── AnthropicClient.ts
-    │           ├── GeminiClient.ts
-    │           ├── OllamaClient.ts
-    │           ├── OpenAIResponsesClient.ts
+    │       ├── llm/     # LLM client implementations
+    │       │   ├── LLMClient.ts      # Base class + Factory (implements ILLMClient)
+    │       │   ├── OpenAIClient.ts
+    │       │   ├── AnthropicClient.ts
+    │       │   ├── GeminiClient.ts
+    │       │   ├── OllamaClient.ts
+    │       │   ├── OpenAIResponsesClient.ts
+    │       │   └── __tests__/
+    │       └── split/   # File splitter implementations
+    │           ├── PDFSplitter.ts    # (implements ISplitter)
+    │           ├── ImageSplitter.ts  # (implements ISplitter)
+    │           ├── SplitterFactory.ts
+    │           ├── ImagePathUtil.ts
     │           └── __tests__/
     │
     ├── application/     # Application logic layer
@@ -381,7 +389,7 @@ src/
     │       ├── MergerWorker.ts
     │       └── __tests__/
     │
-    ├── domain/          # Domain logic layer
+    ├── domain/          # Domain logic layer (interfaces + pure logic only)
     │   ├── index.ts
     │   ├── repositories/ # Data access
     │   │   ├── ProviderRepository.ts
@@ -389,23 +397,18 @@ src/
     │   │   ├── TaskRepository.ts
     │   │   ├── TaskDetailRepository.ts
     │   │   └── __tests__/
-    │   └── split/       # Splitting logic
-    │       ├── ISplitter.ts
-    │       ├── PDFSplitter.ts
-    │       ├── ImageSplitter.ts
-    │       ├── SplitterFactory.ts
-    │       ├── PageRangeParser.ts
-    │       ├── ImagePathUtil.ts
-    │       └── __tests__/
-    │
-    ├── shared/          # Cross-cutting concerns
-    │   ├── index.ts
-    │   ├── events/      # Event system
-    │   │   ├── EventBus.ts
+    │   ├── split/       # Splitter interfaces (no external deps)
+    │   │   ├── ISplitter.ts      # Interface + types
+    │   │   ├── PageRangeParser.ts # Pure logic
     │   │   └── __tests__/
-    │   └── di/          # Dependency injection
-    │       ├── Container.ts
-    │       └── __tests__/
+    │   └── llm/         # LLM interfaces (no external deps)
+    │       └── ILLMClient.ts     # Interface + all types
+    │
+    └── shared/          # Cross-cutting concerns
+        ├── index.ts
+        └── events/      # Event system
+            ├── EventBus.ts
+            └── __tests__/
 ```
 
 ### Adding New Features
