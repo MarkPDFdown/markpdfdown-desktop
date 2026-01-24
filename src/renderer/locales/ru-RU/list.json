@@ -15,6 +15,7 @@
     "completed": "Завершено",
     "cancelled": "Отменено",
     "failed": "Ошибка",
+    "partial_failed": "Частичная ошибка",
     "unknown": "Неизвестно"
   },
   "actions": {

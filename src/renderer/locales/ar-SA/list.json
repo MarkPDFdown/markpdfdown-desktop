@@ -15,6 +15,7 @@
     "completed": "مكتمل",
     "cancelled": "ملغى",
     "failed": "فشل",
+    "partial_failed": "فشل جزئي",
     "unknown": "غير معروف"
   },
   "actions": {

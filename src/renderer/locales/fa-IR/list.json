@@ -15,6 +15,7 @@
     "completed": "تکمیل شده",
     "cancelled": "لغو شده",
     "failed": "ناموفق",
+    "partial_failed": "ناموفق جزئی",
     "unknown": "ناشناخته"
   },
   "actions": {

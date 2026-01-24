@@ -15,6 +15,7 @@
     "completed": "Completed",
     "cancelled": "Cancelled",
     "failed": "Failed",
+    "partial_failed": "Partial Failed",
     "unknown": "Unknown"
   },
   "actions": {
