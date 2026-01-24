@@ -1,4 +1,4 @@
-import { SplitterWorker, ConverterWorker } from '../workers/index.js';
+import { SplitterWorker, ConverterWorker, MergerWorker } from '../workers/index.js';
 import { ImagePathUtil } from './split/index.js';
 import fileLogic from './File.js';
 import { WORKER_CONFIG } from '../config/worker.config.js';
@@ -18,12 +18,14 @@ class TaskLogic {
   private isRunning: boolean;
   private splitterWorker: SplitterWorker | null;
   private converterWorkers: ConverterWorker[];
+  private mergerWorker: MergerWorker | null;
   private uploadsDir: string;
 
   constructor() {
     this.isRunning = false;
     this.splitterWorker = null;
     this.converterWorkers = [];
+    this.mergerWorker = null;
 
     // Use FileLogic for consistent directory paths across dev/prod
     this.uploadsDir = fileLogic.getUploadDir();
@@ -71,6 +73,14 @@ class TaskLogic {
         });
       }
 
+      // Start MergerWorker
+      this.mergerWorker = new MergerWorker(this.uploadsDir);
+      console.log(`[TaskLogic] MergerWorker created (ID: ${this.mergerWorker.getWorkerId().slice(0, 8)})`);
+
+      this.mergerWorker.run().catch((error) => {
+        console.error('[TaskLogic] MergerWorker error:', error);
+      });
+
       this.isRunning = true;
       console.log('[TaskLogic] All workers started successfully');
     } catch (error) {
@@ -106,6 +116,13 @@ class TaskLogic {
       }
       this.converterWorkers = [];
 
+      // Stop MergerWorker
+      if (this.mergerWorker) {
+        this.mergerWorker.stop();
+        console.log(`[TaskLogic] MergerWorker ${this.mergerWorker.getWorkerId().slice(0, 8)} stopped`);
+        this.mergerWorker = null;
+      }
+
       this.isRunning = false;
       console.log('[TaskLogic] All workers stopped');
     } catch (error) {
@@ -135,6 +152,10 @@ class TaskLogic {
         id: worker.getWorkerId().slice(0, 8),
         running: worker.getIsRunning(),
       })),
+      mergerWorker: this.mergerWorker ? {
+        id: this.mergerWorker.getWorkerId().slice(0, 8),
+        running: this.mergerWorker.getIsRunning(),
+      } : null,
       directories: {
         uploads: this.uploadsDir,
       },

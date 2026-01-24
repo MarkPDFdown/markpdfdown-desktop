@@ -471,8 +471,8 @@ export function registerIpcHandlers() {
             throw new Error("任务不存在");
           }
 
-          if (task.status === TaskStatus.CANCELLED || task.status === TaskStatus.COMPLETED) {
-            throw new Error("任务已取消或已完成，无法重试");
+          if (task.status === TaskStatus.CANCELLED) {
+            throw new Error("任务已取消，无法重试");
           }
 
           // Step 4: Update page status
@@ -550,8 +550,8 @@ export function registerIpcHandlers() {
             throw new Error("任务不存在");
           }
 
-          if (task.status === TaskStatus.CANCELLED || task.status === TaskStatus.COMPLETED) {
-            throw new Error("任务已取消或已完成，无法重试");
+          if (task.status === TaskStatus.CANCELLED) {
+            throw new Error("任务已取消，无法重试");
           }
 
           // Step 2: Count failed pages

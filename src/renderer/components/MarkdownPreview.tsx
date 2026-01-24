@@ -28,7 +28,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ content }) => {
     >
       <ReactMarkdown
         remarkPlugins={[remarkMath, remarkGfm]}
-        rehypePlugins={[rehypeKatex, rehypePrism]}
+        rehypePlugins={[rehypeKatex, [rehypePrism, { ignoreMissing: true }]]}
       >
         {content}
       </ReactMarkdown>

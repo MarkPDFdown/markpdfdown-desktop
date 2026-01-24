@@ -36,11 +36,13 @@ vi.mock('../../logic/Model.js', () => ({
 vi.mock('../../events/EventBus.js', () => ({
   eventBus: {
     emitTaskEvent: vi.fn(),
+    emitTaskDetailEvent: vi.fn(),
   },
   TaskEventType: {
     TASK_UPDATED: 'task:updated',
     TASK_STATUS_CHANGED: 'task:status_changed',
     TASK_PROGRESS_CHANGED: 'task:progress_changed',
+    TASK_DETAIL_UPDATED: 'taskDetail:updated',
   },
 }));
 

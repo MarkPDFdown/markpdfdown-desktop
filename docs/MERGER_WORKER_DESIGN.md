@@ -1,6 +1,6 @@
 # MergerWorker 详细设计方案
 
-> **版本**: v1.0
+> **版本**: v1.1
 > **创建日期**: 2026-01-24
 > **基于**: TASK_STATE_DESIGN.md v2.0
 > **设计目标**: 实现 Markdown 页面合并，完成任务处理流程的最后一环
@@ -87,10 +87,13 @@ MergerWorker 是任务处理流水线的最后一个环节，负责：
 │                     MergerWorker                         │
 ├─────────────────────────────────────────────────────────┤
 │ - uploadsDir: string                                     │
+│ - currentTaskId: string | null                           │
 ├─────────────────────────────────────────────────────────┤
 │ + constructor(uploadsDir: string)                        │
 │ + run(): Promise<void>                                   │
-│ - getCompletedPages(taskId): Promise<TaskDetail[]>      │
+│ + stop(): void                              [override]   │
+│ - releaseCurrentTask(): Promise<void>                    │
+│ - getCompletedPages(taskId): Promise<CompletedPage[]>   │
 │ - mergeMarkdown(pages): string                          │
 │ - getOutputPath(task): string                           │
 │ - saveMergedFile(task, content): Promise<string>        │
@@ -245,6 +248,15 @@ import { PageStatus } from '../types/PageStatus.js';
 import { WORKER_CONFIG } from '../config/worker.config.js';
 
 /**
+ * 已完成页面的精简类型（仅包含合并所需字段）
+ * 使用 Prisma 查询结果的类型推断
+ */
+type CompletedPage = {
+  page: number;
+  content: string;
+};
+
+/**
  * MergerWorker - 合并 Markdown 页面为最终文档
  *
  * 职责：
@@ -257,10 +269,14 @@ import { WORKER_CONFIG } from '../config/worker.config.js';
  * - 单实例运行，避免并发合并冲突
  * - 合并完成后不清理临时文件，保留预览能力
  * - 输出文件与原始文件同名，扩展名改为 .md
+ * - 支持优雅停止，停止时释放当前任务
  */
 export class MergerWorker extends WorkerBase {
   /** 上传文件根目录 */
   private readonly uploadsDir: string;
+
+  /** 当前正在处理的任务 ID，用于优雅停止时释放 */
+  private currentTaskId: string | null = null;
 
   /**
    * 构造函数
@@ -295,6 +311,8 @@ export class MergerWorker extends WorkerBase {
           continue;
         }
 
+        // 记录当前任务 ID，用于优雅停止
+        this.currentTaskId = task.id!;
         console.log(`[Merger-${this.workerId.slice(0, 8)}] Claimed task ${task.id}`);
 
         try {
@@ -304,15 +322,63 @@ export class MergerWorker extends WorkerBase {
           // 合并失败，记录错误并更新状态
           console.error(`[Merger-${this.workerId.slice(0, 8)}] Failed to merge task ${task.id}:`, error);
           await this.handleError(task.id!, error);
+        } finally {
+          // 清除当前任务 ID
+          this.currentTaskId = null;
         }
       } catch (error) {
         // 主循环级别的错误，记录但继续运行
         console.error(`[Merger-${this.workerId.slice(0, 8)}] Unexpected error in main loop:`, error);
+        // 尝试释放当前任务
+        if (this.currentTaskId !== null) {
+          await this.releaseCurrentTask();
+        }
         await this.sleep(WORKER_CONFIG.merger.pollInterval);
       }
     }
 
     console.log(`[Merger-${this.workerId.slice(0, 8)}] Stopped`);
+  }
+
+  /**
+   * 优雅停止 Worker
+   *
+   * 覆盖基类方法，添加释放当前任务的逻辑。
+   * 如果正在处理任务，将其释放回 READY_TO_MERGE 状态。
+   */
+  override stop(): void {
+    this.isRunning = false;
+    console.log(`[Merger-${this.workerId.slice(0, 8)}] Stopping...`);
+
+    // 异步释放当前任务
+    if (this.currentTaskId !== null) {
+      this.releaseCurrentTask().catch((error) => {
+        console.error(`[Merger-${this.workerId.slice(0, 8)}] Failed to release task on stop:`, error);
+      });
+    }
+  }
+
+  /**
+   * 释放当前任务回 READY_TO_MERGE 状态
+   *
+   * 用于优雅停止或异常恢复时释放任务。
+   */
+  private async releaseCurrentTask(): Promise<void> {
+    if (this.currentTaskId === null) return;
+
+    try {
+      await prisma.task.update({
+        where: { id: this.currentTaskId },
+        data: {
+          status: TaskStatus.READY_TO_MERGE,
+          worker_id: null,
+        },
+      });
+      console.log(`[Merger-${this.workerId.slice(0, 8)}] Released task ${this.currentTaskId}`);
+      this.currentTaskId = null;
+    } catch (error) {
+      console.error(`[Merger-${this.workerId.slice(0, 8)}] Failed to release task ${this.currentTaskId}:`, error);
+    }
   }
 
   /**
@@ -349,10 +415,12 @@ export class MergerWorker extends WorkerBase {
   /**
    * 获取任务的所有已完成页面
    *
+   * 使用 Prisma 的类型推断，返回仅包含合并所需字段的页面列表。
+   *
    * @param taskId - 任务 ID
    * @returns 已完成的页面列表，按页码排序
    */
-  private async getCompletedPages(taskId: string): Promise<TaskDetailRecord[]> {
+  private async getCompletedPages(taskId: string): Promise<CompletedPage[]> {
     return await prisma.taskDetail.findMany({
       where: {
         task: taskId,
@@ -379,7 +447,7 @@ export class MergerWorker extends WorkerBase {
    * @param pages - 已完成的页面列表
    * @returns 合并后的 Markdown 内容
    */
-  private mergeMarkdown(pages: TaskDetailRecord[]): string {
+  private mergeMarkdown(pages: CompletedPage[]): string {
     return pages
       .map((page) => {
         // 每页添加页码注释，方便定位
@@ -391,6 +459,11 @@ export class MergerWorker extends WorkerBase {
   /**
    * 计算输出文件路径
    *
+   * 使用 path.parse() 可靠地处理各种文件名边界情况：
+   * - 以点开头的隐藏文件（如 .hidden）
+   * - 多个点的文件名（如 my.report.2024.pdf）
+   * - 无扩展名的文件（如 document）
+   *
    * 路径格式: {uploadsDir}/{taskId}/{filename}.md
    * 例如: files/abc123/document.md (原文件为 document.pdf)
    *
@@ -398,10 +471,9 @@ export class MergerWorker extends WorkerBase {
    * @returns 输出文件的完整路径
    */
   private getOutputPath(task: Task): string {
-    // 从原文件名获取基础名（去掉扩展名）
-    const originalName = task.filename;
-    const baseName = originalName.replace(/\.[^/.]+$/, '');
-    const outputFileName = `${baseName}.md`;
+    // 使用 path.parse() 可靠地提取文件名（不含扩展名）
+    const { name } = path.parse(task.filename);
+    const outputFileName = `${name}.md`;
 
     // 输出到任务目录下，与 split 目录同级
     return path.join(this.uploadsDir, task.id!, outputFileName);
@@ -441,24 +513,26 @@ export class MergerWorker extends WorkerBase {
     }
   }
 }
-
-/**
- * TaskDetail 记录的精简类型（仅包含合并所需字段）
- */
-interface TaskDetailRecord {
-  page: number;
-  content: string;
-}
 ```
 
 ### 4.2 重要实现细节
 
 #### 4.2.1 任务抢占
 
-MergerWorker 继承自 `WorkerBase`，使用基类提供的 `claimTask()` 方法进行原子性任务抢占：
+MergerWorker 继承自 `WorkerBase`，使用基类提供的 `claimTask()` 方法进行原子性任务抢占。
+
+基类的 `claimTask()` 方法已经实现了：
+- Prisma 事务确保原子性
+- 事务成功后自动发射 `TASK_UPDATED` 和 `TASK_STATUS_CHANGED` 事件
+- 异常处理和日志记录
+
+> **注意**: 基类的事务实现足以保证单实例 MergerWorker 的正确性。如果未来需要多实例并发，
+> 应考虑添加 `{ isolationLevel: 'Serializable' }` 配置，参考 `ConverterWorker` 的实现。
+
+抢占流程示意（在 WorkerBase 中实现）：
 
 ```typescript
-// 抢占流程（在 WorkerBase 中实现）
+// WorkerBase.claimTask() 已实现的逻辑
 const claimed = await prisma.$transaction(async (tx) => {
   // 1. 查找第一个可用的待合并任务
   const task = await tx.task.findFirst({
@@ -483,6 +557,12 @@ const claimed = await prisma.$transaction(async (tx) => {
     },
   });
 });
+
+// 3. 事务成功后发射事件（基类自动处理）
+if (claimed) {
+  eventBus.emitTaskEvent(TaskEventType.TASK_UPDATED, { ... });
+  eventBus.emitTaskEvent(TaskEventType.TASK_STATUS_CHANGED, { ... });
+}
 ```
 
 #### 4.2.2 合并格式
@@ -621,65 +701,111 @@ const orphanedMergingTasks = await prisma.task.updateMany({
 更新 `src/server/workers/index.ts`:
 
 ```typescript
+// 当前内容
 export { WorkerBase } from './WorkerBase.js';
 export { SplitterWorker } from './SplitterWorker.js';
 export { ConverterWorker } from './ConverterWorker.js';
-export { MergerWorker } from './MergerWorker.js';  // 新增
+
+// 新增以下行
+export { MergerWorker } from './MergerWorker.js';
 ```
 
 ### 7.2 集成到 TaskLogic
 
 更新 `src/server/logic/Task.ts`:
 
-```typescript
-import { SplitterWorker, ConverterWorker, MergerWorker } from '../workers/index.js';
+#### 7.2.1 导入语句
 
+```typescript
+// 更新导入，添加 MergerWorker
+import { SplitterWorker, ConverterWorker, MergerWorker } from '../workers/index.js';
+```
+
+#### 7.2.2 类属性
+
+```typescript
 class TaskLogic {
+  private isRunning: boolean;
   private splitterWorker: SplitterWorker | null;
   private converterWorkers: ConverterWorker[];
   private mergerWorker: MergerWorker | null;  // 新增
+  private uploadsDir: string;
 
   constructor() {
-    // ...
+    this.isRunning = false;
+    this.splitterWorker = null;
+    this.converterWorkers = [];
     this.mergerWorker = null;  // 新增
+    this.uploadsDir = fileLogic.getUploadDir();
+  }
+  // ...
+}
+```
+
+#### 7.2.3 start() 方法
+
+在 `start()` 方法中，ConverterWorkers 启动后添加：
+
+```typescript
+async start() {
+  // ... 现有代码（cleanupOrphanedWork、ImagePathUtil.init、SplitterWorker、ConverterWorkers）...
+
+  // Start MergerWorker (新增，放在 ConverterWorkers 之后)
+  this.mergerWorker = new MergerWorker(this.uploadsDir);
+  console.log(`[TaskLogic] MergerWorker created (ID: ${this.mergerWorker.getWorkerId().slice(0, 8)})`);
+
+  this.mergerWorker.run().catch((error) => {
+    console.error('[TaskLogic] MergerWorker error:', error);
+  });
+
+  this.isRunning = true;
+  console.log('[TaskLogic] All workers started successfully');
+}
+```
+
+#### 7.2.4 stop() 方法
+
+在 `stop()` 方法中，ConverterWorkers 停止后添加：
+
+```typescript
+async stop() {
+  // ... 现有代码（SplitterWorker、ConverterWorkers 停止）...
+
+  // Stop MergerWorker (新增)
+  if (this.mergerWorker) {
+    this.mergerWorker.stop();
+    console.log(`[TaskLogic] MergerWorker ${this.mergerWorker.getWorkerId().slice(0, 8)} stopped`);
+    this.mergerWorker = null;
   }
 
-  async start() {
-    // ... 现有代码 ...
+  this.isRunning = false;
+  console.log('[TaskLogic] All workers stopped');
+}
+```
 
-    // Start MergerWorker (新增)
-    this.mergerWorker = new MergerWorker(this.uploadsDir);
-    console.log(`[TaskLogic] MergerWorker created (ID: ${this.mergerWorker.getWorkerId().slice(0, 8)})`);
+#### 7.2.5 getWorkerInfo() 方法
 
-    this.mergerWorker.run().catch((error) => {
-      console.error('[TaskLogic] MergerWorker error:', error);
-    });
-
-    // ...
-  }
-
-  async stop() {
-    // ... 现有代码 ...
-
-    // Stop MergerWorker (新增)
-    if (this.mergerWorker) {
-      this.mergerWorker.stop();
-      console.log(`[TaskLogic] MergerWorker ${this.mergerWorker.getWorkerId().slice(0, 8)} stopped`);
-      this.mergerWorker = null;
-    }
-
-    // ...
-  }
-
-  getWorkerInfo() {
-    return {
-      // ... 现有字段 ...
-      mergerWorker: this.mergerWorker ? {  // 新增
-        id: this.mergerWorker.getWorkerId().slice(0, 8),
-        running: this.mergerWorker.getIsRunning(),
-      } : null,
-    };
-  }
+```typescript
+getWorkerInfo() {
+  return {
+    isRunning: this.isRunning,
+    splitterWorker: this.splitterWorker ? {
+      id: this.splitterWorker.getWorkerId(),
+      running: this.splitterWorker.getIsRunning(),
+    } : null,
+    converterWorkers: this.converterWorkers.map((worker) => ({
+      id: worker.getWorkerId().slice(0, 8),
+      running: worker.getIsRunning(),
+    })),
+    // 新增 mergerWorker，格式与 converterWorkers 保持一致
+    mergerWorker: this.mergerWorker ? {
+      id: this.mergerWorker.getWorkerId().slice(0, 8),
+      running: this.mergerWorker.getIsRunning(),
+    } : null,
+    directories: {
+      uploads: this.uploadsDir,
+    },
+  };
 }
 ```
 
@@ -692,6 +818,9 @@ class TaskLogic {
 4. ConverterWorker[].run()   # 启动转换器池
 5. MergerWorker.run()        # 启动合并器 (新增)
 ```
+
+> **顺序说明**: MergerWorker 放在最后启动是因为它依赖前面的 Worker 产出的数据。
+> 停止时按相反顺序，先停止 MergerWorker，再停止 ConverterWorkers 和 SplitterWorker。
 
 ---
 
@@ -716,13 +845,68 @@ merger: {
 merger: {
   /** Poll interval for checking tasks ready to merge (ms) */
   pollInterval: 2000,
-  /** Maximum file size for single write operation (bytes) */
+  /** Maximum merged file size (bytes). Files exceeding this will fail with error. */
   maxFileSize: 100 * 1024 * 1024, // 100MB
   /** Page separator format */
   pageSeparator: '\n\n---\n\n',
   /** Include page comments in output */
   includePageComments: true,
 },
+```
+
+### 8.3 大文件处理考虑
+
+当前实现将所有页面内容加载到内存后一次性写入文件。对于大多数使用场景（几十到几百页的 PDF），这种方式足够高效。
+
+#### 内存占用估算
+
+| 页面数 | 平均每页字符数 | 估计内存占用 |
+|--------|---------------|-------------|
+| 50     | 2000          | ~200KB      |
+| 200    | 2000          | ~800KB      |
+| 500    | 2000          | ~2MB        |
+| 1000   | 2000          | ~4MB        |
+
+> **结论**: 对于常见的文档规模，内存占用在可接受范围内。
+
+#### 未来优化方向（如需要）
+
+如果未来需要处理超大文档（数千页），可以考虑：
+
+1. **流式写入**: 使用 `fs.createWriteStream()` 逐页写入
+2. **分块处理**: 每次从数据库读取一批页面（如 100 页）
+3. **文件大小限制**: 在合并前检查预估大小，超出限制时报错
+
+```typescript
+// 流式写入示例（未来优化）
+private async saveMergedFileStreaming(task: Task, taskId: string): Promise<string> {
+  const outputPath = this.getOutputPath(task);
+  const writeStream = fs.createWriteStream(outputPath, { encoding: 'utf-8' });
+
+  const pageCount = await prisma.taskDetail.count({
+    where: { task: taskId, status: PageStatus.COMPLETED },
+  });
+
+  for (let offset = 0; offset < pageCount; offset += 100) {
+    const pages = await prisma.taskDetail.findMany({
+      where: { task: taskId, status: PageStatus.COMPLETED },
+      orderBy: { page: 'asc' },
+      skip: offset,
+      take: 100,
+      select: { page: true, content: true },
+    });
+
+    for (const page of pages) {
+      if (offset > 0 || page.page > 1) {
+        writeStream.write('\n\n---\n\n');
+      }
+      writeStream.write(`<!-- Page ${page.page} -->\n\n${page.content}`);
+    }
+  }
+
+  writeStream.end();
+  return outputPath;
+}
 ```
 
 ---
@@ -763,25 +947,70 @@ describe('MergerWorker', () => {
     it('should replace file extension with .md', () => {
       const task = { id: 'task-123', filename: 'document.pdf' };
 
-      const path = worker['getOutputPath'](task);
+      const outputPath = worker['getOutputPath'](task);
 
-      expect(path).toMatch(/document\.md$/);
+      expect(outputPath).toMatch(/document\.md$/);
     });
 
     it('should handle filenames without extension', () => {
       const task = { id: 'task-123', filename: 'document' };
 
-      const path = worker['getOutputPath'](task);
+      const outputPath = worker['getOutputPath'](task);
 
-      expect(path).toMatch(/document\.md$/);
+      expect(outputPath).toMatch(/document\.md$/);
     });
 
     it('should handle filenames with multiple dots', () => {
       const task = { id: 'task-123', filename: 'my.report.2024.pdf' };
 
-      const path = worker['getOutputPath'](task);
+      const outputPath = worker['getOutputPath'](task);
 
-      expect(path).toMatch(/my\.report\.2024\.md$/);
+      expect(outputPath).toMatch(/my\.report\.2024\.md$/);
+    });
+
+    it('should handle hidden files (starting with dot)', () => {
+      const task = { id: 'task-123', filename: '.hidden.pdf' };
+
+      const outputPath = worker['getOutputPath'](task);
+
+      // path.parse('.hidden.pdf') => { name: '.hidden', ext: '.pdf' }
+      expect(outputPath).toMatch(/\.hidden\.md$/);
+    });
+
+    it('should handle files with only extension-like name', () => {
+      const task = { id: 'task-123', filename: '.gitignore' };
+
+      const outputPath = worker['getOutputPath'](task);
+
+      // path.parse('.gitignore') => { name: '.gitignore', ext: '' }
+      expect(outputPath).toMatch(/\.gitignore\.md$/);
+    });
+  });
+
+  describe('stop', () => {
+    it('should release current task when stopped during processing', async () => {
+      const task = await createTestTask({ status: TaskStatus.READY_TO_MERGE });
+      const worker = new MergerWorker(uploadsDir);
+
+      // 模拟正在处理任务
+      worker['currentTaskId'] = task.id;
+
+      // 调用 stop
+      worker.stop();
+
+      // 等待异步释放完成
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // 验证任务被释放
+      const updatedTask = await getTask(task.id);
+      expect(updatedTask.status).toBe(TaskStatus.READY_TO_MERGE);
+      expect(updatedTask.worker_id).toBeNull();
+    });
+
+    it('should not throw when no task is being processed', () => {
+      const worker = new MergerWorker(uploadsDir);
+
+      expect(() => worker.stop()).not.toThrow();
     });
   });
 });
@@ -835,6 +1064,9 @@ describe('MergerWorker Integration', () => {
 | Worker 中途崩溃 | 重启后任务恢复到 READY_TO_MERGE |
 | 并发抢占 | 只有一个 Worker 能抢到任务 |
 | 重复合并 | 文件被覆盖，内容保持一致 |
+| 优雅停止（处理中） | 当前任务释放回 READY_TO_MERGE |
+| 优雅停止（空闲） | Worker 正常停止，无副作用 |
+| 特殊文件名 | `.hidden.pdf`、`a.b.c.pdf` 等正确处理 |
 
 ---
 
@@ -851,6 +1083,13 @@ describe('MergerWorker Integration', () => {
 
 ### B. 日志示例
 
+日志前缀格式说明：
+- `[TaskLogic]` - 任务编排层日志
+- `[Merger-xxxxxxxx]` - MergerWorker 日志，xxxxxxxx 为 workerId 前 8 位
+
+> **一致性说明**: MergerWorker 使用 `[Merger-${workerId.slice(0, 8)}]` 前缀，
+> 与 ConverterWorker 的 `[Converter-${workerId.slice(0, 8)}]` 保持一致的命名风格。
+
 ```
 [TaskLogic] MergerWorker created (ID: a1b2c3d4)
 [Merger-a1b2c3d4] Started
@@ -859,6 +1098,8 @@ describe('MergerWorker Integration', () => {
 [Merger-a1b2c3d4] Task task-001 merged successfully: files/task-001/document.md
 [Merger-a1b2c3d4] Claimed task task-002
 [Merger-a1b2c3d4] Failed to merge task task-002: No completed pages found for merging
+[Merger-a1b2c3d4] Stopping...
+[Merger-a1b2c3d4] Released task task-003
 [Merger-a1b2c3d4] Stopped
 ```
 

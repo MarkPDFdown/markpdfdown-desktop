@@ -4,7 +4,9 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 vi.mock('../../../server/events/EventBus.js', () => ({
   eventBus: {
     onTaskEvent: vi.fn(),
+    onTaskDetailEvent: vi.fn(),
     emitTaskEvent: vi.fn(),
+    emitTaskDetailEvent: vi.fn(),
     removeAllListeners: vi.fn(),
   },
   TaskEventType: {
@@ -12,6 +14,7 @@ vi.mock('../../../server/events/EventBus.js', () => ({
     TASK_STATUS_CHANGED: 'task:status_changed',
     TASK_PROGRESS_CHANGED: 'task:progress_changed',
     TASK_DELETED: 'task:deleted',
+    TASK_DETAIL_UPDATED: 'taskDetail:updated',
   },
 }));
 

@@ -36,6 +36,12 @@ vi.mock('../../workers/index.js', () => ({
     run: vi.fn().mockResolvedValue(undefined),
     stop: vi.fn(),
   })),
+  MergerWorker: vi.fn().mockImplementation(() => ({
+    getWorkerId: vi.fn(() => 'mock-merger-id'),
+    getIsRunning: vi.fn(() => true),
+    run: vi.fn().mockResolvedValue(undefined),
+    stop: vi.fn(),
+  })),
 }));
 
 // Mock ImagePathUtil

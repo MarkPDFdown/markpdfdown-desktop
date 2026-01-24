@@ -191,13 +191,14 @@ export class ConverterWorker extends WorkerBase {
           return null;
         }
 
-        // Step 2: Verify the parent task is in PROCESSING state
+        // Step 2: Verify the parent task is in a valid state for processing
+        // Allow PROCESSING (normal flow) and COMPLETED (single page retry)
         const task = await prisma.task.findUnique({
           where: { id: candidate.task },
           select: { status: true },
         });
 
-        if (!task || task.status !== TaskStatus.PROCESSING) {
+        if (!task || (task.status !== TaskStatus.PROCESSING && task.status !== TaskStatus.COMPLETED)) {
           // Task not in correct state, remember it and try next
           checkedTaskIds.push(candidate.task);
           continue;
