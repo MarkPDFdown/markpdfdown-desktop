@@ -1,6 +1,6 @@
 {
   "name": "markpdfdown",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "A high-quality PDF to Markdown tool based on large language model visual recognition.",
   "author": "MarkPDFdown",
   "main": "dist/main/index.js",
