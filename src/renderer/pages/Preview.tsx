@@ -288,7 +288,7 @@ const Preview: React.FC = () => {
               </div>
             ) : (
               <img
-                src={`local-file://${taskDetail.imagePath}`}
+                src={`local-file:///${taskDetail.imagePath.replace(/\\/g, '/')}`}
                 alt={`Page ${currentPage}`}
                 draggable={false}
                 style={{

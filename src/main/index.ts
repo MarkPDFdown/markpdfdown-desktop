@@ -29,8 +29,12 @@ function registerLocalFileProtocol() {
   protocol.registerFileProtocol('local-file', (request, callback) => {
     try {
       // 从 URL 中提取文件路径
-      // URL 格式: local-file://path/to/file
-      const url = request.url.substring('local-file://'.length);
+      // URL 格式: local-file:///path/to/file (Windows: local-file:///D:/path)
+      let url = request.url.substring('local-file://'.length);
+      // 移除开头的斜杠（Windows 路径如 /D:/... 需要变成 D:/...）
+      if (url.startsWith('/') && /^\/[A-Za-z]:/.test(url)) {
+        url = url.substring(1);
+      }
       const decodedPath = decodeURIComponent(url);
 
       // 安全检查：确保路径在允许的目录内
