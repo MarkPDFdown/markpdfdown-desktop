@@ -1,4 +1,5 @@
-export type { IProviderRepository } from './IProviderRepository.js';
-export type { IModelRepository } from './IModelRepository.js';
-export type { ITaskRepository } from './ITaskRepository.js';
-export type { ITaskDetailRepository, TaskDetail } from './ITaskDetailRepository.js';
+// Backward-compatible re-export from new location
+export type { IProviderRepository } from '../../domain/repositories/interfaces/IProviderRepository.js';
+export type { IModelRepository } from '../../domain/repositories/interfaces/IModelRepository.js';
+export type { ITaskRepository } from '../../domain/repositories/interfaces/ITaskRepository.js';
+export type { ITaskDetailRepository, TaskDetail } from '../../domain/repositories/interfaces/ITaskDetailRepository.js';
