@@ -3,7 +3,7 @@ import { TaskStatus } from '../types/TaskStatus.js';
 import { PageStatus } from '../types/PageStatus.js';
 import { ImagePathUtil } from '../logic/split/ImagePathUtil.js';
 import modelLogic from '../logic/Model.js';
-import { eventBus, TaskEventType } from '../events/EventBus.js';
+import { eventBus, TaskEventType, TaskDetailEventData } from '../events/EventBus.js';
 import { prisma } from '../db/index.js';
 import { WORKER_CONFIG } from '../config/worker.config.js';
 import type { CompletionResponse } from '../logic/llm/LLMClient.js';
@@ -223,6 +223,12 @@ export class ConverterWorker extends WorkerBase {
           const claimed = await prisma.taskDetail.findUnique({
             where: { id: candidate.id },
           });
+
+          // Emit event to notify frontend about page status change
+          if (claimed) {
+            this.emitPageStatusEvent(claimed.task, claimed.id, claimed.page, PageStatus.PROCESSING);
+          }
+
           return claimed as PageWithTask;
         }
 
@@ -425,6 +431,7 @@ export class ConverterWorker extends WorkerBase {
         );
 
         // Success - emit events outside transaction
+        this.emitPageStatusEvent(page.task, page.id, page.page, PageStatus.COMPLETED);
         this.emitProgressEvent(page.task);
         return;
       } catch (error: any) {
@@ -527,6 +534,7 @@ export class ConverterWorker extends WorkerBase {
         );
 
         // Success - emit events outside transaction
+        this.emitPageStatusEvent(page.task, page.id, page.page, PageStatus.FAILED);
         this.emitProgressEvent(page.task);
         return;
       } catch (error: any) {
@@ -561,6 +569,19 @@ export class ConverterWorker extends WorkerBase {
       data: {
         retry_count: { increment: 1 },
       },
+    });
+  }
+
+  /**
+   * Emit page status change event.
+   */
+  private emitPageStatusEvent(taskId: string, pageId: number, page: number, status: number): void {
+    eventBus.emitTaskDetailEvent(TaskEventType.TASK_DETAIL_UPDATED, {
+      taskId,
+      pageId,
+      page,
+      status,
+      timestamp: Date.now(),
     });
   }
 

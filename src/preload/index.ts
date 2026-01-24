@@ -102,6 +102,21 @@ contextBridge.exposeInMainWorld("api", {
         ipcRenderer.removeListener('task:event', handler);
       };
     },
+
+    /**
+     * 监听任务详情（页面）事件
+     * @param callback 事件回调函数
+     * @returns 清理函数
+     */
+    onTaskDetailEvent: (callback: (event: any) => void) => {
+      const handler = (_event: any, data: any) => callback(data);
+      ipcRenderer.on('taskDetail:event', handler);
+
+      // 返回清理函数
+      return () => {
+        ipcRenderer.removeListener('taskDetail:event', handler);
+      };
+    },
   },
 
   // ==================== Platform APIs ====================

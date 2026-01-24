@@ -1,4 +1,4 @@
-import { eventBus, TaskEventType, TaskEventData } from '../../server/events/EventBus.js';
+import { eventBus, TaskEventType, TaskEventData, TaskDetailEventData } from '../../server/events/EventBus.js';
 import { windowManager } from '../WindowManager.js';
 
 export class EventBridge {
@@ -8,6 +8,7 @@ export class EventBridge {
     if (this.isInitialized) return;
 
     eventBus.onTaskEvent('task:*', this.handleTaskEvent.bind(this));
+    eventBus.onTaskDetailEvent('taskDetail:*', this.handleTaskDetailEvent.bind(this));
     this.isInitialized = true;
     console.log('[EventBridge] Initialized');
   }
@@ -19,6 +20,19 @@ export class EventBridge {
       type,
       taskId,
       task,
+      timestamp,
+    });
+  }
+
+  private handleTaskDetailEvent(data: { type: TaskEventType } & TaskDetailEventData): void {
+    const { type, taskId, pageId, page, status, timestamp } = data;
+
+    windowManager.sendToRenderer('taskDetail:event', {
+      type,
+      taskId,
+      pageId,
+      page,
+      status,
       timestamp,
     });
   }

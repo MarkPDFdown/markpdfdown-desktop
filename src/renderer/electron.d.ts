@@ -106,6 +106,16 @@ interface TaskEvent {
   timestamp: number;
 }
 
+// TaskDetailEvent 相关类型
+interface TaskDetailEvent {
+  type: string;
+  taskId: string;
+  pageId: number;
+  page: number;
+  status: number;
+  timestamp: number;
+}
+
 interface CreateTaskDTO {
   filename: string;
   type: string;
@@ -222,6 +232,7 @@ interface ElectronAPI {
 
   events: {
     onTaskEvent: (callback: (event: TaskEvent) => void) => () => void;
+    onTaskDetailEvent: (callback: (event: TaskDetailEvent) => void) => () => void;
   };
 }
 

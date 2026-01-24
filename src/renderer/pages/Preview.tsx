@@ -98,7 +98,7 @@ const Preview: React.FC = () => {
 
       if (taskId !== id) return;
 
-      console.log(`[Preview] Received event: ${type}`, { taskId, task: updatedTask });
+      console.log(`[Preview] Received task event: ${type}`, { taskId, task: updatedTask });
 
       switch (type) {
         case 'task:updated':
@@ -122,6 +122,30 @@ const Preview: React.FC = () => {
       cleanup();
     };
   }, [id, message, navigate]);
+
+  // 监听页面详情事件
+  useEffect(() => {
+    if (!id) return;
+
+    const handleTaskDetailEvent = (event: TaskDetailEvent) => {
+      const { taskId, page, status } = event;
+
+      if (taskId !== id) return;
+
+      console.log(`[Preview] Received taskDetail event: page ${page} -> status ${status}`);
+
+      // 如果是当前显示的页面，更新状态
+      if (page === currentPage) {
+        setTaskDetail(prev => prev ? { ...prev, status } : null);
+      }
+    };
+
+    const cleanup = window.api.events.onTaskDetailEvent(handleTaskDetailEvent);
+
+    return () => {
+      cleanup();
+    };
+  }, [id, currentPage]);
 
   // 加载任务元数据
   useEffect(() => {
