@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SplitterWorker } from '../SplitterWorker.js';
-import { TaskStatus, PageStatus } from '../../types/index.js';
+import { TaskStatus, PageStatus } from '../../../shared/types/index.js';
 
 // Mock dependencies
 vi.mock('../../db/index.js', () => ({

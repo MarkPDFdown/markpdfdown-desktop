@@ -3,8 +3,8 @@ import { ImagePathUtil } from '../logic/split/index.js';
 import fileLogic from '../logic/File.js';
 import { WORKER_CONFIG } from '../config/worker.config.js';
 import { prisma } from '../db/index.js';
-import { TaskStatus } from '../types/TaskStatus.js';
-import { PageStatus } from '../types/PageStatus.js';
+import { TaskStatus } from '../../shared/types/TaskStatus.js';
+import { PageStatus } from '../../shared/types/PageStatus.js';
 import type { IWorkerOrchestrator, WorkerStatus, CleanupResult } from './interfaces/IWorkerOrchestrator.js';
 
 /**

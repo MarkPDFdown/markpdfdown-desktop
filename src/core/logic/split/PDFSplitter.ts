@@ -3,7 +3,7 @@ import { PDFDocument } from 'pdf-lib';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { ISplitter, SplitResult, PageInfo } from './ISplitter.js';
-import { Task } from '../../types/index.js';
+import { Task } from '../../../shared/types/index.js';
 import { PageRangeParser } from './PageRangeParser.js';
 import { ImagePathUtil } from './ImagePathUtil.js';
 import { WORKER_CONFIG } from '../../config/worker.config.js';

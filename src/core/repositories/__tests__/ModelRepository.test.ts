@@ -13,7 +13,7 @@ describe('modelDal', () => {
 
   beforeEach(async () => {
     mockReset(prismaMock)
-    const module = await import('../modelDal.js')
+    const module = await import('../ModelRepository.js')
     modelDal = module.default
   })
 

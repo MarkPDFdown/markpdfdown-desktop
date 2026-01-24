@@ -1,5 +1,5 @@
 import { WorkerBase } from './WorkerBase.js';
-import { Task, TaskStatus, PageStatus } from '../types/index.js';
+import { Task, TaskStatus, PageStatus } from '../../shared/types/index.js';
 import { SplitterFactory } from '../logic/split/index.js';
 import { WORKER_CONFIG } from '../config/worker.config.js';
 import { prisma } from '../db/index.js';

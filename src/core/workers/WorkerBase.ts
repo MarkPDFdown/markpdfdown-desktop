@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { prisma } from '../db/index.js';
-import { Task, TaskStatus } from '../types/index.js';
+import { Task, TaskStatus } from '../../shared/types/index.js';
 import { eventBus, TaskEventType } from '../events/EventBus.js';
 
 /**

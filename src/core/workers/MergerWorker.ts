@@ -2,8 +2,8 @@ import fs from 'fs/promises';
 import path from 'path';
 import { WorkerBase } from './WorkerBase.js';
 import { prisma } from '../db/index.js';
-import { Task, TaskStatus } from '../types/index.js';
-import { PageStatus } from '../types/PageStatus.js';
+import { Task, TaskStatus } from '../../shared/types/index.js';
+import { PageStatus } from '../../shared/types/PageStatus.js';
 import { WORKER_CONFIG } from '../config/worker.config.js';
 
 /**

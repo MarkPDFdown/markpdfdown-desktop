@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { WorkerBase } from '../WorkerBase.js';
-import { TaskStatus } from '../../types/index.js';
+import { TaskStatus } from '../../../shared/types/index.js';
 
 // Mock Prisma
 vi.mock('../../db/index.js', () => ({

@@ -17,7 +17,7 @@ describe('taskDal', () => {
 
   beforeEach(async () => {
     mockReset(prismaMock)
-    const module = await import('../TaskDal.js')
+    const module = await import('../TaskRepository.js')
     taskDal = module.default
   })
 

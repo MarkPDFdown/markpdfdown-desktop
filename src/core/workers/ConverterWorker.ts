@@ -1,6 +1,6 @@
 import { WorkerBase } from './WorkerBase.js';
-import { TaskStatus } from '../types/TaskStatus.js';
-import { PageStatus } from '../types/PageStatus.js';
+import { TaskStatus } from '../../shared/types/TaskStatus.js';
+import { PageStatus } from '../../shared/types/PageStatus.js';
 import { ImagePathUtil } from '../logic/split/ImagePathUtil.js';
 import modelLogic from '../logic/Model.js';
 import { eventBus, TaskEventType } from '../events/EventBus.js';

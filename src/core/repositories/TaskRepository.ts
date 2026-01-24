@@ -1,5 +1,5 @@
 import { prisma } from "../db/index.js";
-import type { Task } from "../types/Task.js";
+import type { Task } from "../../shared/types/Task.js";
 import { v4 as uuidv4 } from 'uuid';
 // 查找所有任务，支持分页
 const findAll = async (page: number, pageSize: number) => {

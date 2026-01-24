@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { ConverterWorker } from '../ConverterWorker.js';
-import { TaskStatus } from '../../types/TaskStatus.js';
-import { PageStatus } from '../../types/PageStatus.js';
+import { TaskStatus } from '../../../shared/types/TaskStatus.js';
+import { PageStatus } from '../../../shared/types/PageStatus.js';
 
 // Mock dependencies
 vi.mock('../../db/index.js', () => ({

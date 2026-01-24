@@ -4,8 +4,8 @@ import taskDetailRepository from "../../../core/repositories/TaskDetailRepositor
 import { ImagePathUtil } from "../../../core/logic/split/ImagePathUtil.js";
 import { eventBus, TaskEventType } from '../../../core/events/EventBus.js';
 import { prisma } from '../../../core/db/index.js';
-import { TaskStatus } from '../../../core/types/TaskStatus.js';
-import { PageStatus } from '../../../core/types/PageStatus.js';
+import { TaskStatus } from '../../../shared/types/TaskStatus.js';
+import { PageStatus } from '../../../shared/types/PageStatus.js';
 import { IPC_CHANNELS } from "../../../shared/ipc/channels.js";
 import type { IpcResponse } from "../../../shared/ipc/responses.js";
 

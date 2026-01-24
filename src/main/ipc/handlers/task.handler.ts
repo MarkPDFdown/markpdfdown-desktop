@@ -4,7 +4,7 @@ import taskRepository from "../../../core/repositories/TaskRepository.js";
 import fileLogic from "../../../core/logic/File.js";
 import { eventBus, TaskEventType } from '../../../core/events/EventBus.js';
 import { prisma } from '../../../core/db/index.js';
-import { TaskStatus } from '../../../core/types/TaskStatus.js';
+import { TaskStatus } from '../../../shared/types/TaskStatus.js';
 import { IPC_CHANNELS } from "../../../shared/ipc/channels.js";
 import type { IpcResponse } from "../../../shared/ipc/responses.js";
 

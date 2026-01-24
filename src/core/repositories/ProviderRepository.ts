@@ -1,5 +1,5 @@
 import { prisma } from "../db/index.js";
-import { Provider } from "../types/Provider.js";
+import { Provider } from "../../shared/types/Provider.js";
 
 // 查找所有启用的提供商
 const findAll = async () => {

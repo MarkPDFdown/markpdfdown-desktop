@@ -1,4 +1,4 @@
-import { Task } from '../../types/index.js';
+import { Task } from '../../../shared/types/index.js';
 
 /**
  * Information about a single page after splitting

@@ -16,7 +16,7 @@ describe('providerDal', () => {
   beforeEach(async () => {
     mockReset(prismaMock)
     // Dynamically import to get fresh module with mocked dependencies
-    const module = await import('../providerDal.js')
+    const module = await import('../ProviderRepository.js')
     providerDal = module.default
   })
 

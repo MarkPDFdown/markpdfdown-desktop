@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { Task } from '../types/Task';
+import { Task } from '../../shared/types/Task.js';
 
 export enum TaskEventType {
   TASK_UPDATED = 'task:updated',

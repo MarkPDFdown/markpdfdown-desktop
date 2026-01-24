@@ -1,15 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { mockDeep, mockReset } from 'vitest-mock-extended'
-import { PrismaClient } from '@prisma/client'
-import { TaskStatus } from '../../types/TaskStatus.js'
-import { PageStatus } from '../../types/PageStatus.js'
+import { mockDeep, mockReset, DeepMockProxy } from 'vitest-mock-extended'
+import type { PrismaClient } from '@prisma/client'
+import { TaskStatus } from '../../../shared/types/TaskStatus.js'
+import { PageStatus } from '../../../shared/types/PageStatus.js'
 
-// Mock Prisma
-const prismaMock = mockDeep<PrismaClient>()
-
-vi.mock('../../db/index.js', () => ({
-  prisma: prismaMock
-}))
+// Mock prisma module
+vi.mock('../../db/index.js', async () => {
+  const { mockDeep } = await import('vitest-mock-extended')
+  return {
+    prisma: mockDeep()
+  }
+})
 
 // Mock workers
 const mockSplitterWorker = {
@@ -62,6 +63,10 @@ vi.mock('../../config/worker.config.js', () => ({
 import { WorkerOrchestrator } from '../WorkerOrchestrator.js'
 import { SplitterWorker, ConverterWorker, MergerWorker } from '../../workers/index.js'
 import { ImagePathUtil } from '../../logic/split/index.js'
+import { prisma } from '../../db/index.js'
+
+// Cast to mock type for type safety
+const prismaMock = prisma as unknown as DeepMockProxy<PrismaClient>
 
 describe('WorkerOrchestrator', () => {
   let orchestrator: WorkerOrchestrator

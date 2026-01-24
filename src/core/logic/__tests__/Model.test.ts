@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock dependencies
-const mockProviderDal = {
+const mockProviderRepository = {
   findById: vi.fn()
 }
 
@@ -14,8 +14,8 @@ const mockSharp = vi.fn(() => ({
   toBuffer: mockToBuffer
 }))
 
-vi.mock('../../dal/ProviderDal.js', () => ({
-  default: mockProviderDal
+vi.mock('../../repositories/ProviderRepository.js', () => ({
+  default: mockProviderRepository
 }))
 
 vi.mock('../llm/LLMClient.js', () => ({
@@ -38,7 +38,7 @@ describe('Model Logic', () => {
 
   describe('getLLMClient', () => {
     it('should throw error when provider does not exist', async () => {
-      mockProviderDal.findById.mockResolvedValue(null)
+      mockProviderRepository.findById.mockResolvedValue(null)
 
       // Test through completion since getLLMClient is private
       await expect(
@@ -59,7 +59,7 @@ describe('Model Logic', () => {
         completion: vi.fn().mockResolvedValue({ content: 'test' })
       }
 
-      mockProviderDal.findById.mockResolvedValue(mockProvider)
+      mockProviderRepository.findById.mockResolvedValue(mockProvider)
       mockLLMClientFactory.createClient.mockResolvedValue(mockClient)
 
       // Test through completion
@@ -68,7 +68,7 @@ describe('Model Logic', () => {
         model: 'gpt-4'
       })
 
-      expect(mockProviderDal.findById).toHaveBeenCalledWith(1)
+      expect(mockProviderRepository.findById).toHaveBeenCalledWith(1)
       expect(mockLLMClientFactory.createClient).toHaveBeenCalledWith(
         'openai',
         'sk-test-key',
@@ -89,7 +89,7 @@ describe('Model Logic', () => {
         completion: vi.fn().mockResolvedValue({ content: 'response' })
       }
 
-      mockProviderDal.findById.mockResolvedValue(mockProvider)
+      mockProviderRepository.findById.mockResolvedValue(mockProvider)
       mockLLMClientFactory.createClient.mockResolvedValue(mockClient)
 
       await modelLogic.completion(2, {
@@ -126,7 +126,7 @@ describe('Model Logic', () => {
           completion: vi.fn().mockResolvedValue({ content: 'response' })
         }
 
-        mockProviderDal.findById.mockResolvedValue(mockProvider)
+        mockProviderRepository.findById.mockResolvedValue(mockProvider)
         mockLLMClientFactory.createClient.mockResolvedValue(mockClient)
 
         await modelLogic.completion(1, {
@@ -155,7 +155,7 @@ describe('Model Logic', () => {
         completion: vi.fn().mockResolvedValue({ content: 'response' })
       }
 
-      mockProviderDal.findById.mockResolvedValue(mockProvider)
+      mockProviderRepository.findById.mockResolvedValue(mockProvider)
       mockLLMClientFactory.createClient.mockResolvedValue(mockClient)
 
       await modelLogic.completion(1, {
@@ -188,7 +188,7 @@ describe('Model Logic', () => {
         })
       }
 
-      mockProviderDal.findById.mockResolvedValue(mockProvider)
+      mockProviderRepository.findById.mockResolvedValue(mockProvider)
       mockLLMClientFactory.createClient.mockResolvedValue(mockClient)
 
       const options = {
@@ -224,7 +224,7 @@ describe('Model Logic', () => {
         completion: vi.fn().mockRejectedValue(new Error('API Error'))
       }
 
-      mockProviderDal.findById.mockResolvedValue(mockProvider)
+      mockProviderRepository.findById.mockResolvedValue(mockProvider)
       mockLLMClientFactory.createClient.mockResolvedValue(mockClient)
 
       await expect(
