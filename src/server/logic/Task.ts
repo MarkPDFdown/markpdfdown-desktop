@@ -1,6 +1,7 @@
-import { SplitterWorker } from '../workers/index.js';
+import { SplitterWorker, ConverterWorker } from '../workers/index.js';
 import { ImagePathUtil } from './split/index.js';
 import fileLogic from './File.js';
+import { WORKER_CONFIG } from '../config/worker.config.js';
 
 /**
  * TaskLogic - Central task orchestrator
@@ -13,11 +14,13 @@ import fileLogic from './File.js';
 class TaskLogic {
   private isRunning: boolean;
   private splitterWorker: SplitterWorker | null;
+  private converterWorkers: ConverterWorker[];
   private uploadsDir: string;
 
   constructor() {
     this.isRunning = false;
     this.splitterWorker = null;
+    this.converterWorkers = [];
 
     // Use FileLogic for consistent directory paths across dev/prod
     this.uploadsDir = fileLogic.getUploadDir();
@@ -49,6 +52,19 @@ class TaskLogic {
         console.error('[TaskLogic] SplitterWorker error:', error);
       });
 
+      // Start ConverterWorkers
+      const converterCount = WORKER_CONFIG.converter.count;
+      for (let i = 0; i < converterCount; i++) {
+        const worker = new ConverterWorker();
+        this.converterWorkers.push(worker);
+        console.log(`[TaskLogic] ConverterWorker ${i + 1}/${converterCount} created (ID: ${worker.getWorkerId().slice(0, 8)})`);
+
+        // Run each converter worker in background
+        worker.run().catch((error) => {
+          console.error(`[TaskLogic] ConverterWorker ${worker.getWorkerId().slice(0, 8)} error:`, error);
+        });
+      }
+
       this.isRunning = true;
       console.log('[TaskLogic] All workers started successfully');
     } catch (error) {
@@ -77,6 +93,13 @@ class TaskLogic {
         this.splitterWorker = null;
       }
 
+      // Stop all ConverterWorkers
+      for (const worker of this.converterWorkers) {
+        worker.stop();
+        console.log(`[TaskLogic] ConverterWorker ${worker.getWorkerId().slice(0, 8)} stopped`);
+      }
+      this.converterWorkers = [];
+
       this.isRunning = false;
       console.log('[TaskLogic] All workers stopped');
     } catch (error) {
@@ -102,6 +125,10 @@ class TaskLogic {
         id: this.splitterWorker.getWorkerId(),
         running: this.splitterWorker.getIsRunning(),
       } : null,
+      converterWorkers: this.converterWorkers.map((worker) => ({
+        id: worker.getWorkerId().slice(0, 8),
+        running: worker.getIsRunning(),
+      })),
       directories: {
         uploads: this.uploadsDir,
       },
