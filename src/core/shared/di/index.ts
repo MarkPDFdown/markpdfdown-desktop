@@ -1,4 +1,3 @@
-// Backward-compatible re-export from new location
 export {
   createContainer,
   getContainer,
@@ -6,4 +5,4 @@ export {
   resetContainer,
   type DIContainer,
   type AppConfig,
-} from '../shared/di/index.js';
+} from './Container.js';
