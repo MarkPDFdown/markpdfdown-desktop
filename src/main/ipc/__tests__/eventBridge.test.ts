@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 // Mock dependencies before importing
-vi.mock('../../../server/events/EventBus.js', () => ({
+vi.mock('../../../core/events/EventBus.js', () => ({
   eventBus: {
     onTaskEvent: vi.fn(),
     onTaskDetailEvent: vi.fn(),
@@ -26,7 +26,7 @@ vi.mock('../../WindowManager.js', () => ({
 }));
 
 import { EventBridge } from '../eventBridge.js';
-import { eventBus, TaskEventType } from '../../../server/events/EventBus.js';
+import { eventBus, TaskEventType } from '../../../core/events/EventBus.js';
 import { windowManager } from '../../WindowManager.js';
 
 describe('EventBridge', () => {

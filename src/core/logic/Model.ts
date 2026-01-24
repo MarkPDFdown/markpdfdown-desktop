@@ -1,12 +1,12 @@
-// @ts-expect-error - ProviderDal import may have type issues
-import providerDal from '../dal/ProviderDal.js';
+// @ts-expect-error - ProviderRepository import may have type issues
+import providerRepository from '../repositories/ProviderRepository.js';
 import { LLMClientFactory, CompletionOptions, Message } from './llm/LLMClient.js';
 import sharp from 'sharp';
 
 
 // 根据服务商ID获取LLM客户端
 const getLLMClient = async (providerId: number) => {
-    const provider = await providerDal.findById(providerId);
+    const provider = await providerRepository.findById(providerId);
 
     if (!provider) {
         throw new Error('服务商不存在');

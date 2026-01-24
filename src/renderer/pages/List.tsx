@@ -10,7 +10,7 @@ import {
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Task } from "../../server/types/Task";
+import { Task } from "../../core/types/Task";
 const { Text } = Typography;
 
 const List: React.FC = () => {

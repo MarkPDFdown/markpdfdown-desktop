@@ -48,24 +48,99 @@ vi.mock('electron', () => ({
   dialog: mockDialog
 }))
 
-vi.mock('../../../server/dal/providerDal.js', () => ({
+vi.mock('../../../core/repositories/ProviderRepository.js', () => ({
   default: mockProviderDal
 }))
 
-vi.mock('../../../server/dal/modelDal.js', () => ({
+vi.mock('../../../core/repositories/ModelRepository.js', () => ({
   default: mockModelDal
 }))
 
-vi.mock('../../../server/dal/TaskDal.js', () => ({
+vi.mock('../../../core/repositories/TaskRepository.js', () => ({
   default: mockTaskDal
 }))
 
-vi.mock('../../../server/logic/File.js', () => ({
+vi.mock('../../../core/repositories/TaskDetailRepository.js', () => ({
+  default: { findByTaskAndPage: vi.fn(), findByTaskId: vi.fn() }
+}))
+
+vi.mock('../../../core/logic/File.js', () => ({
   default: mockFileLogic
 }))
 
-vi.mock('../../../server/logic/model.js', () => ({
+vi.mock('../../../core/logic/Model.js', () => ({
   default: mockModelLogic
+}))
+
+vi.mock('../../../core/logic/split/ImagePathUtil.js', () => ({
+  ImagePathUtil: { getPath: vi.fn(() => '/test/image/path.png') }
+}))
+
+vi.mock('../../../core/events/EventBus.js', () => ({
+  eventBus: {
+    emitTaskEvent: vi.fn(),
+  },
+  TaskEventType: {
+    TASK_UPDATED: 'task:updated',
+    TASK_STATUS_CHANGED: 'task:status_changed',
+    TASK_DELETED: 'task:deleted',
+  },
+}))
+
+vi.mock('../../../core/db/index.js', () => ({
+  prisma: {
+    task: { count: vi.fn().mockResolvedValue(0) },
+    taskDetail: {
+      aggregate: vi.fn().mockResolvedValue({ _count: { id: 0 }, _sum: {}, _avg: {} }),
+      groupBy: vi.fn().mockResolvedValue([]),
+    },
+  },
+}))
+
+vi.mock('../../../shared/ipc/channels.js', () => ({
+  IPC_CHANNELS: {
+    PROVIDER: {
+      GET_ALL: 'provider:getAll',
+      GET_BY_ID: 'provider:getById',
+      CREATE: 'provider:create',
+      UPDATE: 'provider:update',
+      DELETE: 'provider:delete',
+      UPDATE_STATUS: 'provider:updateStatus',
+    },
+    MODEL: {
+      GET_ALL: 'model:getAll',
+      GET_BY_PROVIDER: 'model:getByProvider',
+      CREATE: 'model:create',
+      DELETE: 'model:delete',
+    },
+    TASK: {
+      CREATE: 'task:create',
+      GET_ALL: 'task:getAll',
+      GET_BY_ID: 'task:getById',
+      UPDATE: 'task:update',
+      DELETE: 'task:delete',
+      HAS_RUNNING: 'task:hasRunningTasks',
+    },
+    TASK_DETAIL: {
+      GET_BY_PAGE: 'taskDetail:getByPage',
+      GET_ALL_BY_TASK: 'taskDetail:getAllByTask',
+      RETRY: 'taskDetail:retry',
+      RETRY_FAILED: 'taskDetail:retryFailed',
+      GET_COST_STATS: 'taskDetail:getCostStats',
+    },
+    FILE: {
+      GET_IMAGE_PATH: 'file:getImagePath',
+      DOWNLOAD_MARKDOWN: 'file:downloadMarkdown',
+      SELECT_DIALOG: 'file:selectDialog',
+      UPLOAD: 'file:upload',
+      UPLOAD_MULTIPLE: 'file:uploadMultiple',
+      UPLOAD_FILE_CONTENT: 'file:uploadFileContent',
+    },
+    COMPLETION: {
+      MARK_IMAGEDOWN: 'completion:markImagedown',
+      TEST_CONNECTION: 'completion:testConnection',
+    },
+  },
 }))
 
 vi.mock('uuid', () => ({
@@ -164,7 +239,7 @@ describe('IPC Handlers', () => {
 
         expect(result).toEqual({
           success: false,
-          error: '服务商不存在'
+          error: 'Provider not found'
         })
       })
     })
@@ -197,7 +272,7 @@ describe('IPC Handlers', () => {
 
         expect(result).toEqual({
           success: false,
-          error: '名称和协议类型为必填项'
+          error: 'Name and type are required'
         })
       })
     })
@@ -226,7 +301,7 @@ describe('IPC Handlers', () => {
 
         expect(result).toEqual({
           success: false,
-          error: '服务商不存在'
+          error: 'Provider not found'
         })
       })
     })
@@ -251,7 +326,7 @@ describe('IPC Handlers', () => {
 
         expect(result).toEqual({
           success: false,
-          error: '服务商不存在'
+          error: 'Provider not found'
         })
       })
     })
@@ -278,7 +353,7 @@ describe('IPC Handlers', () => {
 
         expect(result).toEqual({
           success: false,
-          error: '状态值不合法'
+          error: 'Invalid status value'
         })
       })
     })
@@ -349,7 +424,7 @@ describe('IPC Handlers', () => {
 
         expect(result).toEqual({
           success: false,
-          error: '模型ID、服务商ID、名称为必填项'
+          error: 'Model ID, provider ID, and name are required'
         })
       })
     })
@@ -363,7 +438,7 @@ describe('IPC Handlers', () => {
 
         expect(result).toEqual({
           success: true,
-          data: { message: '模型删除成功' }
+          data: { message: 'Model deleted successfully' }
         })
         expect(mockModelDal.remove).toHaveBeenCalledWith('gpt-4o', 1)
       })
@@ -374,7 +449,7 @@ describe('IPC Handlers', () => {
 
         expect(result).toEqual({
           success: false,
-          error: '模型ID和服务商ID为必填项'
+          error: 'Model ID and provider ID are required'
         })
       })
     })
@@ -409,7 +484,7 @@ describe('IPC Handlers', () => {
 
         expect(result).toEqual({
           success: false,
-          error: '任务列表不能为空'
+          error: 'Task list cannot be empty'
         })
       })
     })
@@ -527,7 +602,7 @@ describe('IPC Handlers', () => {
 
         expect(result).toEqual({
           success: false,
-          error: '任务ID和文件路径不能为空'
+          error: 'Task ID and file path are required'
         })
       })
     })
@@ -565,7 +640,7 @@ describe('IPC Handlers', () => {
 
         expect(result).toEqual({
           success: false,
-          error: 'providerId, modelId, url 为必填项'
+          error: 'providerId, modelId, and url are required'
         })
       })
     })
@@ -590,7 +665,7 @@ describe('IPC Handlers', () => {
 
         expect(result).toEqual({
           success: false,
-          error: 'providerId, modelId 为必填项'
+          error: 'providerId and modelId are required'
         })
       })
     })

@@ -3,7 +3,7 @@ import { TaskStatus } from '../types/TaskStatus.js';
 import { PageStatus } from '../types/PageStatus.js';
 import { ImagePathUtil } from '../logic/split/ImagePathUtil.js';
 import modelLogic from '../logic/Model.js';
-import { eventBus, TaskEventType, TaskDetailEventData } from '../events/EventBus.js';
+import { eventBus, TaskEventType } from '../events/EventBus.js';
 import { prisma } from '../db/index.js';
 import { WORKER_CONFIG } from '../config/worker.config.js';
 import type { CompletionResponse } from '../logic/llm/LLMClient.js';

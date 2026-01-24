@@ -1,20 +1,21 @@
 import { SplitterWorker, ConverterWorker, MergerWorker } from '../workers/index.js';
-import { ImagePathUtil } from './split/index.js';
-import fileLogic from './File.js';
+import { ImagePathUtil } from '../logic/split/index.js';
+import fileLogic from '../logic/File.js';
 import { WORKER_CONFIG } from '../config/worker.config.js';
 import { prisma } from '../db/index.js';
 import { TaskStatus } from '../types/TaskStatus.js';
 import { PageStatus } from '../types/PageStatus.js';
+import type { IWorkerOrchestrator, WorkerStatus, CleanupResult } from './interfaces/IWorkerOrchestrator.js';
 
 /**
- * TaskLogic - Central task orchestrator
+ * WorkerOrchestrator - Central worker lifecycle manager
  *
  * Manages all worker lifecycle:
  * - SplitterWorker: Splits PDF/images into pages
- * - ConverterWorker: Converts pages to Markdown (future)
- * - MergerWorker: Merges pages into final document (future)
+ * - ConverterWorker: Converts pages to Markdown
+ * - MergerWorker: Merges pages into final document
  */
-class TaskLogic {
+export class WorkerOrchestrator implements IWorkerOrchestrator {
   private isRunning: boolean;
   private splitterWorker: SplitterWorker | null;
   private converterWorkers: ConverterWorker[];
@@ -34,14 +35,14 @@ class TaskLogic {
   /**
    * Start all workers
    */
-  async start() {
+  async start(): Promise<void> {
     if (this.isRunning) {
-      console.warn('[TaskLogic] Workers already running');
+      console.warn('[WorkerOrchestrator] Workers already running');
       return;
     }
 
     try {
-      console.log('[TaskLogic] Initializing workers...');
+      console.log('[WorkerOrchestrator] Initializing workers...');
 
       // Clean up orphaned tasks/pages from previous abnormal shutdown
       await this.cleanupOrphanedWork();
@@ -49,15 +50,15 @@ class TaskLogic {
       // Initialize ImagePathUtil (critical for image path calculation)
       // Split results are stored in: {uploadsDir}/{taskId}/split/
       ImagePathUtil.init(this.uploadsDir);
-      console.log(`[TaskLogic] ImagePathUtil initialized with uploadsDir: ${this.uploadsDir}`);
+      console.log(`[WorkerOrchestrator] ImagePathUtil initialized with uploadsDir: ${this.uploadsDir}`);
 
       // Start SplitterWorker
       this.splitterWorker = new SplitterWorker(this.uploadsDir);
-      console.log(`[TaskLogic] SplitterWorker created (ID: ${this.splitterWorker.getWorkerId()})`);
+      console.log(`[WorkerOrchestrator] SplitterWorker created (ID: ${this.splitterWorker.getWorkerId()})`);
 
       // Run worker in background (non-blocking)
       this.splitterWorker.run().catch((error) => {
-        console.error('[TaskLogic] SplitterWorker error:', error);
+        console.error('[WorkerOrchestrator] SplitterWorker error:', error);
       });
 
       // Start ConverterWorkers
@@ -65,26 +66,26 @@ class TaskLogic {
       for (let i = 0; i < converterCount; i++) {
         const worker = new ConverterWorker();
         this.converterWorkers.push(worker);
-        console.log(`[TaskLogic] ConverterWorker ${i + 1}/${converterCount} created (ID: ${worker.getWorkerId().slice(0, 8)})`);
+        console.log(`[WorkerOrchestrator] ConverterWorker ${i + 1}/${converterCount} created (ID: ${worker.getWorkerId().slice(0, 8)})`);
 
         // Run each converter worker in background
         worker.run().catch((error) => {
-          console.error(`[TaskLogic] ConverterWorker ${worker.getWorkerId().slice(0, 8)} error:`, error);
+          console.error(`[WorkerOrchestrator] ConverterWorker ${worker.getWorkerId().slice(0, 8)} error:`, error);
         });
       }
 
       // Start MergerWorker
       this.mergerWorker = new MergerWorker(this.uploadsDir);
-      console.log(`[TaskLogic] MergerWorker created (ID: ${this.mergerWorker.getWorkerId().slice(0, 8)})`);
+      console.log(`[WorkerOrchestrator] MergerWorker created (ID: ${this.mergerWorker.getWorkerId().slice(0, 8)})`);
 
       this.mergerWorker.run().catch((error) => {
-        console.error('[TaskLogic] MergerWorker error:', error);
+        console.error('[WorkerOrchestrator] MergerWorker error:', error);
       });
 
       this.isRunning = true;
-      console.log('[TaskLogic] All workers started successfully');
+      console.log('[WorkerOrchestrator] All workers started successfully');
     } catch (error) {
-      console.error('[TaskLogic] Failed to start workers:', error);
+      console.error('[WorkerOrchestrator] Failed to start workers:', error);
       this.isRunning = false;
       throw error;
     }
@@ -93,40 +94,40 @@ class TaskLogic {
   /**
    * Stop all workers gracefully
    */
-  async stop() {
+  async stop(): Promise<void> {
     if (!this.isRunning) {
-      console.warn('[TaskLogic] Workers not running');
+      console.warn('[WorkerOrchestrator] Workers not running');
       return;
     }
 
     try {
-      console.log('[TaskLogic] Stopping workers...');
+      console.log('[WorkerOrchestrator] Stopping workers...');
 
       // Stop SplitterWorker
       if (this.splitterWorker) {
         this.splitterWorker.stop();
-        console.log('[TaskLogic] SplitterWorker stopped');
+        console.log('[WorkerOrchestrator] SplitterWorker stopped');
         this.splitterWorker = null;
       }
 
       // Stop all ConverterWorkers
       for (const worker of this.converterWorkers) {
         worker.stop();
-        console.log(`[TaskLogic] ConverterWorker ${worker.getWorkerId().slice(0, 8)} stopped`);
+        console.log(`[WorkerOrchestrator] ConverterWorker ${worker.getWorkerId().slice(0, 8)} stopped`);
       }
       this.converterWorkers = [];
 
       // Stop MergerWorker
       if (this.mergerWorker) {
         this.mergerWorker.stop();
-        console.log(`[TaskLogic] MergerWorker ${this.mergerWorker.getWorkerId().slice(0, 8)} stopped`);
+        console.log(`[WorkerOrchestrator] MergerWorker ${this.mergerWorker.getWorkerId().slice(0, 8)} stopped`);
         this.mergerWorker = null;
       }
 
       this.isRunning = false;
-      console.log('[TaskLogic] All workers stopped');
+      console.log('[WorkerOrchestrator] All workers stopped');
     } catch (error) {
-      console.error('[TaskLogic] Error stopping workers:', error);
+      console.error('[WorkerOrchestrator] Error stopping workers:', error);
       throw error;
     }
   }
@@ -141,7 +142,7 @@ class TaskLogic {
   /**
    * Get worker information (for debugging/monitoring)
    */
-  getWorkerInfo() {
+  getWorkerInfo(): WorkerStatus {
     return {
       isRunning: this.isRunning,
       splitterWorker: this.splitterWorker ? {
@@ -171,9 +172,9 @@ class TaskLogic {
    *
    * These are reset to their previous state so new workers can pick them up.
    */
-  private async cleanupOrphanedWork(): Promise<void> {
+  async cleanupOrphanedWork(): Promise<CleanupResult> {
     try {
-      console.log('[TaskLogic] Checking for orphaned work from previous session...');
+      console.log('[WorkerOrchestrator] Checking for orphaned work from previous session...');
 
       // Reset orphaned pages (PROCESSING -> PENDING)
       // These are pages that were being processed when the app was closed
@@ -190,7 +191,7 @@ class TaskLogic {
       });
 
       if (orphanedPages.count > 0) {
-        console.log(`[TaskLogic] Reset ${orphanedPages.count} orphaned pages to PENDING`);
+        console.log(`[WorkerOrchestrator] Reset ${orphanedPages.count} orphaned pages to PENDING`);
       }
 
       // Reset orphaned splitting tasks (SPLITTING -> PENDING)
@@ -207,7 +208,7 @@ class TaskLogic {
       });
 
       if (orphanedSplittingTasks.count > 0) {
-        console.log(`[TaskLogic] Reset ${orphanedSplittingTasks.count} orphaned SPLITTING tasks to PENDING`);
+        console.log(`[WorkerOrchestrator] Reset ${orphanedSplittingTasks.count} orphaned SPLITTING tasks to PENDING`);
       }
 
       // Reset orphaned merging tasks (MERGING -> READY_TO_MERGE)
@@ -224,20 +225,38 @@ class TaskLogic {
       });
 
       if (orphanedMergingTasks.count > 0) {
-        console.log(`[TaskLogic] Reset ${orphanedMergingTasks.count} orphaned MERGING tasks to READY_TO_MERGE`);
+        console.log(`[WorkerOrchestrator] Reset ${orphanedMergingTasks.count} orphaned MERGING tasks to READY_TO_MERGE`);
       }
 
-      const totalOrphaned = orphanedPages.count + orphanedSplittingTasks.count + orphanedMergingTasks.count;
-      if (totalOrphaned === 0) {
-        console.log('[TaskLogic] No orphaned work found');
+      const result: CleanupResult = {
+        orphanedPages: orphanedPages.count,
+        orphanedSplittingTasks: orphanedSplittingTasks.count,
+        orphanedMergingTasks: orphanedMergingTasks.count,
+        total: orphanedPages.count + orphanedSplittingTasks.count + orphanedMergingTasks.count,
+      };
+
+      if (result.total === 0) {
+        console.log('[WorkerOrchestrator] No orphaned work found');
       } else {
-        console.log(`[TaskLogic] Cleanup complete: ${totalOrphaned} items recovered`);
+        console.log(`[WorkerOrchestrator] Cleanup complete: ${result.total} items recovered`);
       }
+
+      return result;
     } catch (error) {
-      console.error('[TaskLogic] Failed to clean up orphaned work:', error);
-      // Don't throw - allow workers to start even if cleanup fails
+      console.error('[WorkerOrchestrator] Failed to clean up orphaned work:', error);
+      // Return empty result - allow workers to start even if cleanup fails
+      return {
+        orphanedPages: 0,
+        orphanedSplittingTasks: 0,
+        orphanedMergingTasks: 0,
+        total: 0,
+      };
     }
   }
 }
 
-export default new TaskLogic();
+// Create singleton instance for backward compatibility
+export const workerOrchestrator = new WorkerOrchestrator();
+
+// Default export for backward compatibility with Task.ts
+export default workerOrchestrator;

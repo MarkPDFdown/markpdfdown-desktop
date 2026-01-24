@@ -19,8 +19,8 @@ function getDatabaseUrl(): string {
     }
 
     // 开发环境回退路径
-    console.log('Using default development database path:', `file:${path.join(process.cwd(), 'src', 'server', 'db', 'dev.db')}`);
-    return `file:${path.join(process.cwd(), 'src', 'server', 'db', 'dev.db')}`;
+    console.log('Using default development database path:', `file:${path.join(process.cwd(), 'src', 'core', 'db', 'dev.db')}`);
+    return `file:${path.join(process.cwd(), 'src', 'core', 'db', 'dev.db')}`;
 }
 
 // 获取数据库URL

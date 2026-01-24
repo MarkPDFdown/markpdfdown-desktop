@@ -142,7 +142,7 @@ const AppLayout: React.FC = () => {
       } else {
         window.api?.window?.close();
       }
-    } catch (error) {
+    } catch {
       // 如果检查失败，直接关闭
       window.api?.window?.close();
     }
