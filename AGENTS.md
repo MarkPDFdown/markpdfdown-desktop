@@ -297,8 +297,8 @@ The domain layer contains **only interfaces and pure business logic** with no ex
 
 ### Prisma Database
 - **Provider**: SQLite (configured in schema.prisma)
-- **Schema Location**: `src/core/db/schema.prisma`
-- **Migrations**: Store in `src/core/db/migrations/`
+- **Schema Location**: `src/core/infrastructure/db/schema.prisma`
+- **Migrations**: Store in `src/core/infrastructure/db/migrations/`
 - **Client**: Generated via `npm run generate`, imported from `../db/index.js` (backend only)
 - **Database Models**:
   - `Provider`: LLM service providers (id, name, type, api_key, base_url, suffix, status)
@@ -306,7 +306,7 @@ The domain layer contains **only interfaces and pure business logic** with no ex
   - `Task`: PDF conversion tasks (id, filename, type, page_range, pages, provider, model, progress, status)
   - `TaskDetail`: Individual page conversion details (id, task, page, page_source, status, provider, model, content)
 - **Types**: Use Prisma-generated types, or define custom in `src/core/types/`
-- **Initialization**: `initDatabase()` runs migrations on server start (via `src/core/db/Migration.ts`)
+- **Initialization**: `initDatabase()` runs migrations on server start (via `src/core/infrastructure/db/Migration.ts`)
 
 ### Git Workflow
 - **Conventional Commits**: Use prefixes: `feat`, `fix`, `chore`, `docs`, `refactor`, `style`, `test`, `perf`
