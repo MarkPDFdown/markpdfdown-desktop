@@ -1,15 +1,23 @@
 {
   "name": "markpdfdown",
-  "private": true,
-  "version": "1.0.0",
+  "version": "0.1.1",
   "description": "A high-quality PDF to Markdown tool based on large language model visual recognition.",
   "author": "MarkPDFdown",
   "main": "dist/main/index.js",
+  "bin": {
+    "markpdfdown": "./bin/cli.js"
+  },
   "type": "module",
   "engines": {
     "node": ">=18.0.0"
   },
   "homepage": "https://github.com/markpdfdown/markpdfdown-desktop",
+  "files": [
+    "bin/",
+    "dist/",
+    "src/core/infrastructure/db/migrations/",
+    "src/core/infrastructure/db/schema.prisma"
+  ],
   "scripts": {
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
     "dev": "npm run generate && electron-vite dev",
