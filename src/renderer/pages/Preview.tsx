@@ -6,6 +6,7 @@ import {
   FileMarkdownOutlined,
   FilePdfTwoTone,
   LoadingOutlined,
+  ReloadOutlined,
 } from "@ant-design/icons";
 import {
   App,
@@ -217,33 +218,38 @@ const Preview: React.FC = () => {
   // 获取页面状态信息
   const getPageStatusInfo = () => {
     const status = taskDetail?.status;
-    const iconStyle = { fontSize: 20 };
+    const iconStyle = { fontSize: 14 };
     // PageStatus: FAILED = -1, PENDING = 0, PROCESSING = 1, COMPLETED = 2, RETRYING = 3
     switch (status) {
       case -1: // FAILED
         return {
           icon: <CloseCircleFilled style={{ ...iconStyle, color: '#ff4d4f' }} />,
           text: t('preview.status.failed'),
+          color: '#ff4d4f',
         };
       case 0: // PENDING
         return {
           icon: <ClockCircleFilled style={{ ...iconStyle, color: '#faad14' }} />,
           text: t('preview.status.pending'),
+          color: '#faad14',
         };
       case 1: // PROCESSING
         return {
           icon: <LoadingOutlined style={{ ...iconStyle, color: '#1890ff' }} spin />,
           text: t('preview.status.processing'),
+          color: '#1890ff',
         };
       case 2: // COMPLETED
         return {
           icon: <CheckCircleFilled style={{ ...iconStyle, color: '#52c41a' }} />,
           text: t('preview.status.completed'),
+          color: '#52c41a',
         };
       case 3: // RETRYING
         return {
           icon: <LoadingOutlined style={{ ...iconStyle, color: '#faad14' }} spin />,
           text: t('preview.status.retrying'),
+          color: '#faad14',
         };
       default:
         return null;
@@ -341,75 +347,83 @@ const Preview: React.FC = () => {
             max="70%"
             style={{
               display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
+              flexDirection: "column",
               padding: "12px",
             }}
           >
-            {loading ? (
-              <Spin size="large" />
-            ) : imageError || !taskDetail?.imagePath ? (
-              <div style={{ textAlign: 'center', color: '#999' }}>
-                <Text type="secondary">图片加载失败或不存在</Text>
-              </div>
-            ) : (
-              <img
-                src={`local-file:///${taskDetail.imagePath.replace(/\\/g, '/')}`}
-                alt={`Page ${currentPage}`}
-                draggable={false}
+            {/* 图片区域 */}
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                overflow: "hidden",
+              }}
+            >
+              {loading ? (
+                <Spin size="large" />
+              ) : imageError || !taskDetail?.imagePath ? (
+                <div style={{ textAlign: 'center', color: '#999' }}>
+                  <Text type="secondary">图片加载失败或不存在</Text>
+                </div>
+              ) : (
+                <img
+                  src={`local-file:///${taskDetail.imagePath.replace(/\\/g, '/')}`}
+                  alt={`Page ${currentPage}`}
+                  draggable={false}
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "100%",
+                    objectFit: "contain",
+                  }}
+                  onError={() => setImageError(true)}
+                />
+              )}
+            </div>
+            {/* 底部状态栏 */}
+            {!loading && (
+              <div
                 style={{
-                  maxWidth: "100%",
-                  maxHeight: "100%",
-                  objectFit: "contain",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  paddingTop: 12,
+                  borderTop: "1px solid rgba(0, 0, 0, 0.06)",
+                  marginTop: 12,
                 }}
-                onError={() => setImageError(true)}
-              />
+              >
+                {/* 状态显示 */}
+                {pageStatusInfo ? (
+                  <Space size={6}>
+                    {pageStatusInfo.icon}
+                    <Text style={{ fontSize: 13, color: pageStatusInfo.color }}>
+                      {pageStatusInfo.text}
+                    </Text>
+                  </Space>
+                ) : (
+                  <span />
+                )}
+                {/* 重新生成按钮 */}
+                <Tooltip title={t('preview.regenerate')}>
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={retrying ? <LoadingOutlined /> : <ReloadOutlined />}
+                    onClick={handleRetryPage}
+                    disabled={!taskDetail?.id || retrying}
+                    style={{ color: '#666' }}
+                  >
+                    {t('preview.regenerate')}
+                  </Button>
+                </Tooltip>
+              </div>
             )}
           </Splitter.Panel>
 
           {/* Markdown Panel */}
-          <Splitter.Panel style={{ position: 'relative' }}>
+          <Splitter.Panel>
             <MarkdownPreview content={taskDetail?.content || ''} />
-            {/* 悬浮操作按钮 */}
-            {pageStatusInfo && !loading && (
-              <Tooltip
-                title={
-                  <span>
-                    {pageStatusInfo.text}
-                    {(taskDetail?.status === -1 || taskDetail?.status === 2) && (
-                      <span style={{ opacity: 0.7 }}> · {t('preview.regenerate')}</span>
-                    )}
-                  </span>
-                }
-                placement="left"
-              >
-                <Button
-                  type="text"
-                  shape="circle"
-                  icon={
-                    retrying ? (
-                      <LoadingOutlined style={{ fontSize: 20, color: '#1890ff' }} />
-                    ) : (
-                      pageStatusInfo.icon
-                    )
-                  }
-                  onClick={handleRetryPage}
-                  disabled={!taskDetail?.id || retrying}
-                  style={{
-                    position: 'absolute',
-                    bottom: 20,
-                    right: 20,
-                    width: 44,
-                    height: 44,
-                    backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                    backdropFilter: 'blur(8px)',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-                    border: 'none',
-                    transition: 'all 0.2s ease',
-                  }}
-                />
-              </Tooltip>
-            )}
           </Splitter.Panel>
         </Splitter>
 
