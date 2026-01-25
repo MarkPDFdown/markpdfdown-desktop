@@ -9,6 +9,8 @@ permissions:
 
 jobs:
   build:
+    # Only build assets on prereleased to avoid duplicate builds
+    if: github.event.action == 'prereleased'
     strategy:
       matrix:
         include:
