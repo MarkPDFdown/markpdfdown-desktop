@@ -314,7 +314,10 @@ const UploadPanel: React.FC = () => {
             </p>
             <Button
               type="primary"
-              onClick={handleFileSelect}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleFileSelect();
+              }}
               style={{ marginTop: 16 }}
             >
               {t('dragger.button')}
