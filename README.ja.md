@@ -26,12 +26,12 @@
 npxで直接実行（Node.js 18+が必要）：
 
 ```bash
-npx markpdfdown
+npx -y markpdfdown
 ```
 
 ### インストーラーのダウンロード
 
-[Releases](https://github.com/MarkPDFdown/desktop/releases)ページからお使いのプラットフォーム用の最新版をダウンロードしてください：
+[Releases](https://github.com/MarkPDFdown/markpdfdown-desktop/releases)ページからお使いのプラットフォーム用の最新版をダウンロードしてください：
 
 - **Windows**：`MarkPDFdown-{version}-x64.exe`
 - **macOS**：`MarkPDFdown-{version}-arm64.dmg` / `MarkPDFdown-{version}-x64.dmg`

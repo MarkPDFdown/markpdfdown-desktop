@@ -28,12 +28,12 @@
 التشغيل مباشرة باستخدام npx (يتطلب Node.js 18+):
 
 ```bash
-npx markpdfdown
+npx -y markpdfdown
 ```
 
 ### تحميل المثبت
 
-قم بتحميل أحدث إصدار لمنصتك من صفحة [Releases](https://github.com/MarkPDFdown/desktop/releases):
+قم بتحميل أحدث إصدار لمنصتك من صفحة [Releases](https://github.com/MarkPDFdown/markpdfdown-desktop/releases):
 
 - **Windows**: `MarkPDFdown-{version}-x64.exe`
 - **macOS**: `MarkPDFdown-{version}-arm64.dmg` / `MarkPDFdown-{version}-x64.dmg`

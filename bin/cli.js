@@ -21,9 +21,23 @@ async function ensurePrismaClient() {
   if (!existsSync(prismaClientPath)) {
     console.log('🔧 Prisma client not found. Generating...');
     try {
-      execSync('npx prisma generate --schema=./src/core/infrastructure/db/schema.prisma', {
+      // 使用项目本地的 prisma CLI
+      const prismaBin = process.platform === 'win32' ? 'prisma.cmd' : 'prisma';
+      const prismaPath = join(projectRoot, 'node_modules', '.bin', prismaBin);
+      const prismaCmd = existsSync(prismaPath)
+        ? `"${prismaPath}"`
+        : 'npx prisma';
+
+      // 设置临时的 DATABASE_URL，prisma generate 需要此变量存在
+      // 实际的数据库路径在运行时由 db/index.ts 动态决定
+      execSync(`${prismaCmd} generate --schema=./src/core/infrastructure/db/schema.prisma`, {
         cwd: projectRoot,
-        stdio: 'inherit'
+        stdio: 'inherit',
+        shell: true,
+        env: {
+          ...process.env,
+          DATABASE_URL: 'file:./placeholder.db'
+        }
       });
       console.log('✅ Prisma client generated successfully.');
     } catch (error) {
@@ -33,14 +47,26 @@ async function ensurePrismaClient() {
   }
 }
 
+// 获取 Electron 可执行文件路径
+function getElectronPath() {
+  const require = createRequire(import.meta.url);
+  try {
+    // 使用 electron 包导出的路径（最可靠的方式）
+    return require('electron');
+  } catch (e) {
+    console.error('❌ Electron not found. Please ensure the package is installed correctly.');
+    process.exit(1);
+  }
+}
+
 // 启动 Electron
 function launchElectron(args) {
-  const electronBin = process.platform === 'win32' ? 'electron.cmd' : 'electron';
-  const electronPath = join(projectRoot, 'node_modules', '.bin', electronBin);
+  const electronPath = getElectronPath();
   const mainPath = join(projectRoot, 'dist', 'main', 'index.js');
 
   if (!existsSync(mainPath)) {
-    console.error('❌ Application not built. Please run: npm run build');
+    console.error('❌ Application not built. Main file not found at:', mainPath);
+    console.error('   Please run: npm run build');
     process.exit(1);
   }
 

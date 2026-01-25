@@ -26,12 +26,12 @@ A desktop application that converts PDF documents to Markdown format using Large
 Run directly with npx (requires Node.js 18+):
 
 ```bash
-npx markpdfdown
+npx -y markpdfdown
 ```
 
 ### Download Installer
 
-Download the latest release for your platform from the [Releases](https://github.com/MarkPDFdown/desktop/releases) page:
+Download the latest release for your platform from the [Releases](https://github.com/MarkPDFdown/markpdfdown-desktop/releases) page:
 
 - **Windows**: `MarkPDFdown-{version}-x64.exe`
 - **macOS**: `MarkPDFdown-{version}-arm64.dmg` / `MarkPDFdown-{version}-x64.dmg`
