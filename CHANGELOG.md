@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.7] - 2026-01-25
+### :bug: Bug Fixes
+- [`cf5549e`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/cf5549e130e9394f4f1bc5f7c5b8e368596c0124) - **deps**: ⚡️ optimize electron dependency for smaller builds *(PR [#6](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/6) by [@jorben](https://github.com/jorben))*
+- [`a6174e9`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/a6174e93c95d2693e148e990dd6c81ec53743a7a) - **icon**: 🐛 fix app icon not displaying on macOS when running via npx *(PR [#8](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/8) by [@jorben](https://github.com/jorben))*
+
+
 ## [0.1.6] - 2026-01-25
 ### :bug: Bug Fixes
 - [`44b6566`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/44b6566c6d9c1f1f5985ba96c2d757e7434d534d) - **deps**: 🐛 move electron to optionalDependencies for build compatibility *(commit by [@jorben](https://github.com/jorben))*
@@ -72,3 +78,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.1.3]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.0.1...0.1.3
 [0.1.5]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.1.4...0.1.5
 [0.1.6]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.1.5...0.1.6
+[0.1.7]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.1.6...0.1.7
