@@ -109,6 +109,10 @@
       "prettier --write"
     ]
   },
+  "overrides": {
+    "@electron/get": "^4.0.2",
+    "global-agent": "^3.0.1"
+  },
   "dependencies": {
     "@ant-design/icons": "^5.6.1",
     "@prisma/client": "^6.5.0",
@@ -133,7 +137,7 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
-    "electron": "^35.0.2",
+    "electron": "^38.0.0",
     "@eslint/js": "^9.21.0",
     "@testing-library/jest-dom": "^6.1.5",
     "@testing-library/react": "^14.0.0",
