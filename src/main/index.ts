@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell, protocol } from "electron";
+import { app, BrowserWindow, ipcMain, shell, protocol, nativeImage } from "electron";
 
 // 在 app ready 之前设置应用名称，确保 userData 路径正确
 // 这必须在所有其他模块导入之前执行，因为一些模块在导入时就会读取 app.getPath('userData')
@@ -16,6 +16,63 @@ if (!app.isPackaged) {
 
 import path from "path";
 import fs from "fs";
+
+/**
+ * 获取图标路径
+ * npx 运行时 app.getAppPath() 返回 dist/main 目录，需要向上查找到项目根目录
+ * 打包后 app.getAppPath() 返回 app.asar，图标在 resources 目录
+ *
+ * 注意：nativeImage 对 .icns/.ico 格式支持不佳，非打包模式下使用 PNG
+ * macOS 使用专门的 PNG 图标（带透明边距，适合 Dock 放大效果）
+ */
+function getIconPath(): string {
+  let iconName: string;
+
+  if (app.isPackaged) {
+    // 打包模式：使用原生格式
+    iconName = process.platform === "darwin"
+      ? "icons/mac/icon.icns"
+      : process.platform === "win32"
+        ? "icons/win/icon.ico"
+        : "icons/png/512x512.png";
+  } else {
+    // 非打包模式（开发/npx）：使用 PNG，区分平台
+    // macOS 使用专门的图标（带透明边距）
+    iconName = process.platform === "darwin"
+      ? "icons/mac/png/512x512.png"
+      : "icons/png/512x512.png";
+  }
+
+  // 开发模式（有 ELECTRON_RENDERER_URL）
+  if (process.env.ELECTRON_RENDERER_URL) {
+    return path.join(process.cwd(), 'public', iconName);
+  }
+
+  // 打包模式
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, iconName);
+  }
+
+  // npx 运行模式：从 dist/main 向上查找 public/icons
+  const appPath = app.getAppPath();
+
+  // 尝试多个可能的路径
+  const possiblePaths = [
+    path.join(appPath, '..', '..', 'public', iconName),  // dist/main -> 根目录
+    path.join(appPath, '..', 'public', iconName),        // dist -> 根目录
+    path.join(appPath, 'public', iconName),              // 当前目录
+    path.join(process.cwd(), 'public', iconName),        // 工作目录
+  ];
+
+  for (const iconPath of possiblePaths) {
+    if (fs.existsSync(iconPath)) {
+      return iconPath;
+    }
+  }
+
+  // 返回默认路径（即使不存在）
+  return possiblePaths[0];
+}
 import isDev from "electron-is-dev";
 import { workerOrchestrator } from "../core/application/services/index.js";
 import { initDatabase, disconnect } from "../core/infrastructure/db/index.js";
@@ -92,9 +149,28 @@ async function stopTask() {
 }
 
 function createWindow() {
+  const iconPath = getIconPath();
+  const iconExists = fs.existsSync(iconPath);
+
+  // 尝试加载图标为 nativeImage
+  let appIcon: Electron.NativeImage | undefined;
+  if (iconExists) {
+    try {
+      appIcon = nativeImage.createFromPath(iconPath);
+      if (appIcon.isEmpty()) {
+        console.warn('[Main] Icon loaded but is empty:', iconPath);
+        appIcon = undefined;
+      }
+    } catch (err) {
+      console.warn('[Main] Failed to load icon:', iconPath, err);
+      appIcon = undefined;
+    }
+  }
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    title: 'MarkPDFdown',
     // macOS: 使用隐藏标题栏，Windows/Linux: 使用无边框窗口
     ...(process.platform === "darwin"
       ? { titleBarStyle: "hidden" }
@@ -104,15 +180,18 @@ function createWindow() {
       contextIsolation: true,
       preload: path.join(__dirname, "../preload/index.js"),
     },
-    icon: path.join(
-      process.env.ELECTRON_RENDERER_URL ? process.cwd() : app.getAppPath(),
-      process.platform === "darwin"
-        ? "public/icons/mac/icon.icns"
-        : process.platform === "win32"
-          ? "public/icons/win/icon.ico"
-          : "public/icons/png/512x512.png",
-    ),
+    // 仅在图标成功加载时设置
+    ...(appIcon ? { icon: appIcon } : {}),
   });
+
+  // macOS: 设置 Dock 图标
+  if (process.platform === "darwin" && app.dock && appIcon) {
+    try {
+      app.dock.setIcon(appIcon);
+    } catch (err) {
+      console.warn('[Main] Failed to set dock icon:', err);
+    }
+  }
 
   // 注册窗口到 WindowManager
   windowManager.setMainWindow(mainWindow);
