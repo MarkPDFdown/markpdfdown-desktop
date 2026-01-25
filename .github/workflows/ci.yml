@@ -9,8 +9,52 @@ on:
       - master
 
 jobs:
+  commitlint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate commit message
+        run: |
+          # Get commit message(s) to validate
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            COMMITS=$(git log --format=%s origin/${{ github.base_ref }}..HEAD)
+          else
+            COMMITS=$(git log -1 --format=%s)
+          fi
+
+          # Conventional commit pattern: type(scope): emoji description
+          # type is required, scope is optional, emoji after colon is optional
+          PATTERN='^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\([a-zA-Z0-9_-]+\))?: .+'
+
+          echo "Validating commit messages..."
+          FAILED=0
+          while IFS= read -r MSG; do
+            if [ -n "$MSG" ]; then
+              if echo "$MSG" | grep -qE "$PATTERN"; then
+                echo "✅ $MSG"
+              else
+                echo "❌ $MSG"
+                echo "   Expected format: type(scope): description"
+                echo "   Example: feat(auth): ✨ add login feature"
+                FAILED=1
+              fi
+            fi
+          done <<< "$COMMITS"
+
+          if [ $FAILED -eq 1 ]; then
+            echo ""
+            echo "Commit message validation failed!"
+            echo "Please follow Conventional Commits: https://www.conventionalcommits.org/"
+            exit 1
+          fi
+
   ci:
     runs-on: ubuntu-latest
+    needs: commitlint
 
     steps:
       - name: Checkout code
