@@ -30,6 +30,8 @@ interface ModelGroupType {
   models: ModelType[];
 }
 
+const SELECTED_MODEL_KEY = "markpdfdown_selected_model";
+
 const UploadPanel: React.FC = () => {
   const navigate = useNavigate();
   const { message } = App.useApp();
@@ -51,6 +53,20 @@ const UploadPanel: React.FC = () => {
 
         if (result.success && result.data) {
           setModelGroups(result.data);
+
+          // 尝试恢复上次选择的模型
+          const savedModel = localStorage.getItem(SELECTED_MODEL_KEY);
+          if (savedModel) {
+            // 检查保存的模型是否在当前列表中存在
+            const modelExists = result.data.some((group: ModelGroupType) =>
+              group.models.some(
+                (model: ModelType) => `${model.id}@${model.provider}` === savedModel
+              )
+            );
+            if (modelExists) {
+              setSelectedModel(savedModel);
+            }
+          }
         } else {
           message.error(result.error || t('messages.fetch_models_failed'));
         }
@@ -67,6 +83,12 @@ const UploadPanel: React.FC = () => {
 
     fetchAllModels();
   }, [message, t]);
+
+  // 处理模型选择变化
+  const handleModelChange = (value: string) => {
+    setSelectedModel(value);
+    localStorage.setItem(SELECTED_MODEL_KEY, value);
+  };
 
   // 将模型数据转换为Select选项格式
   const getModelOptions = () => {
@@ -334,7 +356,8 @@ const UploadPanel: React.FC = () => {
               options={getModelOptions()}
               loading={loading}
               placeholder={t('form.model_placeholder')}
-              onChange={(value) => setSelectedModel(value)}
+              value={selectedModel || undefined}
+              onChange={handleModelChange}
             />
             <Text>{t('form.page_range_label')}</Text>
             <Input
