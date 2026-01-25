@@ -77,7 +77,7 @@ export class ImageSplitter implements ISplitter {
   /**
    * Wrap errors with friendly, actionable messages.
    */
-  private wrapError(error: unknown, taskId: string, filename: string): Error {
+  private wrapError(error: unknown, _taskId: string, filename: string): Error {
     const err = error as Error;
     const message = err.message.toLowerCase();
 

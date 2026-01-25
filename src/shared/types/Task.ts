@@ -10,4 +10,6 @@ export interface Task {
     progress?: number;
     status?: number;
     error?: string | null;
+    worker_id?: string | null;
+    merged_path?: string | null;
 }

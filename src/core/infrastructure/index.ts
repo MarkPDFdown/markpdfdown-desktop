@@ -3,7 +3,7 @@
 
 // Database
 export { prisma } from './db/index.js';
-export { migrateDatabase, runCustomMigrations } from './db/Migration.js';
+export { runMigrations } from './db/Migration.js';
 
 // Configuration
 export { WORKER_CONFIG } from './config/worker.config.js';
@@ -20,10 +20,6 @@ export {
   GeminiClient,
   OllamaClient,
   OpenAIResponsesClient,
-  type Message,
-  type MessageContent,
-  type TextContent,
-  type ImageContent,
   type CompletionOptions,
   type CompletionResponse,
 } from './adapters/llm/index.js';

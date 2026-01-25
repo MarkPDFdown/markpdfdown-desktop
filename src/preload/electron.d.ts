@@ -61,10 +61,12 @@ interface WindowAPI {
     getById: (id: string) => Promise<any>;
     update: (id: string, data: any) => Promise<any>;
     delete: (id: string) => Promise<any>;
+    hasRunningTasks: () => Promise<any>;
   };
   taskDetail: {
     getByPage: (taskId: string, page: number) => Promise<any>;
     getAllByTask: (taskId: string) => Promise<any>;
+    retry: (pageId: number) => Promise<any>;
   };
   file: {
     selectDialog: () => Promise<any>;

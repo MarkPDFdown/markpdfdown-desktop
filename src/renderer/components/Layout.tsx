@@ -67,6 +67,7 @@ const WindowControls: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         display: 'flex',
         gap: '8px',
         padding: '12px',
+        // @ts-expect-error WebkitAppRegion is Electron-specific CSS property
         WebkitAppRegion: 'no-drag',
       }}
     >

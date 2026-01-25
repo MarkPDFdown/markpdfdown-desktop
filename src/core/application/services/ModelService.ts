@@ -1,4 +1,3 @@
-// @ts-expect-error - ProviderRepository import may have type issues
 import providerRepository from '../../domain/repositories/ProviderRepository.js';
 import { LLMClientFactory, CompletionOptions, Message } from '../../infrastructure/adapters/llm/LLMClient.js';
 import sharp from 'sharp';

@@ -15,7 +15,7 @@ export interface WorkerStatus {
   converterWorkers: WorkerInfo[];
   mergerWorker: WorkerInfo | null;
   directories: {
-    uploads: string;
+    uploads: string | null;
   };
 }
 

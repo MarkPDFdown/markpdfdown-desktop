@@ -35,7 +35,7 @@ const LanguageSwitcher: React.FC = () => {
   ];
 
   const handleMenuClick: MenuProps['onClick'] = (e) => {
-    changeLanguage(e.key);
+    changeLanguage(e.key as 'en-US' | 'zh-CN' | 'ja-JP' | 'ru-RU' | 'fa-IR' | 'ar-SA');
   };
 
   const getCurrentLabel = (lang: string) => {

@@ -25,6 +25,42 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import MarkdownPreview from "../components/MarkdownPreview";
+import { Task } from "../../shared/types";
+
+// Types for task events
+interface TaskDetailWithImage {
+  id: number;
+  task: string;
+  page: number;
+  page_source: number;
+  status: number;
+  worker_id?: string | null;
+  provider: number;
+  model: string;
+  content: string;
+  error?: string | null;
+  retry_count: number;
+  createdAt: Date;
+  updatedAt: Date;
+  imagePath: string;
+  imageExists: boolean;
+}
+
+interface TaskEvent {
+  type: string;
+  taskId: string;
+  task?: Partial<Task>;
+  timestamp: number;
+}
+
+interface TaskDetailEvent {
+  type: string;
+  taskId: string;
+  pageId: number;
+  page: number;
+  status: number;
+  timestamp: number;
+}
 
 const { Text } = Typography;
 
@@ -154,14 +190,14 @@ const Preview: React.FC = () => {
 
   // 加载页面详情
   useEffect(() => {
-    if (task && task.pages > 0) {
+    if (task && task.pages && task.pages > 0) {
       fetchPageDetail(currentPage);
     }
   }, [currentPage, task, fetchPageDetail]);
 
   // 检查任务状态
   useEffect(() => {
-    if (task && task.status < 2) {
+    if (task && task.status !== undefined && task.status < 2) {
       message.warning('任务尚未开始处理,无法预览');
       navigate('/list');
     }

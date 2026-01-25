@@ -106,7 +106,7 @@ const UploadPanel: React.FC = () => {
       ) {
         // 将选中的文件路径转换为 UploadFile 格式
         const newFiles: UploadFile[] = dialogResult.data.filePaths.map(
-          (filePath, index) => {
+          (filePath: string, index: number) => {
             // 从文件路径中提取文件名
             const fileName = filePath.split(/[\\/]/).pop() || filePath;
 
