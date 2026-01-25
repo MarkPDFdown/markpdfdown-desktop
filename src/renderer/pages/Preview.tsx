@@ -199,9 +199,10 @@ const Preview: React.FC = () => {
     }
   }, [currentPage, task, fetchPageDetail]);
 
-  // 检查任务状态
+  // 检查任务状态：只有 CREATED(-1) 和 PENDING(1) 不允许预览
+  // FAILED(0) 应该允许预览，以便用户删除或重试
   useEffect(() => {
-    if (task && task.status !== undefined && task.status < 2) {
+    if (task && task.status !== undefined && (task.status === -1 || task.status === 1)) {
       message.warning(t('preview.task_not_started'));
       navigate('/list');
     }

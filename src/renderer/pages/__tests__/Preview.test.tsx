@@ -13,6 +13,9 @@ vi.mock('react-i18next', () => ({
         'preview.download': 'Download',
         'preview.cancel': 'Cancel',
         'preview.retry': 'Retry',
+        'preview.retry_all': 'Retry All',
+        'preview.retry_failed': 'Retry Failed',
+        'preview.more_actions': 'More Actions',
         'preview.delete': 'Delete',
         'preview.regenerate': 'Regenerate',
         'preview.regenerate_tooltip': 'Regenerate this page',
@@ -27,7 +30,8 @@ vi.mock('react-i18next', () => ({
         'preview.cancel_success': 'Task cancelled',
         'preview.cancel_failed': 'Failed to cancel task',
         'preview.retry_success': 'Task retrying',
-        'preview.retry_failed': 'Failed to retry task',
+        'preview.page_retry_failed': 'Failed to retry page',
+        'preview.image_load_failed': 'Image failed to load',
         'preview.status.failed': 'Failed',
         'preview.status.pending': 'Pending',
         'preview.status.processing': 'Processing',
@@ -266,7 +270,7 @@ describe('Preview', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText(/图片加载失败或不存在/)).toBeInTheDocument()
+        expect(screen.getByText(/Image failed to load/)).toBeInTheDocument()
       })
     })
   })
@@ -485,12 +489,20 @@ describe('Preview', () => {
     })
 
     describe('Cancel', () => {
-      it('should display cancel button for processing tasks', async () => {
+      it('should display cancel option in dropdown for processing tasks', async () => {
         render(
           <Wrapper>
             <Preview />
           </Wrapper>
         )
+
+        // For processing tasks, there's a "More Actions" dropdown
+        await waitFor(() => {
+          expect(screen.getByText('More Actions')).toBeInTheDocument()
+        })
+
+        // Click the dropdown to show menu items
+        fireEvent.click(screen.getByText('More Actions'))
 
         await waitFor(() => {
           expect(screen.getByText('Cancel')).toBeInTheDocument()
@@ -509,14 +521,24 @@ describe('Preview', () => {
           </Wrapper>
         )
 
+        // For completed tasks, click dropdown to verify Cancel is not there
         await waitFor(() => {
-          expect(screen.queryByText('Cancel')).not.toBeInTheDocument()
+          expect(screen.getByText('More Actions')).toBeInTheDocument()
         })
+
+        fireEvent.click(screen.getByText('More Actions'))
+
+        await waitFor(() => {
+          // Delete should be visible, but not Cancel
+          expect(screen.getByText('Delete')).toBeInTheDocument()
+        })
+
+        expect(screen.queryByText('Cancel')).not.toBeInTheDocument()
       })
     })
 
     describe('Retry Task', () => {
-      it('should display retry button for failed tasks', async () => {
+      it('should display retry all button for failed tasks', async () => {
         vi.mocked(window.api.task.getById).mockResolvedValue({
           success: true,
           data: mockFailedTask
@@ -529,7 +551,8 @@ describe('Preview', () => {
         )
 
         await waitFor(() => {
-          expect(screen.getByText('Retry')).toBeInTheDocument()
+          // For failed tasks (status === 0), "Retry All" is the primary button
+          expect(screen.getByText('Retry All')).toBeInTheDocument()
         })
       })
 
@@ -545,12 +568,12 @@ describe('Preview', () => {
           expect(screen.getByText(/document\.pdf/)).toBeInTheDocument()
         })
 
-        expect(screen.queryByText('Retry')).not.toBeInTheDocument()
+        expect(screen.queryByText('Retry All')).not.toBeInTheDocument()
       })
     })
 
     describe('Delete', () => {
-      it('should display delete button for completed tasks', async () => {
+      it('should display delete option in dropdown for completed tasks', async () => {
         vi.mocked(window.api.task.getById).mockResolvedValue({
           success: true,
           data: mockCompletedTask
@@ -562,12 +585,20 @@ describe('Preview', () => {
           </Wrapper>
         )
 
+        // For completed tasks, there's a "More Actions" dropdown
+        await waitFor(() => {
+          expect(screen.getByText('More Actions')).toBeInTheDocument()
+        })
+
+        // Click the dropdown to show menu items
+        fireEvent.click(screen.getByText('More Actions'))
+
         await waitFor(() => {
           expect(screen.getByText('Delete')).toBeInTheDocument()
         })
       })
 
-      it('should display delete button for failed tasks', async () => {
+      it('should have dropdown with delete option for failed tasks', async () => {
         vi.mocked(window.api.task.getById).mockResolvedValue({
           success: true,
           data: mockFailedTask
@@ -579,9 +610,15 @@ describe('Preview', () => {
           </Wrapper>
         )
 
+        // For failed tasks (status === 0), "Retry All" is the primary button
+        // with a Dropdown.Button that contains Delete in its menu
         await waitFor(() => {
-          expect(screen.getByText('Delete')).toBeInTheDocument()
+          expect(screen.getByText('Retry All')).toBeInTheDocument()
         })
+
+        // Verify Dropdown.Button is rendered (has Space wrapper with icon and text)
+        const retryButton = screen.getByText('Retry All').closest('button')
+        expect(retryButton).toBeInTheDocument()
       })
 
       it('should not display delete button for processing tasks', async () => {
@@ -595,6 +632,7 @@ describe('Preview', () => {
           expect(screen.getByText(/document\.pdf/)).toBeInTheDocument()
         })
 
+        // For processing tasks, there's a Cancel option in dropdown, but no Delete
         expect(screen.queryByText('Delete')).not.toBeInTheDocument()
       })
     })
