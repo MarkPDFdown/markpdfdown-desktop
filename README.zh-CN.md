@@ -31,7 +31,7 @@ npx markpdfdown
 
 ### 下载安装包
 
-从 [Releases](https://github.com/MarkPDFdown/desktop/releases) 页面下载适合您平台的最新版本：
+从 [Releases](https://github.com/MarkPDFdown/markpdfdown-desktop/releases) 页面下载适合您平台的最新版本：
 
 - **Windows**：`MarkPDFdown-{version}-x64.exe`
 - **macOS**：`MarkPDFdown-{version}-arm64.dmg` / `MarkPDFdown-{version}-x64.dmg`

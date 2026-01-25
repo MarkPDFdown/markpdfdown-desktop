@@ -33,7 +33,7 @@ npx markpdfdown
 
 ### دانلود نصب‌کننده
 
-آخرین نسخه را برای پلتفرم خود از صفحه [Releases](https://github.com/MarkPDFdown/desktop/releases) دانلود کنید:
+آخرین نسخه را برای پلتفرم خود از صفحه [Releases](https://github.com/MarkPDFdown/markpdfdown-desktop/releases) دانلود کنید:
 
 - **Windows**: `MarkPDFdown-{version}-x64.exe`
 - **macOS**: `MarkPDFdown-{version}-arm64.dmg` / `MarkPDFdown-{version}-x64.dmg`
