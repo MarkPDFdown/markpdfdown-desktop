@@ -36,7 +36,8 @@
     "test:renderer": "vitest run --config vitest.config.renderer.ts",
     "test:watch": "vitest watch",
     "test:coverage": "vitest run --coverage",
-    "prepare": "husky"
+    "prepare": "husky",
+    "publish": "node scripts/publish.js"
   },
   "build": {
     "appId": "com.markpdfdown.desktop",
@@ -45,8 +46,13 @@
       "dist/**/*",
       "!**/*.db",
       "!**/*.d.ts",
+      "!**/*.map",
       "!**/*.min.*.map",
-      "!**/{.DS_Store,Thumbs.db}"
+      "!**/{.DS_Store,Thumbs.db}",
+      "!**/node_modules/**/{CHANGELOG.md,README.md,readme.md,LICENSE,license,License}",
+      "!**/node_modules/**/*.{ts,tsx,md,markdown}",
+      "!**/node_modules/**/{test,tests,__tests__,__mocks__,docs,doc,example,examples}/**/*",
+      "!**/node_modules/.cache/**/*"
     ],
     "extraResources": [
       "node_modules/.prisma/**/*",
@@ -103,9 +109,6 @@
       "prettier --write"
     ]
   },
-  "optionalDependencies": {
-    "electron": "^35.0.2"
-  },
   "dependencies": {
     "@ant-design/icons": "^5.6.1",
     "@prisma/client": "^6.5.0",
@@ -130,6 +133,7 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "electron": "^35.0.2",
     "@eslint/js": "^9.21.0",
     "@testing-library/jest-dom": "^6.1.5",
     "@testing-library/react": "^14.0.0",

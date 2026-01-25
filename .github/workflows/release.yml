@@ -86,6 +86,17 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Add electron to optionalDependencies for npm publish
+        run: |
+          # Get electron version from devDependencies
+          ELECTRON_VERSION=$(node -p "require('./package.json').devDependencies.electron")
+          echo "Adding electron@$ELECTRON_VERSION to optionalDependencies"
+          # Add electron to optionalDependencies using npm pkg
+          npm pkg set optionalDependencies.electron="$ELECTRON_VERSION"
+          # Remove electron from devDependencies to avoid duplication
+          npm pkg delete devDependencies.electron
+          echo "Updated package.json for npm publish"
+
       - name: Publish to npm
         run: npm publish --access public
         env:
