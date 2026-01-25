@@ -27,6 +27,8 @@ const projectRoot = join(__dirname, '..');
 const packageJsonPath = join(projectRoot, 'package.json');
 const backupPath = join(projectRoot, 'package.json.backup');
 const envPath = join(projectRoot, '.env');
+const npmrcPath = join(projectRoot, '.npmrc');
+const npmrcBackupPath = join(projectRoot, '.npmrc.backup');
 
 // Load .env file if exists
 function loadEnv() {
@@ -52,7 +54,9 @@ const args = process.argv.slice(2);
 const showHelp = args.includes('--help') || args.includes('-h');
 const dryRun = args.includes('--dry-run');
 const skipBuild = args.includes('--skip-build');
-const version = args.find(arg => !arg.startsWith('--'));
+const tagIndex = args.findIndex(arg => arg === '--tag');
+const tag = tagIndex !== -1 && args[tagIndex + 1] ? args[tagIndex + 1] : 'beta';
+const version = args.find(arg => !arg.startsWith('--') && arg !== tag);
 
 function printHelp() {
   console.log(`
@@ -60,11 +64,14 @@ Usage: npm run publish [version] [options]
 
 Arguments:
   version           Version to publish (e.g., 0.1.7-beta.1)
+                    MUST contain "-beta" to prevent overwriting production packages
                     If not specified, uses current version from package.json
 
 Options:
   --dry-run         Simulate publish without actually publishing
   --skip-build      Skip the build step (use existing dist/)
+  --tag <tag>       npm dist-tag to publish under (default: "beta")
+                    Use "beta" to avoid overwriting the "latest" tag
   --help, -h        Show this help message
 
 Environment:
@@ -125,6 +132,33 @@ function restore() {
   }
 }
 
+function backupNpmrc() {
+  if (existsSync(npmrcPath)) {
+    copyFileSync(npmrcPath, npmrcBackupPath);
+    log('Backed up existing .npmrc');
+    return true;
+  }
+  return false;
+}
+
+function restoreNpmrc(hadExisting) {
+  if (hadExisting && existsSync(npmrcBackupPath)) {
+    copyFileSync(npmrcBackupPath, npmrcPath);
+    unlinkSync(npmrcBackupPath);
+    log('Restored .npmrc');
+  } else if (!hadExisting && existsSync(npmrcPath)) {
+    unlinkSync(npmrcPath);
+    log('Removed temporary .npmrc');
+  }
+}
+
+function setupNpmAuth(token) {
+  // Create .npmrc with auth token for registry.npmjs.org
+  const npmrcContent = `//registry.npmjs.org/:_authToken=${token}\n`;
+  writeFileSync(npmrcPath, npmrcContent);
+  log('Created .npmrc with auth token');
+}
+
 function run(command, options = {}) {
   log(`Running: ${command}`);
   try {
@@ -155,11 +189,31 @@ async function main() {
     log('DRY RUN MODE - will not actually publish');
   }
 
-  // Step 1: Backup package.json
+  // Step 1: Check NPM_TOKEN early
+  const npmToken = process.env.NPM_TOKEN;
+  if (!dryRun && !npmToken) {
+    error('NPM_TOKEN not found. Please set it in .env file or environment variable.');
+    process.exitCode = 1;
+    return;
+  }
+
+  // Step 1.5: Validate version contains "-beta" to prevent overwriting production packages
+  const currentPkg = readPackageJson();
+  const publishVersion = version || currentPkg.version;
+  if (!publishVersion.includes('-beta')) {
+    error(`Version "${publishVersion}" must contain "-beta" for local publishing.`);
+    error('This prevents accidentally overwriting production packages.');
+    error('Example: npm run publish 0.1.7-beta.1');
+    process.exitCode = 1;
+    return;
+  }
+
+  // Step 2: Backup package.json and .npmrc
   backup();
+  const hadExistingNpmrc = backupNpmrc();
 
   try {
-    // Step 2: Read and modify package.json
+    // Step 3: Read and modify package.json
     const pkg = readPackageJson();
 
     // Set version if provided
@@ -189,7 +243,7 @@ async function main() {
     writePackageJson(pkg);
     success('Updated package.json for publishing');
 
-    // Step 3: Build (skip if --skip-build)
+    // Step 4: Build (skip if --skip-build)
     if (skipBuild) {
       log('Skipping build (--skip-build)');
     } else {
@@ -197,20 +251,19 @@ async function main() {
       run('npm run build');
     }
 
-    // Step 4: Check NPM_TOKEN
-    const npmToken = process.env.NPM_TOKEN;
-    if (!dryRun && !npmToken) {
-      throw new Error('NPM_TOKEN not found. Please set it in .env file or environment variable.');
+    // Step 5: Setup npm authentication via .npmrc
+    if (npmToken) {
+      setupNpmAuth(npmToken);
     }
 
-    // Step 5: Publish (use --ignore-scripts to avoid recursive publish script call)
-    const publishEnv = npmToken ? { ...process.env, NODE_AUTH_TOKEN: npmToken } : process.env;
+    // Step 6: Publish (use --ignore-scripts to avoid recursive publish script call)
+    // Use --tag to avoid overwriting 'latest' tag (default: beta)
     if (dryRun) {
-      log('Dry run: npm publish --dry-run --access public');
-      run('npm publish --dry-run --access public --ignore-scripts', { env: publishEnv });
+      log(`Dry run: npm publish --dry-run --access public --tag ${tag}`);
+      run(`npm publish --dry-run --access public --tag ${tag} --ignore-scripts`);
     } else {
-      log('Publishing to npm...');
-      run('npm publish --access public --ignore-scripts', { env: publishEnv });
+      log(`Publishing to npm with tag "${tag}"...`);
+      run(`npm publish --access public --tag ${tag} --ignore-scripts`);
     }
 
     success(`Successfully published markpdfdown@${pkg.version}${dryRun ? ' (dry run)' : ''}`);
@@ -219,8 +272,9 @@ async function main() {
     error(err.message);
     process.exitCode = 1;
   } finally {
-    // Step 5: Always restore package.json
+    // Always restore package.json and .npmrc
     restore();
+    restoreNpmrc(hadExistingNpmrc);
   }
 }
 

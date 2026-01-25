@@ -38,3 +38,4 @@ settings.local.json
 
 # Publish backup
 package.json.backup
+.npmrc.backup
