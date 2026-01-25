@@ -28,7 +28,7 @@
 التشغيل مباشرة باستخدام npx (يتطلب Node.js 18+):
 
 ```bash
-npx markpdfdown
+npx -y markpdfdown
 ```
 
 ### تحميل المثبت

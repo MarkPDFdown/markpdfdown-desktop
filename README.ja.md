@@ -26,7 +26,7 @@
 npxで直接実行（Node.js 18+が必要）：
 
 ```bash
-npx markpdfdown
+npx -y markpdfdown
 ```
 
 ### インストーラーのダウンロード

@@ -26,7 +26,7 @@
 Запуск напрямую через npx (требуется Node.js 18+):
 
 ```bash
-npx markpdfdown
+npx -y markpdfdown
 ```
 
 ### Скачать установщик

@@ -26,7 +26,7 @@ A desktop application that converts PDF documents to Markdown format using Large
 Run directly with npx (requires Node.js 18+):
 
 ```bash
-npx markpdfdown
+npx -y markpdfdown
 ```
 
 ### Download Installer
