@@ -26,9 +26,18 @@ jobs:
           token: ${{ github.token }}
           tag: ${{ github.ref_name }}
 
-      - name: Commit CHANGELOG.md
-        uses: stefanzweifel/git-auto-commit-action@v4
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
         with:
-          branch: master
-          commit_message: "docs: update CHANGELOG.md for ${{ github.ref_name }} [skip ci]"
-          file_pattern: CHANGELOG.md
+          token: ${{ github.token }}
+          commit-message: "docs: update CHANGELOG.md for ${{ github.ref_name }}"
+          title: "docs: update CHANGELOG.md for ${{ github.ref_name }}"
+          body: |
+            Auto-generated changelog update for release ${{ github.ref_name }}.
+
+            This PR was automatically created by the changelog workflow.
+          branch: changelog/${{ github.ref_name }}
+          base: master
+          add-paths: CHANGELOG.md
+          labels: documentation,automated
+          delete-branch: true
