@@ -15,6 +15,7 @@
   "files": [
     "bin/",
     "dist/",
+    "public/icons/",
     "src/core/infrastructure/db/migrations/",
     "src/core/infrastructure/db/schema.prisma"
   ],
@@ -63,6 +64,10 @@
         "filter": [
           "**/*.sql"
         ]
+      },
+      {
+        "from": "public/icons",
+        "to": "icons"
       }
     ],
     "asarUnpack": [
