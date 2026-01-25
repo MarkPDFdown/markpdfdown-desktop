@@ -36,7 +36,8 @@
     "test:renderer": "vitest run --config vitest.config.renderer.ts",
     "test:watch": "vitest watch",
     "test:coverage": "vitest run --coverage",
-    "prepare": "husky"
+    "prepare": "husky",
+    "publish": "node scripts/publish.js"
   },
   "build": {
     "appId": "com.markpdfdown.desktop",

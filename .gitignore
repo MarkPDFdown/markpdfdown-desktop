@@ -30,3 +30,11 @@ files
 coverage
 
 settings.local.json
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Publish backup
+package.json.backup
