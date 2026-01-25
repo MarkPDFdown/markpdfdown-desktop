@@ -19,6 +19,7 @@
     "src/core/infrastructure/db/schema.prisma"
   ],
   "scripts": {
+    "typecheck": "tsc --build --noEmit",
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
     "dev": "npm run generate && electron-vite dev",
     "build": "npm run generate && electron-vite build",
