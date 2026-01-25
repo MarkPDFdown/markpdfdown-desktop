@@ -67,6 +67,7 @@ interface WindowAPI {
     getByPage: (taskId: string, page: number) => Promise<any>;
     getAllByTask: (taskId: string) => Promise<any>;
     retry: (pageId: number) => Promise<any>;
+    retryFailed: (taskId: string) => Promise<any>;
   };
   file: {
     selectDialog: () => Promise<any>;

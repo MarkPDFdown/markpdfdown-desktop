@@ -9,6 +9,8 @@ export interface Task {
     model_name?: string;
     progress?: number;
     status?: number;
+    completed_count?: number;
+    failed_count?: number;
     error?: string | null;
     worker_id?: string | null;
     merged_path?: string | null;

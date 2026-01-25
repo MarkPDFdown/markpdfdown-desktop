@@ -4,6 +4,7 @@ import {
   ClockCircleFilled,
   CloseCircleFilled,
   DeleteOutlined,
+  DownOutlined,
   FileMarkdownOutlined,
   FilePdfTwoTone,
   LoadingOutlined,
@@ -13,6 +14,7 @@ import {
 import {
   App,
   Button,
+  Dropdown,
   Pagination,
   Progress,
   Space,
@@ -21,6 +23,7 @@ import {
   Tooltip,
   Typography,
 } from "antd";
+import type { MenuProps } from "antd";
 import React, { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -78,6 +81,7 @@ const Preview: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [retryingFailed, setRetryingFailed] = useState(false);
 
   // 获取任务元数据
   const fetchTask = useCallback(async () => {
@@ -276,7 +280,7 @@ const Preview: React.FC = () => {
     });
   };
 
-  // 重试任务
+  // 重试任务（全部重试）
   const handleRetryTask = async () => {
     if (!id) return;
 
@@ -297,6 +301,35 @@ const Preview: React.FC = () => {
         } catch (error) {
           console.error('重试失败:', error);
           message.error(t('preview.retry_failed'));
+        }
+      }
+    });
+  };
+
+  // 重试失败页
+  const handleRetryFailed = async () => {
+    if (!id) return;
+
+    modal.confirm({
+      title: t('preview.confirm_retry_failed'),
+      content: t('preview.confirm_retry_failed_content'),
+      okText: tCommon('common.confirm'),
+      cancelText: tCommon('common.cancel'),
+      onOk: async () => {
+        setRetryingFailed(true);
+        try {
+          const result = await window.api.taskDetail.retryFailed(id);
+
+          if (result.success) {
+            message.success(t('preview.retry_failed_success', { count: result.data?.retried || 0 }));
+          } else {
+            message.error(result.error || t('preview.retry_failed'));
+          }
+        } catch (error) {
+          console.error('重试失败页失败:', error);
+          message.error(t('preview.retry_failed'));
+        } finally {
+          setRetryingFailed(false);
         }
       }
     });
@@ -438,38 +471,113 @@ const Preview: React.FC = () => {
             >
               {t('preview.download')}
             </Button>
-            {/* 取消: status > 0 && status < 6 (PENDING, SPLITTING, PROCESSING, READY_TO_MERGE, MERGING) */}
-            {task?.status && task.status > 0 && task.status < 6 && (
-              <Button
-                icon={<StopOutlined />}
-                variant="filled"
-                onClick={handleCancel}
-              >
-                {t('preview.cancel')}
-              </Button>
-            )}
-            {/* 重试: status === 0 (FAILED) */}
-            {task?.status === 0 && (
-              <Button
-                color="primary"
-                icon={<ReloadOutlined />}
-                variant="filled"
-                onClick={handleRetryTask}
-              >
-                {t('preview.retry')}
-              </Button>
-            )}
-            {/* 删除: status === 0 || status >= 6 (FAILED, COMPLETED, CANCELLED, PARTIAL_FAILED) */}
-            {(task?.status === 0 || (task?.status && task.status >= 6)) && (
-              <Button
-                color="danger"
-                icon={<DeleteOutlined />}
-                variant="filled"
-                onClick={handleDelete}
-              >
-                {t('preview.delete')}
-              </Button>
-            )}
+            {/* 操作下拉菜单 */}
+            {(() => {
+              const status = task?.status;
+              const failedCount = task?.failed_count || 0;
+
+              // 构建菜单项
+              const menuItems: MenuProps['items'] = [];
+
+              // 重试失败页: status === 8 && failed_count > 0
+              if (status === 8 && failedCount > 0) {
+                menuItems.push({
+                  key: 'retry_failed',
+                  icon: <ReloadOutlined />,
+                  label: t('preview.retry_failed'),
+                  onClick: handleRetryFailed,
+                  disabled: retryingFailed,
+                });
+              }
+
+              // 全部重试: status === 0
+              if (status === 0) {
+                menuItems.push({
+                  key: 'retry_all',
+                  icon: <ReloadOutlined />,
+                  label: t('preview.retry_all'),
+                  onClick: handleRetryTask,
+                });
+              }
+
+              // 分隔线
+              if (menuItems.length > 0 && ((status !== undefined && status > 0 && status < 6) || status === 0 || (status !== undefined && status >= 6))) {
+                menuItems.push({ type: 'divider' });
+              }
+
+              // 取消: status > 0 && status < 6
+              if (status !== undefined && status > 0 && status < 6) {
+                menuItems.push({
+                  key: 'cancel',
+                  icon: <StopOutlined />,
+                  label: t('preview.cancel'),
+                  onClick: handleCancel,
+                });
+              }
+
+              // 删除: status === 0 || status >= 6
+              if (status === 0 || (status !== undefined && status >= 6)) {
+                menuItems.push({
+                  key: 'delete',
+                  icon: <DeleteOutlined />,
+                  label: t('preview.delete'),
+                  danger: true,
+                  onClick: handleDelete,
+                });
+              }
+
+              // 如果没有菜单项，不显示下拉按钮
+              if (menuItems.length === 0) return null;
+
+              // 判断是否有主要操作（重试失败页或全部重试）
+              const hasRetryFailed = status === 8 && failedCount > 0;
+              const hasRetryAll = status === 0;
+              const hasPrimaryAction = hasRetryFailed || hasRetryAll;
+
+              if (hasPrimaryAction) {
+                // 有主要操作时，使用 Dropdown.Button
+                const primaryLabel = hasRetryFailed ? t('preview.retry_failed') : t('preview.retry_all');
+                const primaryAction = hasRetryFailed ? handleRetryFailed : handleRetryTask;
+                const primaryIcon = hasRetryFailed && retryingFailed ? <LoadingOutlined /> : <ReloadOutlined />;
+
+                // 过滤掉主按钮对应的菜单项，避免重复
+                const filteredMenuItems = menuItems.filter(item => {
+                  if (!item || item.type === 'divider') return true;
+                  if (hasRetryFailed && (item as any).key === 'retry_failed') return false;
+                  if (hasRetryAll && (item as any).key === 'retry_all') return false;
+                  return true;
+                });
+
+                // 移除开头的分隔线
+                while (filteredMenuItems.length > 0 && filteredMenuItems[0]?.type === 'divider') {
+                  filteredMenuItems.shift();
+                }
+
+                return (
+                  <Dropdown.Button
+                    menu={{ items: filteredMenuItems }}
+                    onClick={primaryAction}
+                    icon={<DownOutlined />}
+                    disabled={hasRetryFailed && retryingFailed}
+                  >
+                    <Space>
+                      {primaryIcon}
+                      {primaryLabel}
+                    </Space>
+                  </Dropdown.Button>
+                );
+              } else {
+                // 没有主要操作时，使用普通 Dropdown，点击按钮即展开菜单
+                return (
+                  <Dropdown menu={{ items: menuItems }} trigger={['click']}>
+                    <Button>
+                      {t('preview.more_actions')}
+                      <DownOutlined />
+                    </Button>
+                  </Dropdown>
+                );
+              }
+            })()}
           </Space>
         </div>
 
