@@ -55,13 +55,6 @@ npm run migrate:dev
 npm run dev
 ```
 
-### Environment Variables
-Create `.env` file in project root (optional, for database URL override):
-```env
-DATABASE_URL="file:./dev.db"
-```
-Default SQLite database location: `src/core/infrastructure/db/dev.db` (gitignored)
-
 ## Testing
 
 本项目已配置完整的测试套件，使用 Vitest 作为测试框架。
@@ -83,30 +76,6 @@ npm run test:watch
 # 生成覆盖率报告
 npm run test:coverage
 ```
-
-### 测试统计
-- **测试文件数**: 30 个
-- **测试用例数**: 72+ 个 (单元测试)
-- **覆盖率**: >75% (LLM Clients: 90-95%)
-
-### 测试覆盖范围
-- ✅ **LLM 客户端**: OpenAI, Anthropic, Gemini, Ollama, OpenAI Responses
-- ✅ **IPC 处理器**: 所有 Provider/Model/Task/TaskDetail/File/Completion 操作
-- ✅ **数据访问层**: Provider, Model, Task DAL
-- ✅ **Repositories**: Provider, Model, Task, TaskDetail
-- ✅ **业务逻辑**: File, Model, Task 逻辑
-- ✅ **Workers**: WorkerBase, SplitterWorker, ConverterWorker, MergerWorker
-- ✅ **Events**: EventBus
-- ✅ **Splitters**: PDFSplitter, ImageSplitter, SplitterFactory, PageRangeParser
-- ✅ **React 组件**: UploadPanel
-
-### 测试文件位置
-- 单元测试: `src/**/__tests__/*.test.ts`
-- 组件测试: `src/renderer/components/__tests__/*.test.tsx`
-- IPC 测试: `src/main/ipc/__tests__/*.test.ts`
-- 核心模块测试: `src/core/**/__tests__/*.test.ts`
-- 测试辅助: `tests/helpers/`, `tests/fixtures/`
-- 配置文件: `vitest.config.ts`, `vitest.config.renderer.ts`
 
 ### 详细文档
 完整的测试指南请参阅: **[docs/TESTING_GUIDE.md](./docs/TESTING_GUIDE.md)**
@@ -153,25 +122,6 @@ npm run test:coverage
 - **Database Models**: PascalCase singular (e.g., `Provider`, `Task`, `Model`, `TaskDetail`)
 - **DAL exports**: Default export object with methods (e.g., `export default { findAll, create, ... }`)
 
-### Import Order
-```typescript
-// 1. Node.js built-ins
-// 2. Third-party packages
-// 3. @ aliases (frontend only - project imports)
-// 4. Relative imports (./, ../)
-
-// Backend example (no @ alias, uses .js extensions):
-import express, { Request, Response, NextFunction } from 'express';
-import cors from 'cors';
-import taskDal from '../dal/TaskDal.js';
-import { prisma } from '../db/index.js';
-
-// Frontend example (with @ alias):
-import { useState } from 'react';
-import { Button } from 'antd';
-import Layout from '@/components/Layout';
-import './styles.css';
-```
 
 ### Backend Architecture (Clean Architecture)
 The backend follows clean architecture principles with clear separation of concerns, organized into four layers:
@@ -257,14 +207,20 @@ The domain layer contains **only interfaces and pure business logic** with no ex
 
 ### Internationalization (i18n)
 - **Library**: react-i18next (v16.5.3)
-- **Supported Languages**: Chinese (zh-CN), English (en-US)
+- **Supported Languages**:
+  - English (en-US)
+  - Chinese Simplified (zh-CN)
+  - Japanese (ja-JP)
+  - Russian (ru-RU)
+  - Arabic (ar-SA)
+  - Persian (fa-IR)
 - **Context Provider**: `<I18nProvider>` wraps the app at `src/renderer/App.tsx`
 - **Key Files**:
   - `src/renderer/contexts/I18nContext.tsx` - Context provider with i18next initialization
   - `src/renderer/contexts/I18nContextDefinition.ts` - TypeScript type definitions
   - `src/renderer/hooks/useLanguage.ts` - Hook for language switching and Antd locale integration
   - `src/renderer/components/LanguageSwitcher.tsx` - Language switcher UI component
-  - `src/renderer/locales/` - Translation files organized by namespace
+  - `src/renderer/locales/` - Translation files organized by language and namespace
 - **Translation Namespaces**:
   - `common` - Common UI text (buttons, status labels, copyright)
   - `home` - Home page content
@@ -309,107 +265,19 @@ The domain layer contains **only interfaces and pure business logic** with no ex
 - **Initialization**: `initDatabase()` runs migrations on server start (via `src/core/infrastructure/db/Migration.ts`)
 
 ### Git Workflow
-- **Conventional Commits**: Use prefixes: `feat`, `fix`, `chore`, `docs`, `refactor`, `style`, `test`, `perf`
+- **Conventional Commits**: Use prefixes: `feat`, `fix`, `chore`, `docs`, `refactor`, `style`, `test`, `perf`, `ci`, `build`, `revert`
+  - Format: `type(scope): description` (scope is optional)
+  - Example: `feat(auth): ✨ add login feature`
+  - CI validates commit messages on push/PR to master (merge commits are excluded)
 - **Branch**: Main branch is `master`
 - **No Force Pushes**: Never force push to main/master
 - **Pre-commit**: Run `npm run lint` before committing
 - **Lint-staged**: Configured for automatic linting/formatting on commit (requires husky setup)
-
-### File Structure
-```
-src/
-├── main/           # Electron main process
-│   ├── ipc/        # IPC handlers
-│   │   ├── handlers.ts    # Entry point (re-exports from handlers/)
-│   │   └── handlers/      # Modular IPC handlers
-│   │       ├── index.ts            # Handler registration
-│   │       ├── provider.handler.ts # Provider CRUD handlers
-│   │       ├── model.handler.ts    # Model CRUD handlers
-│   │       ├── task.handler.ts     # Task CRUD handlers
-│   │       ├── taskDetail.handler.ts # TaskDetail handlers
-│   │       ├── file.handler.ts     # File operation handlers
-│   │       └── completion.handler.ts # LLM completion handlers
-│   └── index.ts    # Main process entry point
-├── preload/        # Preload scripts for IPC
-│   └── index.ts    # Preload script exposing window.api
-├── shared/         # Shared code between main and renderer
-│   ├── ipc/        # IPC channel definitions
-│   └── types/      # Shared TypeScript types
-├── renderer/       # React frontend
-│   ├── components/ # Reusable UI components
-│   ├── pages/      # Route pages (Home, List, Preview, Settings)
-│   ├── contexts/   # React contexts (I18nContext)
-│   ├── hooks/      # Custom React hooks (useLanguage)
-│   ├── locales/    # Translation files (zh-CN, en-US)
-│   ├── electron.d.ts # TypeScript definitions for window.api
-│   ├── App.tsx     # Root component
-│   └── main.tsx    # Frontend entry point
-└── core/           # Core business logic (Clean Architecture)
-    ├── index.ts    # Top-level exports
-    │
-    ├── infrastructure/  # External dependencies layer
-    │   ├── index.ts
-    │   ├── db/          # Database
-    │   │   ├── schema.prisma
-    │   │   ├── migrations/
-    │   │   ├── index.ts      # Prisma client export
-    │   │   └── Migration.ts
-    │   ├── config/      # Configuration
-    │   │   └── worker.config.ts
-    │   ├── services/    # Infrastructure services
-    │   │   ├── FileService.ts
-    │   │   └── __tests__/
-    │   └── adapters/    # External adapters
-    │       ├── llm/     # LLM client implementations
-    │       │   ├── LLMClient.ts      # Base class + Factory (implements ILLMClient)
-    │       │   ├── OpenAIClient.ts
-    │       │   ├── AnthropicClient.ts
-    │       │   ├── GeminiClient.ts
-    │       │   ├── OllamaClient.ts
-    │       │   ├── OpenAIResponsesClient.ts
-    │       │   └── __tests__/
-    │       └── split/   # File splitter implementations
-    │           ├── PDFSplitter.ts    # (implements ISplitter)
-    │           ├── ImageSplitter.ts  # (implements ISplitter)
-    │           ├── SplitterFactory.ts
-    │           ├── ImagePathUtil.ts
-    │           └── __tests__/
-    │
-    ├── application/     # Application logic layer
-    │   ├── index.ts
-    │   ├── services/    # Application services
-    │   │   ├── WorkerOrchestrator.ts
-    │   │   ├── ModelService.ts
-    │   │   ├── interfaces/
-    │   │   └── __tests__/
-    │   └── workers/     # Background workers
-    │       ├── WorkerBase.ts
-    │       ├── SplitterWorker.ts
-    │       ├── ConverterWorker.ts
-    │       ├── MergerWorker.ts
-    │       └── __tests__/
-    │
-    ├── domain/          # Domain logic layer (interfaces + pure logic only)
-    │   ├── index.ts
-    │   ├── repositories/ # Data access
-    │   │   ├── ProviderRepository.ts
-    │   │   ├── ModelRepository.ts
-    │   │   ├── TaskRepository.ts
-    │   │   ├── TaskDetailRepository.ts
-    │   │   └── __tests__/
-    │   ├── split/       # Splitter interfaces (no external deps)
-    │   │   ├── ISplitter.ts      # Interface + types
-    │   │   ├── PageRangeParser.ts # Pure logic
-    │   │   └── __tests__/
-    │   └── llm/         # LLM interfaces (no external deps)
-    │       └── ILLMClient.ts     # Interface + all types
-    │
-    └── shared/          # Cross-cutting concerns
-        ├── index.ts
-        └── events/      # Event system
-            ├── EventBus.ts
-            └── __tests__/
-```
+- **CI Workflows** (`.github/workflows/`):
+  - `ci.yml` - Runs on push/PR to master: commit validation, typecheck, lint, test, build
+  - `changelog.yml` - Auto-updates CHANGELOG.md on release
+  - `draft-release.yml` - Creates draft release on tag push
+  - `release.yml` - Builds and uploads assets on release, publishes to npm
 
 ### Adding New Features
 1. Create Prisma schema changes in `src/core/infrastructure/db/schema.prisma`
@@ -507,64 +375,15 @@ src/
      })
    })
    ```
-15. **Add i18n translations** (if UI changes):
-   ```typescript
-   // Add translation keys to src/renderer/locales/zh-CN/namespace.json
-   {
-     "key": "中文文本"
-   }
-
-   // Add translation keys to src/renderer/locales/en-US/namespace.json
-   {
-     "key": "English text"
-   }
-
-   // Use in component
-   const { t } = useTranslation('namespace');
-   return <div>{t('key')}</div>
-   ```
+15. **Add i18n translations** (if UI changes)
 16. **Run tests** to ensure everything works:
    ```bash
    npm run test:unit        # Run unit tests
    npm run test:renderer    # Run component tests (if applicable)
    npm run test:coverage    # Check coverage
    ```
-17. Run `npm run lint` and `npm run dev` to test
+17. Run `npm run lint` and `npm run typecheck` and `npm run dev` to test
 
-### IPC API Reference
-All communication via `window.api.*` returning `Promise<IpcResponse>`:
-
-**Providers**:
-- `window.api.provider.getAll()` - Get all providers
-- `window.api.provider.getById(id)` - Get provider by ID
-- `window.api.provider.create(data)` - Create provider
-- `window.api.provider.update(id, data)` - Update provider
-- `window.api.provider.delete(id)` - Delete provider
-- `window.api.provider.updateStatus(id, status)` - Update provider status
-
-**Models**:
-- `window.api.model.getAll()` - Get all models (grouped by provider)
-- `window.api.model.getByProvider(providerId)` - Get models by provider
-- `window.api.model.create(data)` - Create model
-- `window.api.model.delete(id, provider)` - Delete model
-
-**Tasks**:
-- `window.api.task.create(tasks[])` - Create tasks (batch)
-- `window.api.task.getAll({page, pageSize})` - Get tasks (paginated)
-- `window.api.task.update(id, data)` - Update task
-- `window.api.task.delete(id)` - Delete task
-
-**Files**:
-- `window.api.file.selectDialog()` - Open file selection dialog
-- `window.api.file.upload(taskId, filePath)` - Upload file
-- `window.api.file.uploadMultiple(taskId, filePaths[])` - Upload multiple files
-
-**Completion**:
-- `window.api.completion.markImagedown(providerId, modelId, url)` - Convert image to markdown
-- `window.api.completion.testConnection(providerId, modelId)` - Test model connection
-
-**Shell**:
-- `window.api.shell.openExternal(url)` - Open URL in default browser
 
 ### Electron Build Configuration
 - **Builder**: electron-builder
@@ -572,9 +391,13 @@ All communication via `window.api.*` returning `Promise<IpcResponse>`:
 - **ASAR**: Enabled (with unpack for `.node`, `.dll`, `.metal`, `.exp`, `.lib` files)
 - **Extra Resources**:
   - Prisma client files (`node_modules/.prisma/**/*`, `node_modules/@prisma/client/**/*`)
-  - Migration files (`src/core/db/migrations/*.sql` → `migrations/`)
+  - Migration files (`src/core/infrastructure/db/migrations/*.sql` → `migrations/`)
 - **Platform-specific**:
   - Windows: NSIS installer (one-click: false, allows custom install location)
   - macOS: DMG with `.icns` icon
   - Linux: AppImage with PNG icons
 - **Artifact Naming**: `${productName}-${version}-${arch}.${ext}` (e.g., `MarkPDFdown-1.0.0-x64.exe`)
+
+### IPC API Reference
+
+For complete IPC API documentation, see: **[docs/IPC_API.md](./docs/IPC_API.md)**
