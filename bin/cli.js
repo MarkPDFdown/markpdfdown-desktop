@@ -21,9 +21,15 @@ async function ensurePrismaClient() {
   if (!existsSync(prismaClientPath)) {
     console.log('🔧 Prisma client not found. Generating...');
     try {
+      // 设置临时的 DATABASE_URL，prisma generate 需要此变量存在
+      // 实际的数据库路径在运行时由 db/index.ts 动态决定
       execSync('npx prisma generate --schema=./src/core/infrastructure/db/schema.prisma', {
         cwd: projectRoot,
-        stdio: 'inherit'
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          DATABASE_URL: 'file:./placeholder.db'
+        }
       });
       console.log('✅ Prisma client generated successfully.');
     } catch (error) {
