@@ -1,4 +1,4 @@
-name: Update changelog and draft release
+name: Update changelog
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
         default: "1.0.0"
 
 jobs:
-  deploy:
+  changelog:
     runs-on: ubuntu-latest
 
     steps:
@@ -25,16 +25,6 @@ jobs:
         with:
           token: ${{ github.token }}
           tag: ${{ github.ref_name }}
-
-      - name: Create Release
-        uses: ncipollo/release-action@v1.12.0
-        with:
-          allowUpdates: true
-          draft: true
-          makeLatest: false
-          name: ${{ github.ref_name }}
-          body: ${{ steps.changelog.outputs.changes }}
-          token: ${{ github.token }}
 
       - name: Commit CHANGELOG.md
         uses: stefanzweifel/git-auto-commit-action@v4
