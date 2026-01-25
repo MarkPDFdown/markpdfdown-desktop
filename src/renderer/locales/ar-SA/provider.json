@@ -29,6 +29,7 @@
     "cancel": "إلغاء"
   },
   "messages": {
+    "fetch_providers_failed": "فشل في جلب قائمة المزودين",
     "fetch_details_failed": "فشل في جلب تفاصيل المزود",
     "fetch_models_failed": "فشل في جلب قائمة النماذج",
     "delete_model_success": "تم حذف النموذج بنجاح",

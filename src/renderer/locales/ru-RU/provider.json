@@ -29,6 +29,7 @@
     "cancel": "Отмена"
   },
   "messages": {
+    "fetch_providers_failed": "Не удалось получить список провайдеров",
     "fetch_details_failed": "Не удалось получить данные провайдера",
     "fetch_models_failed": "Не удалось получить список моделей",
     "delete_model_success": "Модель успешно удалена",

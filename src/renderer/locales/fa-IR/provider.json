@@ -29,6 +29,7 @@
     "cancel": "لغو"
   },
   "messages": {
+    "fetch_providers_failed": "دریافت لیست ارائه‌دهندگان ناموفق بود",
     "fetch_details_failed": "دریافت جزئیات ارائه‌دهنده ناموفق بود",
     "fetch_models_failed": "دریافت لیست مدل‌ها ناموفق بود",
     "delete_model_success": "مدل با موفقیت حذف شد",

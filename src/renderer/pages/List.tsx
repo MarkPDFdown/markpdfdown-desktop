@@ -48,7 +48,7 @@ const List: React.FC = () => {
         message.error(result.error || t('messages.fetch_failed'));
       }
     } catch (error) {
-      console.error("获取任务列表失败:", error);
+      console.error("Failed to fetch task list:", error);
       message.error(t('messages.fetch_failed'));
     } finally {
       setLoading(false);
@@ -174,7 +174,7 @@ const List: React.FC = () => {
             message.error(result.error || t('messages.delete_failed'));
           }
         } catch (error) {
-          console.error("删除任务失败:", error);
+          console.error("Failed to delete task:", error);
           message.error(t('messages.delete_failed'));
         }
       },
@@ -202,7 +202,7 @@ const List: React.FC = () => {
             message.error(result.error || t('messages.action_failed', { action: statusText }));
           }
         } catch (error) {
-          console.error(`${statusText}任务失败:`, error);
+          console.error(`Failed to ${statusText} task:`, error);
           message.error(t('messages.action_failed', { action: statusText }));
         }
       },

@@ -93,15 +93,15 @@ const Preview: React.FC = () => {
       if (result.success && result.data) {
         setTask(result.data);
       } else {
-        message.error(result.error || '获取任务信息失败');
+        message.error(result.error || t('preview.fetch_task_failed'));
         navigate('/list');
       }
     } catch (error) {
-      console.error('获取任务失败:', error);
-      message.error('获取任务信息失败');
+      console.error('Failed to fetch task:', error);
+      message.error(t('preview.fetch_task_failed'));
       navigate('/list');
     }
-  }, [id, message, navigate]);
+  }, [id, message, navigate, t]);
 
   // 获取页面详情
   const fetchPageDetail = useCallback(async (page: number) => {
@@ -117,17 +117,17 @@ const Preview: React.FC = () => {
         setTaskDetail(result.data);
         setImageError(!result.data.imageExists);
       } else {
-        message.error(result.error || '获取页面详情失败');
+        message.error(result.error || t('preview.fetch_page_failed'));
         setTaskDetail(null);
       }
     } catch (error) {
-      console.error('获取页面详情失败:', error);
-      message.error('获取页面详情失败');
+      console.error('Failed to fetch page detail:', error);
+      message.error(t('preview.fetch_page_failed'));
       setTaskDetail(null);
     } finally {
       setLoading(false);
     }
-  }, [id, message]);
+  }, [id, message, t]);
 
   // 监听任务事件
   useEffect(() => {
@@ -150,7 +150,7 @@ const Preview: React.FC = () => {
           break;
 
         case 'task:deleted':
-          message.info('任务已被删除');
+          message.info(t('preview.task_deleted'));
           navigate('/list');
           break;
       }
@@ -202,10 +202,10 @@ const Preview: React.FC = () => {
   // 检查任务状态
   useEffect(() => {
     if (task && task.status !== undefined && task.status < 2) {
-      message.warning('任务尚未开始处理,无法预览');
+      message.warning(t('preview.task_not_started'));
       navigate('/list');
     }
-  }, [task, message, navigate]);
+  }, [task, message, navigate, t]);
 
   // 下载处理
   const handleDownload = async () => {
@@ -215,13 +215,13 @@ const Preview: React.FC = () => {
       const result = await window.api.file.downloadMarkdown(id);
 
       if (result.success) {
-        message.success('下载成功');
+        message.success(t('preview.download_success'));
       } else {
-        message.error(result.error || '下载失败');
+        message.error(result.error || t('preview.download_failed'));
       }
     } catch (error) {
-      console.error('下载失败:', error);
-      message.error('下载失败');
+      console.error('Download failed:', error);
+      message.error(t('preview.download_failed'));
     }
   };
 
@@ -349,15 +349,15 @@ const Preview: React.FC = () => {
       const result = await window.api.taskDetail.retry(taskDetail.id);
 
       if (result.success) {
-        message.success('页面已加入重试队列');
+        message.success(t('preview.page_retry_success'));
         // 重新获取页面详情
         fetchPageDetail(currentPage);
       } else {
-        message.error(result.error || '重试失败');
+        message.error(result.error || t('preview.page_retry_failed'));
       }
     } catch (error) {
-      console.error('重试页面失败:', error);
-      message.error('重试失败');
+      console.error('Failed to retry page:', error);
+      message.error(t('preview.page_retry_failed'));
     } finally {
       setRetrying(false);
     }
@@ -617,7 +617,7 @@ const Preview: React.FC = () => {
                 <Spin size="large" />
               ) : imageError || !taskDetail?.imagePath ? (
                 <div style={{ textAlign: 'center', color: '#999' }}>
-                  <Text type="secondary">图片加载失败或不存在</Text>
+                  <Text type="secondary">{t('preview.image_load_failed')}</Text>
                 </div>
               ) : (
                 <img

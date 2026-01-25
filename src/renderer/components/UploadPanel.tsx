@@ -71,7 +71,7 @@ const UploadPanel: React.FC = () => {
           message.error(result.error || t('messages.fetch_models_failed'));
         }
       } catch (error) {
-        console.error("获取模型列表出错:", error);
+        console.error("Failed to fetch model list:", error);
         message.error(
           t('messages.fetch_models_failed') + ": " +
             (error instanceof Error ? error.message : String(error)),
@@ -145,7 +145,7 @@ const UploadPanel: React.FC = () => {
         setFileList([...fileList, ...newFiles]);
       }
     } catch (error) {
-      console.error("选择文件失败:", error);
+      console.error("Failed to select files:", error);
       message.error(
         t('messages.select_failed') + ": " +
           (error instanceof Error ? error.message : String(error)),
@@ -297,7 +297,7 @@ const UploadPanel: React.FC = () => {
             await window.api.task.delete(task.id);
           }
         } catch (error) {
-          console.error(`上传文件 ${file.name} 出错:`, error);
+          console.error(`Failed to upload file ${file.name}:`, error);
           message.error(t('messages.upload_failed', { filename: file.name }));
           // 删除任务
           await window.api.task.delete(task.id);
@@ -313,7 +313,7 @@ const UploadPanel: React.FC = () => {
         message.error(t('messages.upload_error'));
       }
     } catch (error) {
-      console.error("上传文件出错:", error);
+      console.error("Failed to upload files:", error);
       message.error(
         t('messages.upload_error') + ": " + (error instanceof Error ? error.message : String(error)),
       );

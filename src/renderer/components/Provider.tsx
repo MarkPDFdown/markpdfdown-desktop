@@ -108,7 +108,7 @@ const Provider: React.FC<ProviderProps> = ({
             setSuffix(data.suffix);
           }
         } catch (error) {
-          console.error("获取服务商详情出错:", error);
+          console.error("Failed to fetch provider details:", error);
         }
       };
 
@@ -132,7 +132,7 @@ const Provider: React.FC<ProviderProps> = ({
 
       setModels(result.data);
     } catch (error) {
-      console.error("获取模型列表出错:", error);
+      console.error("Failed to fetch models:", error);
       message.error(
         t('messages.fetch_models_failed') + ": " +
           (error instanceof Error ? error.message : String(error)),
@@ -160,7 +160,7 @@ const Provider: React.FC<ProviderProps> = ({
       // 刷新模型列表
       fetchModelsRef.current();
     } catch (error) {
-      console.error("删除模型出错:", error);
+      console.error("Failed to delete model:", error);
       message.error(
         t('messages.delete_model_failed') + ": " +
           (error instanceof Error ? error.message : String(error)),
@@ -193,7 +193,7 @@ const Provider: React.FC<ProviderProps> = ({
       // 刷新模型列表
       fetchModelsRef.current();
     } catch (error) {
-      console.error("添加模型出错:", error);
+      console.error("Failed to add model:", error);
       message.error(
         t('messages.add_model_failed') + ": " +
           (error instanceof Error ? error.message : String(error)),
@@ -219,7 +219,7 @@ const Provider: React.FC<ProviderProps> = ({
       setProviderData(result.data);
       message.success(t('messages.update_success'));
     } catch (error) {
-      console.error("更新服务商信息出错:", error);
+      console.error("Failed to update provider:", error);
       message.error(
         t('messages.update_failed') + ": " + (error instanceof Error ? error.message : String(error)),
       );
@@ -245,7 +245,7 @@ const Provider: React.FC<ProviderProps> = ({
       // 测试成功
       message.success(t('messages.test_success'));
     } catch (error) {
-      console.error("测试模型连接出错:", error);
+      console.error("Failed to test model connection:", error);
       message.error(
         t('messages.test_failed') + ": " +
           (error instanceof Error ? error.message : String(error)),
@@ -285,7 +285,7 @@ const Provider: React.FC<ProviderProps> = ({
 
               setProviderData(result.data);
             } catch (error) {
-              console.error("更新服务商状态出错:", error);
+              console.error("Failed to update provider status:", error);
             }
           }}
         />
@@ -478,7 +478,7 @@ const Provider: React.FC<ProviderProps> = ({
                   onProviderDeleted();
                 }
               } catch (error) {
-                console.error("删除服务商出错:", error);
+                console.error("Failed to delete provider:", error);
                 message.error(
                   t('messages.delete_provider_failed') + ": " +
                     (error instanceof Error ? error.message : String(error)),

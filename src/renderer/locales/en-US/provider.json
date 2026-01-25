@@ -29,6 +29,7 @@
     "cancel": "Cancel"
   },
   "messages": {
+    "fetch_providers_failed": "Failed to fetch provider list",
     "fetch_details_failed": "Failed to fetch provider details",
     "fetch_models_failed": "Failed to fetch model list",
     "delete_model_success": "Model deleted successfully",

@@ -29,6 +29,7 @@
     "cancel": "取消"
   },
   "messages": {
+    "fetch_providers_failed": "获取服务商列表失败",
     "fetch_details_failed": "获取服务商详情失败",
     "fetch_models_failed": "获取模型列表失败",
     "delete_model_success": "模型已成功删除",

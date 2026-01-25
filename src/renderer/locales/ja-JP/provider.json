@@ -29,6 +29,7 @@
     "cancel": "キャンセル"
   },
   "messages": {
+    "fetch_providers_failed": "プロバイダーリストの取得に失敗しました",
     "fetch_details_failed": "プロバイダーの詳細取得に失敗しました",
     "fetch_models_failed": "モデルリストの取得に失敗しました",
     "delete_model_success": "モデルの削除が完了しました",

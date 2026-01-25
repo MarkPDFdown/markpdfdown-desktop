@@ -48,7 +48,7 @@ const ModelService: React.FC = () => {
       const response = await window.api.provider.getAll();
 
       if (!response.success) {
-        throw new Error(response.error || "获取服务商列表失败");
+        throw new Error(response.error || t("messages.fetch_providers_failed"));
       }
 
       const providers: ProviderData[] = response.data;
@@ -83,7 +83,7 @@ const ModelService: React.FC = () => {
         setIsInitialLoad(false);
       }
     } catch (error) {
-      console.error("获取服务商列表出错:", error);
+      console.error("Failed to fetch provider list:", error);
     }
   }, [activeKey, isInitialLoad, t]);
 
@@ -105,7 +105,7 @@ const ModelService: React.FC = () => {
         const response = await window.api.provider.getAll();
 
         if (!response.success) {
-          throw new Error(response.error || "获取服务商列表失败");
+          throw new Error(response.error || t("messages.fetch_providers_failed"));
         }
 
         const providers: ProviderData[] = response.data;
@@ -118,12 +118,12 @@ const ModelService: React.FC = () => {
           setActiveKey("add provider");
         }
       } catch (error) {
-        console.error("获取服务商列表失败:", error);
+        console.error("Failed to fetch provider list:", error);
         // 出错时默认选中添加服务商选项卡
         setActiveKey("add provider");
       }
     });
-  }, []);
+  }, [t]);
 
   // 同步回调到 ref
   useEffect(() => {
