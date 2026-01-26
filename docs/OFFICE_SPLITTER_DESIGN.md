@@ -173,7 +173,7 @@ export function isLegacyFormat(ext: string): boolean {
 │  2. 获取 Sheet 列表和数据                                               │
 │  3. 每个 Sheet 构建 HTML 表格                                           │
 │  4. 分段截图 + 垂直分页                                                  │
-│  5. pageRange 基于 Sheet 索引/名称过滤                                   │
+│  5. pageRange 基于 Sheet 索引过滤                                   │
 └────────────────────────────────────────────────────────────────────────┘
 
                                         │
@@ -267,12 +267,8 @@ export interface ParsedRange {
 }
 
 export interface SheetRange {
-  /** 解析类型 */
-  type: 'indices' | 'names';
   /** 按索引指定（1-based） */
-  indices?: number[];
-  /** 按名称指定 */
-  names?: string[];
+  indices: number[];
   /** 原始范围字符串 */
   raw: string;
 }
@@ -280,12 +276,10 @@ export interface SheetRange {
 /**
  * 页面范围解析器
  *
- * 支持格式：
- * - 单页: "3"
+ * 支持格式（所有文档类型统一）：
+ * - 单页/单 Sheet: "3"
  * - 范围: "1-5"
  * - 混合: "1,3,5-10"
- * - Sheet 索引: "#1-2" 或 "#1,3"（# 前缀明确表示索引）
- * - Sheet 名称: "Sheet1,数据表"（无 # 前缀）
  */
 export class PageRangeParser {
   /**
@@ -349,56 +343,31 @@ export class PageRangeParser {
   /**
    * 解析 Excel Sheet 范围
    *
-   * 支持格式：
-   * - 索引: "#1-2" 或 "#1,3"（# 前缀明确表示索引）
-   * - 名称: "Sheet1,数据表"（无 # 前缀，即使 Sheet 名是数字）
+   * 使用与页码相同的格式：
+   * - 单个: "1"
+   * - 范围: "1-3"
+   * - 混合: "1,3,5-7"
    *
    * @param range - 范围字符串
-   * @param sheetNames - 可用的 Sheet 名称列表
+   * @param sheetCount - Sheet 总数
    */
   static parseSheetRange(
     range: string | undefined,
-    sheetNames: string[]
+    sheetCount: number
   ): SheetRange {
     if (!range || range.trim() === '') {
       // 未指定，返回全部 Sheet
       return {
-        type: 'indices',
-        indices: Array.from({ length: sheetNames.length }, (_, i) => i + 1),
+        indices: Array.from({ length: sheetCount }, (_, i) => i + 1),
         raw: '',
       };
     }
 
-    const trimmed = range.trim();
-
-    // 使用 # 前缀明确区分索引和名称
-    if (trimmed.startsWith('#')) {
-      // 按索引解析（去掉 # 前缀）
-      const indexRange = trimmed.slice(1);
-      const parsed = this.parseNumeric(indexRange, sheetNames.length);
-      return {
-        type: 'indices',
-        indices: parsed.indices,
-        raw: range,
-      };
-    } else {
-      // 按名称解析
-      const names = trimmed.split(',').map(n => n.trim()).filter(Boolean);
-      const invalidNames = names.filter(n => !sheetNames.includes(n));
-
-      if (invalidNames.length > 0) {
-        throw new Error(
-          `Sheet not found: "${invalidNames.join('", "')}". ` +
-          `Available sheets: "${sheetNames.join('", "')}"`
-        );
-      }
-
-      return {
-        type: 'names',
-        names,
-        raw: range,
-      };
-    }
+    const parsed = this.parseNumeric(range, sheetCount);
+    return {
+      indices: parsed.indices,
+      raw: range,
+    };
   }
 
   /**
@@ -408,15 +377,8 @@ export class PageRangeParser {
     sheetNames: string[],
     range: SheetRange
   ): string[] {
-    if (range.type === 'names' && range.names) {
-      // 按名称保持用户指定顺序
-      return range.names;
-    }
-    if (range.type === 'indices' && range.indices) {
-      // 按索引过滤（1-based）
-      return range.indices.map(i => sheetNames[i - 1]);
-    }
-    return sheetNames;
+    // 按索引过滤（1-based）
+    return range.indices.map(i => sheetNames[i - 1]);
   }
 }
 ```
@@ -1626,9 +1588,9 @@ export class ExcelSplitter implements ISplitter {
         throw new Error('Excel file contains no data');
       }
 
-      // 解析 Sheet 范围
+      // 解析 Sheet 范围（使用与页码相同的格式）
       const sheetNames = sheets.map(s => s.name);
-      const sheetRange = PageRangeParser.parseSheetRange(task.pageRange, sheetNames);
+      const sheetRange = PageRangeParser.parseSheetRange(task.pageRange, sheets.length);
       const selectedSheets = PageRangeParser.filterSheets(sheetNames, sheetRange);
 
       const pages: PageInfo[] = [];
@@ -2033,10 +1995,11 @@ export interface Task {
   /**
    * 页面范围（可选）
    *
+   * 所有文档类型使用统一格式：
    * - PDF: "1-3,5" 表示原生页码
    * - Word: "1-3,5" 表示渲染后页码（注意：非原文档逻辑页码）
    * - PPT: "1,3,5-7" 表示幻灯片编号
-   * - Excel: "#1-2" 表示 Sheet 索引，"Sheet1,数据表" 表示 Sheet 名称
+   * - Excel: "1-3,5" 表示 Sheet 索引
    */
   pageRange?: string;
 }
@@ -2125,7 +2088,7 @@ src/
 | **PDF** | 原生页码 | `1-3,5` = 第 1-3 页和第 5 页 |
 | **Word** | **渲染后页码**（非原文档逻辑页码） | `1-3` = 渲染后的前 3 页截图 |
 | **PowerPoint** | 幻灯片编号 | `1,3,5-7` = 第 1、3、5-7 张幻灯片 |
-| **Excel** | Sheet 索引（#前缀）或名称 | `#1-2` 或 `Sheet1,数据表` |
+| **Excel** | Sheet 索引 | `1-3,5` = 第1、2、3、5 个Sheet |
 
 ### 使用示例
 
@@ -2145,20 +2108,12 @@ const pptTask: Task = {
   pageRange: '1,3,5-7',
 };
 
-// Excel: 按索引提取 Sheet（使用 # 前缀）
+// Excel: 按索引提取 Sheet
 const excelTask1: Task = {
   id: 'task-003',
   filename: 'data.xlsx',
-  pageRange: '#1-2',  // 第 1、2 个 Sheet
+  pageRange: '1-2',  // 第 1、2 个 Sheet
 };
-
-// Excel: 按名称提取 Sheet（无需前缀）
-const excelTask2: Task = {
-  id: 'task-004',
-  filename: 'data.xlsx',
-  pageRange: 'Sheet1,销售数据',  // 按名称指定
-};
-```
 
 ---
 
@@ -2187,7 +2142,7 @@ const excelTask2: Task = {
 | 窗口池配置冲突 | 单例静默忽略配置 | 工厂模式独立实例 |
 | 计时器泄漏 | 部分路径未清理 | 统一 cleanup 函数 |
 | 窗口释放竞态 | 异步清理未等待 | await loadURL('about:blank') |
-| Sheet 名称歧义 | 自动推断易出错 | # 前缀明确区分 |
+| Sheet 范围格式 | 名称/索引混合易歧义 | 仅索引，与其他类型统一 |
 
 ---
 
