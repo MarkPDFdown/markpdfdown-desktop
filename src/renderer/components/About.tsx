@@ -49,13 +49,13 @@ const About: React.FC = () => {
           {t('about.subtitle')}
         </Text>
         <Space style={{ marginTop: 16 }}>
-          <Button onClick={() => handleOpenLink('https://github.com/MarkPDFdown')}>
+          <Button onClick={() => handleOpenLink('https://github.com/MarkPDFdown/markpdfdown-desktop')}>
             {t('about.buttons.website')}
           </Button>
-          <Button onClick={() => handleOpenLink('https://github.com/MarkPDFdown/desktop/blob/master/LICENSE')}>
+          <Button onClick={() => handleOpenLink('https://github.com/MarkPDFdown/markpdfdown-desktop/blob/master/LICENSE')}>
             {t('about.buttons.license')}
           </Button>
-          <Button onClick={() => handleOpenLink('https://github.com/MarkPDFdown/desktop/issues')}>
+          <Button onClick={() => handleOpenLink('https://github.com/MarkPDFdown/markpdfdown-desktop/issues')}>
             {t('about.buttons.feedback')}
           </Button>
           <Button onClick={() => handleOpenLink('mailto:jorben@aix.me')}>
