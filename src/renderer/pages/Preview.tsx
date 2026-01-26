@@ -161,7 +161,7 @@ const Preview: React.FC = () => {
     return () => {
       cleanup();
     };
-  }, [id, message, navigate]);
+  }, [id, message, navigate, t]);
 
   // 监听页面详情事件
   useEffect(() => {
