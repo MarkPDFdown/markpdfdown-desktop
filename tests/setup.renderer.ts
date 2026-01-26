@@ -73,6 +73,36 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 })
 
+// Mock ResizeObserver for Ant Design Splitter and other components
+class ResizeObserverMock {
+  observe = vi.fn()
+  unobserve = vi.fn()
+  disconnect = vi.fn()
+}
+Object.defineProperty(window, 'ResizeObserver', {
+  writable: true,
+  value: ResizeObserverMock,
+})
+
+// Mock getComputedStyle for rc-util/getScrollBarSize
+const originalGetComputedStyle = window.getComputedStyle
+Object.defineProperty(window, 'getComputedStyle', {
+  writable: true,
+  value: (elt: Element, pseudoElt?: string | null) => {
+    try {
+      return originalGetComputedStyle(elt, pseudoElt)
+    } catch {
+      // Return a minimal mock for elements that don't work in jsdom
+      return {
+        getPropertyValue: () => '',
+        overflow: 'auto',
+        overflowX: 'auto',
+        overflowY: 'auto',
+      } as CSSStyleDeclaration
+    }
+  },
+})
+
 // Reset all mocks before each test
 beforeEach(() => {
   vi.clearAllMocks()
