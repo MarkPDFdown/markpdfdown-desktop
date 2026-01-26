@@ -255,8 +255,11 @@ describe('File Handler', () => {
           properties: ['openFile', 'multiSelections'],
           filters: expect.arrayContaining([
             expect.objectContaining({
-              name: 'PDF and Images',
-              extensions: expect.arrayContaining(['pdf', 'jpg', 'jpeg', 'png'])
+              name: 'All Supported Files',
+              extensions: expect.arrayContaining([
+                'pdf', 'jpg', 'jpeg', 'png', 'webp',
+                'docx', 'dotx', 'pptx', 'potx', 'xlsx', 'xltx', 'csv'
+              ])
             })
           ])
         })

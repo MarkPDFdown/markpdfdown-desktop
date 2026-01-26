@@ -1,7 +1,7 @@
 {
   "dragger": {
     "text": "拖拽文件到此处或点击下方按钮选择文件",
-    "hint": "支持单个或批量上传 PDF/JPG/PNG 文件",
+    "hint": "支持 PDF、图片 (JPG/PNG/WebP)、Word (DOCX)、PowerPoint (PPTX)、Excel (XLSX/CSV)",
     "button": "选择文件"
   },
   "form": {
@@ -22,7 +22,7 @@
     "update_status_failed": "更新任务状态失败: {{filename}}",
     "tasks_created": "已创建{{count}}个任务",
     "upload_error": "上传失败",
-    "invalid_file_type": "文件 {{filename}} 不是有效的PDF文件",
+    "invalid_file_type": "文件 {{filename}} 不是支持的文件类型",
     "invalid_file_path": "无法获取文件 {{filename}} 的路径"
   }
 }

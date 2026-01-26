@@ -1,7 +1,7 @@
 {
   "dragger": {
     "text": "فایل‌ها را به اینجا بکشید یا برای انتخاب فایل‌ها روی دکمه زیر کلیک کنید",
-    "hint": "پشتیبانی از بارگذاری تکی یا دسته‌ای فایل‌های PDF/JPG/PNG",
+    "hint": "پشتیبانی از PDF، تصاویر (JPG/PNG/WebP)، Word (DOCX)، PowerPoint (PPTX)، Excel (XLSX/CSV)",
     "button": "انتخاب فایل‌ها"
   },
   "form": {
@@ -22,7 +22,7 @@
     "update_status_failed": "به‌روزرسانی وضعیت تسک ناموفق بود: {{filename}}",
     "tasks_created": "{{count}} تسک ایجاد شد",
     "upload_error": "خطا در بارگذاری",
-    "invalid_file_type": "فایل {{filename}} یک فایل PDF معتبر نیست",
+    "invalid_file_type": "فایل {{filename}} یک نوع فایل پشتیبانی‌شده نیست",
     "invalid_file_path": "نمی‌توان مسیر فایل {{filename}} را دریافت کرد"
   }
 }

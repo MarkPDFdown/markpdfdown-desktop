@@ -153,6 +153,15 @@ const UploadPanel: React.FC = () => {
     }
   };
 
+  // Supported file extensions
+  const SUPPORTED_EXTENSIONS = [
+    '.pdf',
+    '.jpg', '.jpeg', '.png', '.webp',
+    '.docx', '.dotx',
+    '.pptx', '.potx',
+    '.xlsx', '.xltx', '.csv',
+  ];
+
   const props: UploadProps = {
     onRemove: (file) => {
       const index = fileList.indexOf(file);
@@ -162,9 +171,10 @@ const UploadPanel: React.FC = () => {
     },
     beforeUpload: (file) => {
       // 检查文件类型
-      const isPDF = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      const fileName = file.name.toLowerCase();
+      const isSupported = SUPPORTED_EXTENSIONS.some(ext => fileName.endsWith(ext));
 
-      if (!isPDF) {
+      if (!isSupported) {
         message.error(t('messages.invalid_file_type', { filename: file.name }));
         return Upload.LIST_IGNORE;
       }
@@ -186,7 +196,7 @@ const UploadPanel: React.FC = () => {
     },
     fileList,
     showUploadList: true,
-    accept: '.pdf',
+    accept: SUPPORTED_EXTENSIONS.join(','),
     multiple: true,
   };
 

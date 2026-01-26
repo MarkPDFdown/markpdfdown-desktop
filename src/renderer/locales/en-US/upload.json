@@ -1,7 +1,7 @@
 {
   "dragger": {
     "text": "Drag files here or click button below to select files",
-    "hint": "Supports single or batch upload of PDF/JPG/PNG files",
+    "hint": "Supports PDF, Images (JPG/PNG/WebP), Word (DOCX), PowerPoint (PPTX), Excel (XLSX/CSV)",
     "button": "Select Files"
   },
   "form": {
@@ -22,7 +22,7 @@
     "update_status_failed": "Failed to update task status: {{filename}}",
     "tasks_created": "{{count}} task(s) created",
     "upload_error": "Upload failed",
-    "invalid_file_type": "File {{filename}} is not a valid PDF file",
+    "invalid_file_type": "File {{filename}} is not a supported file type",
     "invalid_file_path": "Cannot get file path for {{filename}}"
   }
 }

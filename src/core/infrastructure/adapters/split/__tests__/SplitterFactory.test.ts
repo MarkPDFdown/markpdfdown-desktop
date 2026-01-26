@@ -130,7 +130,7 @@ describe('SplitterFactory', () => {
 
     it('should throw error for unsupported file type', () => {
       expect(() => factory.createFromFilename('document.txt')).toThrow(
-        /Unsupported file type/
+        /Unsupported file extension/
       );
     });
 

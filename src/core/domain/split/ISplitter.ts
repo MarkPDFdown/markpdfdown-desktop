@@ -10,6 +10,8 @@ export interface PageInfo {
   pageSource: number;
   /** Full path to the generated image file */
   imagePath: string;
+  /** Sheet name (for Excel files only) */
+  sheetName?: string;
 }
 
 /**

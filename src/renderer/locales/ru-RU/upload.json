@@ -1,7 +1,7 @@
 {
   "dragger": {
     "text": "Перетащите файлы сюда или нажмите кнопку ниже, чтобы выбрать файлы",
-    "hint": "Поддерживается одиночная или пакетная загрузка файлов PDF/JPG/PNG",
+    "hint": "Поддерживается PDF, изображения (JPG/PNG/WebP), Word (DOCX), PowerPoint (PPTX), Excel (XLSX/CSV)",
     "button": "Выбрать файлы"
   },
   "form": {
@@ -22,7 +22,7 @@
     "update_status_failed": "Не удалось обновить статус задачи: {{filename}}",
     "tasks_created": "Создано {{count}} задач(а)",
     "upload_error": "Ошибка загрузки",
-    "invalid_file_type": "Файл {{filename}} не является действительным PDF-файлом",
+    "invalid_file_type": "Файл {{filename}} не является поддерживаемым типом файла",
     "invalid_file_path": "Не удалось получить путь к файлу {{filename}}"
   }
 }

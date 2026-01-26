@@ -129,4 +129,48 @@ export class PageRangeParser {
 
     return this.RANGE_REGEX.test(rangeStr.trim());
   }
+
+  /**
+   * Parse an Excel sheet range.
+   *
+   * Uses the same format as page numbers:
+   * - Single: "1"
+   * - Range: "1-3"
+   * - Mixed: "1,3,5-7"
+   *
+   * @param range - Range string
+   * @param sheetCount - Total number of sheets
+   * @returns Object with indices array and raw string
+   */
+  static parseSheetRange(
+    range: string | undefined,
+    sheetCount: number
+  ): { indices: number[]; raw: string } {
+    if (!range || range.trim() === '') {
+      return {
+        indices: Array.from({ length: sheetCount }, (_, i) => i + 1),
+        raw: '',
+      };
+    }
+
+    const indices = this.parse(range, sheetCount);
+    return {
+      indices,
+      raw: range,
+    };
+  }
+
+  /**
+   * Filter sheet names by range.
+   *
+   * @param sheetNames - Array of sheet names
+   * @param range - Parsed sheet range
+   * @returns Filtered array of sheet names
+   */
+  static filterSheets(
+    sheetNames: string[],
+    range: { indices: number[]; raw: string }
+  ): string[] {
+    return range.indices.map((i) => sheetNames[i - 1]);
+  }
 }

@@ -105,11 +105,20 @@ export function registerFileHandlers() {
         properties: ["openFile", "multiSelections"],
         filters: [
           {
-            name: "PDF and Images",
-            extensions: ["pdf", "jpg", "jpeg", "png", "bmp", "gif"],
+            name: "All Supported Files",
+            extensions: [
+              "pdf",
+              "jpg", "jpeg", "png", "webp",
+              "docx", "dotx",
+              "pptx", "potx",
+              "xlsx", "xltx", "csv",
+            ],
           },
           { name: "PDF Documents", extensions: ["pdf"] },
-          { name: "Images", extensions: ["jpg", "jpeg", "png", "bmp", "gif"] },
+          { name: "Images", extensions: ["jpg", "jpeg", "png", "webp"] },
+          { name: "Word Documents", extensions: ["docx", "dotx"] },
+          { name: "PowerPoint Presentations", extensions: ["pptx", "potx"] },
+          { name: "Excel Spreadsheets", extensions: ["xlsx", "xltx", "csv"] },
           { name: "All Files", extensions: ["*"] },
         ],
       });
