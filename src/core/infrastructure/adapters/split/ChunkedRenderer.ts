@@ -22,6 +22,16 @@ const DEFAULT_CHUNK_CONFIG: ChunkedRenderConfig = {
 };
 
 /**
+ * Page margin for output images (CSS pixels).
+ * This controls how much white space appears at top/bottom of each page.
+ * The content area per page = pageHeight - top - bottom
+ */
+const PAGE_MARGIN = {
+  top: 50,
+  bottom: 50,
+};
+
+/**
  * Chunked screenshot renderer.
  *
  * Renders long HTML documents in chunks to avoid memory issues
@@ -38,161 +48,161 @@ export class ChunkedRenderer {
   /**
    * Render HTML content to page images.
    *
+   * This method:
+   * 1. Sets window size to full document height
+   * 2. Uses setZoomFactor for high DPI rendering
+   * 3. Captures the entire document as one image
+   * 4. Splits the image into pages using sharp
+   *
    * @param window - BrowserWindow with HTML loaded
-   * @param totalHeight - Total document height in CSS pixels
+   * @param _totalHeight - Ignored, we recalculate internally
    * @param outputPathFn - Function to generate output path for each page
    * @returns Number of pages generated
    */
   async renderToPages(
     window: BrowserWindow,
-    totalHeight: number,
+    _totalHeight: number,
     outputPathFn: (pageNum: number) => string
   ): Promise<number> {
-    const { chunkHeight, deviceScaleFactor, pageWidth, pageHeight } = this.config;
+    const { deviceScaleFactor, pageWidth, pageHeight } = this.config;
     const sharp = (await import('sharp')).default;
+    const fs = await import('fs');
 
-    // Validate totalHeight - must be positive
-    if (!totalHeight || totalHeight <= 0) {
-      throw new Error('Document has no content to render (totalHeight is 0)');
+    // Measure document height at zoom=1 to get accurate CSS pixel value
+    window.webContents.setZoomFactor(1);
+    await this.sleep(100);
+
+    // Debug: log the HTML structure to understand page breaks
+    const debugInfo = await window.webContents.executeJavaScript(`
+      (function() {
+        const sections = document.querySelectorAll('section.docx');
+        const sectionInfo = Array.from(sections).map((s, i) => ({
+          index: i,
+          height: s.offsetHeight,
+          marginTop: getComputedStyle(s).marginTop,
+          marginBottom: getComputedStyle(s).marginBottom,
+          paddingTop: getComputedStyle(s).paddingTop,
+          paddingBottom: getComputedStyle(s).paddingBottom,
+        }));
+        return {
+          sectionCount: sections.length,
+          sections: sectionInfo,
+          bodyHeight: document.body.scrollHeight,
+          containerHeight: document.getElementById('docx-container')?.scrollHeight || 0,
+        };
+      })();
+    `);
+    console.log('[ChunkedRenderer] Debug info:', JSON.stringify(debugInfo, null, 2));
+
+    const docHeight = await window.webContents.executeJavaScript(
+      'document.body.scrollHeight'
+    );
+
+    console.log('[ChunkedRenderer] Config:', { deviceScaleFactor, pageWidth, pageHeight });
+    console.log('[ChunkedRenderer] Document height (CSS px):', docHeight);
+
+    // Validate height
+    if (!docHeight || docHeight <= 0) {
+      throw new Error('Document has no content to render (height is 0)');
     }
 
-    const scaledPageHeight = pageHeight * deviceScaleFactor;
-    const scaledPageWidth = pageWidth * deviceScaleFactor;
+    // Set window to full document size (CSS pixels)
+    window.setContentSize(pageWidth, docHeight);
+    await this.sleep(200);
 
-    let pageNum = 1;
-    let processedHeight = 0;
-    let carryOverBuffer: Buffer | null = null;
-    let carryOverHeight = 0;
+    // Capture the entire document at zoom=1
+    // The system DPI scaling will be automatically applied by Electron
+    const image = await window.webContents.capturePage({
+      x: 0,
+      y: 0,
+      width: pageWidth,
+      height: docHeight,
+    });
 
-    while (processedHeight < totalHeight) {
-      // Calculate capture height for this chunk
-      const captureHeight = Math.min(chunkHeight, totalHeight - processedHeight);
+    const fullBuffer = image.toPNG();
 
-      // Skip if nothing to capture
-      if (captureHeight <= 0) {
+    // Get actual captured image dimensions
+    const metadata = await sharp(fullBuffer).metadata();
+    const imgWidth = metadata.width || 0;
+    const imgHeight = metadata.height || 0;
+
+    console.log('[ChunkedRenderer] Captured image size:', imgWidth, 'x', imgHeight);
+
+    // Calculate actual scale from the captured image
+    // This accounts for system DPI scaling
+    const actualScale = imgHeight / docHeight;
+    console.log('[ChunkedRenderer] Actual scale (from system DPI):', actualScale);
+
+    // Calculate content height per page (page height minus margins)
+    const contentHeight = pageHeight - PAGE_MARGIN.top - PAGE_MARGIN.bottom;
+    const scaledContentHeight = Math.round(contentHeight * actualScale);
+    const scaledPageWidth = imgWidth;
+
+    // Calculate total pages based on content height
+    const totalPages = Math.ceil(imgHeight / scaledContentHeight);
+    console.log('[ChunkedRenderer] Total pages:', totalPages);
+    console.log('[ChunkedRenderer] Content height per page:', contentHeight, '(scaled:', scaledContentHeight, ')');
+
+    if (totalPages <= 0) {
+      throw new Error('Failed to calculate page count from document');
+    }
+
+    // Target dimensions for output
+    const targetWidth = pageWidth * deviceScaleFactor;
+    const targetPageHeight = pageHeight * deviceScaleFactor;
+    const targetMarginTop = PAGE_MARGIN.top * deviceScaleFactor;
+
+    // Split into pages
+    let actualPageCount = 0;
+    for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+      const topOffset = (pageNum - 1) * scaledContentHeight;
+      const extractHeight = Math.min(scaledContentHeight, imgHeight - topOffset);
+
+      console.log(`[ChunkedRenderer] Page ${pageNum}: topOffset=${topOffset}, extractHeight=${extractHeight}`);
+
+      if (extractHeight <= 0) {
         break;
       }
 
-      // Scroll to target position
-      await window.webContents.executeJavaScript(`window.scrollTo(0, ${processedHeight})`);
-      await this.sleep(50);
-
-      // Capture current viewport
-      const image = await window.webContents.capturePage({
-        x: 0,
-        y: 0,
-        width: pageWidth,
-        height: captureHeight,
-      });
-      const chunkBuffer = image.toPNG();
-
-      // Get actual image dimensions
-      const chunkMetadata = await sharp(chunkBuffer).metadata();
-      const actualChunkWidth = chunkMetadata.width || 0;
-      const actualChunkHeight = chunkMetadata.height || 0;
-
-      // Skip empty captures
-      if (actualChunkWidth === 0 || actualChunkHeight === 0) {
-        processedHeight += captureHeight;
-        continue;
-      }
-
-      // Combine with carry-over from previous chunk
-      let workingBuffer: Buffer;
-      let workingHeight: number;
-      let workingWidth: number;
-
-      if (carryOverBuffer) {
-        // Vertically stack carry-over and current chunk
-        const carryOverMetadata = await sharp(carryOverBuffer).metadata();
-        const carryOverActualHeight = carryOverMetadata.height || carryOverHeight;
-        const carryOverActualWidth = carryOverMetadata.width || scaledPageWidth;
-
-        // Use the maximum width of both images
-        workingWidth = Math.max(carryOverActualWidth, actualChunkWidth);
-        workingHeight = carryOverActualHeight + actualChunkHeight;
-
-        workingBuffer = await sharp({
-          create: {
-            width: workingWidth,
-            height: workingHeight,
-            channels: 4,
-            background: { r: 255, g: 255, b: 255, alpha: 1 },
-          },
+      // Extract content from the full image
+      const contentBuffer = await sharp(fullBuffer)
+        .extract({
+          left: 0,
+          top: topOffset,
+          width: scaledPageWidth,
+          height: extractHeight,
         })
-          .composite([
-            { input: carryOverBuffer, top: 0, left: 0 },
-            { input: chunkBuffer, top: carryOverActualHeight, left: 0 },
-          ])
-          .png()
-          .toBuffer();
+        .resize(targetWidth, Math.round(extractHeight * (deviceScaleFactor / actualScale)), {
+          kernel: 'lanczos3',
+        })
+        .png()
+        .toBuffer();
 
-        carryOverBuffer = null;
-        carryOverHeight = 0;
-      } else {
-        workingBuffer = chunkBuffer;
-        workingHeight = actualChunkHeight;
-        workingWidth = actualChunkWidth;
-      }
+      // Create a full page with margins (white background)
+      // Fixed page height ensures consistent output
+      const pageBuffer = await sharp({
+        create: {
+          width: targetWidth,
+          height: targetPageHeight,
+          channels: 4,
+          background: { r: 255, g: 255, b: 255, alpha: 1 },
+        },
+      })
+        .composite([
+          {
+            input: contentBuffer,
+            top: targetMarginTop,
+            left: 0,
+          },
+        ])
+        .png()
+        .toBuffer();
 
-      // Extract full pages from working buffer
-      let extractedHeight = 0;
-      while (extractedHeight + scaledPageHeight <= workingHeight) {
-        const outputPath = outputPathFn(pageNum);
-
-        // Ensure extract dimensions are valid
-        const extractWidth = Math.min(scaledPageWidth, workingWidth);
-        const extractHeight = Math.min(scaledPageHeight, workingHeight - extractedHeight);
-
-        if (extractWidth > 0 && extractHeight > 0) {
-          await sharp(workingBuffer)
-            .extract({
-              left: 0,
-              top: extractedHeight,
-              width: extractWidth,
-              height: extractHeight,
-            })
-            .toFile(outputPath);
-
-          pageNum++;
-        }
-        extractedHeight += scaledPageHeight;
-      }
-
-      // Save remaining content for next iteration
-      if (extractedHeight < workingHeight) {
-        const remainingHeight = workingHeight - extractedHeight;
-        const extractWidth = Math.min(scaledPageWidth, workingWidth);
-
-        if (extractWidth > 0 && remainingHeight > 0) {
-          carryOverBuffer = await sharp(workingBuffer)
-            .extract({
-              left: 0,
-              top: extractedHeight,
-              width: extractWidth,
-              height: remainingHeight,
-            })
-            .toBuffer();
-          carryOverHeight = remainingHeight;
-        }
-      }
-
-      processedHeight += captureHeight;
+      await fs.promises.writeFile(outputPathFn(pageNum), pageBuffer);
+      actualPageCount++;
     }
 
-    // Handle final carry-over (content that doesn't fill a complete page)
-    if (carryOverBuffer && carryOverHeight > 0) {
-      const outputPath = outputPathFn(pageNum);
-      await sharp(carryOverBuffer).toFile(outputPath);
-      pageNum++;
-    }
-
-    // Ensure at least one page was generated
-    if (pageNum <= 1) {
-      throw new Error('Failed to render any pages from document');
-    }
-
-    return pageNum - 1;
+    return actualPageCount;
   }
 
   private sleep(ms: number): Promise<void> {
