@@ -120,7 +120,7 @@ describe('About', () => {
       const websiteButton = screen.getByText('Website')
       fireEvent.click(websiteButton)
 
-      expect(mockWindowOpen).toHaveBeenCalledWith('https://github.com/MarkPDFdown', '_blank')
+      expect(mockWindowOpen).toHaveBeenCalledWith('https://github.com/MarkPDFdown/markpdfdown-desktop', '_blank')
     })
 
     it('should open license link when License button is clicked', () => {
@@ -134,7 +134,7 @@ describe('About', () => {
       fireEvent.click(licenseButton)
 
       expect(mockWindowOpen).toHaveBeenCalledWith(
-        'https://github.com/MarkPDFdown/desktop/blob/master/LICENSE',
+        'https://github.com/MarkPDFdown/markpdfdown-desktop/blob/master/LICENSE',
         '_blank'
       )
     })
@@ -150,7 +150,7 @@ describe('About', () => {
       fireEvent.click(feedbackButton)
 
       expect(mockWindowOpen).toHaveBeenCalledWith(
-        'https://github.com/MarkPDFdown/desktop/issues',
+        'https://github.com/MarkPDFdown/markpdfdown-desktop/issues',
         '_blank'
       )
     })
