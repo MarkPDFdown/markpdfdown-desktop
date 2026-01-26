@@ -38,7 +38,8 @@
     "test:watch": "vitest watch",
     "test:coverage": "vitest run --coverage",
     "prepare": "husky",
-    "publish": "node scripts/publish.js"
+    "publish": "node scripts/publish.js",
+    "bundle:office": "node scripts/bundle-office-libs.js"
   },
   "build": {
     "appId": "com.markpdfdown.desktop",
@@ -124,6 +125,7 @@
     "@types/sharp": "^0.31.1",
     "antd": "^5.24.4",
     "chardet": "^2.1.0",
+    "docx-preview": "^0.3.7",
     "electron-is-dev": "^3.0.1",
     "exceljs": "^4.4.0",
     "fast-xml-parser": "^4.5.0",
@@ -134,6 +136,7 @@
     "papaparse": "^5.4.1",
     "pdf-lib": "^1.17.1",
     "pdf-to-png-converter": "^3.11.0",
+    "pptx-preview": "^1.0.7",
     "prisma": "^6.5.0",
     "prismjs": "^1.30.0",
     "react": "^18.2.0",
