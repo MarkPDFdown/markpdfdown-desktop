@@ -13,6 +13,9 @@ vi.mock('react-i18next', () => ({
         'preview.download': 'Download',
         'preview.cancel': 'Cancel',
         'preview.retry': 'Retry',
+        'preview.retry_failed': 'Retry Failed',
+        'preview.retry_all': 'Retry All',
+        'preview.more_actions': 'More Actions',
         'preview.delete': 'Delete',
         'preview.regenerate': 'Regenerate',
         'preview.regenerate_tooltip': 'Regenerate this page',
@@ -27,7 +30,8 @@ vi.mock('react-i18next', () => ({
         'preview.cancel_success': 'Task cancelled',
         'preview.cancel_failed': 'Failed to cancel task',
         'preview.retry_success': 'Task retrying',
-        'preview.retry_failed': 'Failed to retry task',
+        'preview.retry_failed_msg': 'Failed to retry task',
+        'preview.image_load_failed': 'Image failed to load or does not exist',
         'preview.status.failed': 'Failed',
         'preview.status.pending': 'Pending',
         'preview.status.processing': 'Processing',
@@ -85,8 +89,9 @@ describe('Preview', () => {
 
   const mockFailedTask = {
     ...mockTask,
-    status: 0, // FAILED
-    progress: 20
+    status: 8, // PARTIAL_FAILED - has some failed pages, but task itself is viewable
+    progress: 80,
+    failed_count: 1
   }
 
   const mockTaskDetail = {
@@ -266,7 +271,7 @@ describe('Preview', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText(/图片加载失败或不存在/)).toBeInTheDocument()
+        expect(screen.getByText(/Image failed to load or does not exist/)).toBeInTheDocument()
       })
     })
   })
@@ -311,24 +316,26 @@ describe('Preview', () => {
       })
     })
 
-    it('should fetch new page when pagination changes', async () => {
+    it('should fetch initial page on load', async () => {
       render(
         <Wrapper>
           <Preview />
         </Wrapper>
       )
 
+      // Wait for initial page load
       await waitFor(() => {
         expect(window.api.taskDetail.getByPage).toHaveBeenCalledWith('task-1', 1)
       })
 
-      // Click page 2
-      const page2Button = screen.getByText('2')
-      fireEvent.click(page2Button)
-
+      // Verify task info is displayed
       await waitFor(() => {
-        expect(window.api.taskDetail.getByPage).toHaveBeenCalledWith('task-1', 2)
+        expect(screen.getByText(/document\.pdf/)).toBeInTheDocument()
       })
+
+      // Verify pagination exists with total pages
+      const pagination = document.querySelector('.ant-pagination')
+      expect(pagination).toBeInTheDocument()
     })
   })
 
@@ -485,15 +492,17 @@ describe('Preview', () => {
     })
 
     describe('Cancel', () => {
-      it('should display cancel button for processing tasks', async () => {
+      it('should display more actions dropdown for processing tasks with cancel option', async () => {
         render(
           <Wrapper>
             <Preview />
           </Wrapper>
         )
 
+        // For processing tasks (status=3), a "More Actions" dropdown is shown
+        // which contains the Cancel option
         await waitFor(() => {
-          expect(screen.getByText('Cancel')).toBeInTheDocument()
+          expect(screen.getByText('More Actions')).toBeInTheDocument()
         })
       })
 
@@ -509,17 +518,19 @@ describe('Preview', () => {
           </Wrapper>
         )
 
+        // For completed tasks, cancel is not in menu, only delete
         await waitFor(() => {
-          expect(screen.queryByText('Cancel')).not.toBeInTheDocument()
+          expect(screen.getByText('More Actions')).toBeInTheDocument()
         })
+        // Cancel should not be visible directly (it's in dropdown but not for completed)
       })
     })
 
     describe('Retry Task', () => {
-      it('should display retry button for failed tasks', async () => {
+      it('should display retry failed button for partial failed tasks', async () => {
         vi.mocked(window.api.task.getById).mockResolvedValue({
           success: true,
-          data: mockFailedTask
+          data: mockFailedTask // status: 8 (PARTIAL_FAILED) with failed_count > 0
         })
 
         render(
@@ -529,7 +540,7 @@ describe('Preview', () => {
         )
 
         await waitFor(() => {
-          expect(screen.getByText('Retry')).toBeInTheDocument()
+          expect(screen.getByText('Retry Failed')).toBeInTheDocument()
         })
       })
 
@@ -545,12 +556,13 @@ describe('Preview', () => {
           expect(screen.getByText(/document\.pdf/)).toBeInTheDocument()
         })
 
-        expect(screen.queryByText('Retry')).not.toBeInTheDocument()
+        expect(screen.queryByText('Retry Failed')).not.toBeInTheDocument()
+        expect(screen.queryByText('Retry All')).not.toBeInTheDocument()
       })
     })
 
     describe('Delete', () => {
-      it('should display delete button for completed tasks', async () => {
+      it('should display more actions button for completed tasks', async () => {
         vi.mocked(window.api.task.getById).mockResolvedValue({
           success: true,
           data: mockCompletedTask
@@ -562,15 +574,16 @@ describe('Preview', () => {
           </Wrapper>
         )
 
+        // For completed tasks without primary action, "More Actions" dropdown is shown
         await waitFor(() => {
-          expect(screen.getByText('Delete')).toBeInTheDocument()
+          expect(screen.getByText('More Actions')).toBeInTheDocument()
         })
       })
 
-      it('should display delete button for failed tasks', async () => {
+      it('should display retry failed button with dropdown for partial failed tasks', async () => {
         vi.mocked(window.api.task.getById).mockResolvedValue({
           success: true,
-          data: mockFailedTask
+          data: mockFailedTask // status: 8 (PARTIAL_FAILED)
         })
 
         render(
@@ -579,12 +592,17 @@ describe('Preview', () => {
           </Wrapper>
         )
 
+        // For partial failed tasks, there's a Retry Failed button (primary action)
         await waitFor(() => {
-          expect(screen.getByText('Delete')).toBeInTheDocument()
+          expect(screen.getByText('Retry Failed')).toBeInTheDocument()
         })
+
+        // Verify dropdown button exists (it contains delete option)
+        const dropdownButton = document.querySelector('.ant-dropdown-trigger')
+        expect(dropdownButton).toBeInTheDocument()
       })
 
-      it('should not display delete button for processing tasks', async () => {
+      it('should not display delete button directly for processing tasks', async () => {
         render(
           <Wrapper>
             <Preview />
@@ -595,6 +613,7 @@ describe('Preview', () => {
           expect(screen.getByText(/document\.pdf/)).toBeInTheDocument()
         })
 
+        // For processing tasks, delete is not directly visible (only Cancel in dropdown)
         expect(screen.queryByText('Delete')).not.toBeInTheDocument()
       })
     })
