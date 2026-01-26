@@ -30,6 +30,7 @@ files
 coverage
 
 settings.local.json
+.codebuddy
 
 # Environment variables
 .env
