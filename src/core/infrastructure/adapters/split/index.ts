@@ -8,7 +8,6 @@ export { SplitterFactory } from './SplitterFactory.js';
 export { PathValidator } from './PathValidator.js';
 export { TempFileManager } from './TempFileManager.js';
 export { RenderWindowPoolFactory, RenderWindowPool } from './RenderWindowPoolFactory.js';
-export { ChunkedRenderer } from './ChunkedRenderer.js';
 export { EncodingDetector } from './EncodingDetector.js';
 export { WordSplitter } from './WordSplitter.js';
 export { PowerPointSplitter } from './PowerPointSplitter.js';

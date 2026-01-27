@@ -2,34 +2,31 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import ExcelJS from 'exceljs';
 import Papa from 'papaparse';
+import { pdfToPng } from 'pdf-to-png-converter';
 import { ISplitter, SplitResult, PageInfo } from '../../../domain/split/ISplitter.js';
 import { Task } from '../../../../shared/types/index.js';
 import { ImagePathUtil } from './ImagePathUtil.js';
 import { RenderWindowPoolFactory, RenderWindowPool } from './RenderWindowPoolFactory.js';
 import { TempFileManager } from './TempFileManager.js';
-import { ChunkedRenderer } from './ChunkedRenderer.js';
 import { PageRangeParser } from '../../../domain/split/PageRangeParser.js';
 import { PathValidator } from './PathValidator.js';
 import { EncodingDetector } from './EncodingDetector.js';
+import { WORKER_CONFIG } from '../../config/worker.config.js';
 
 /**
  * Excel rendering configuration.
  */
 const EXCEL_CONFIG = {
-  /** Maximum render width */
-  MAX_WIDTH: 1600,
-  /** Page height for splitting */
-  PAGE_HEIGHT: 1200,
-  /** Chunk height for chunked rendering */
-  CHUNK_HEIGHT: 4000,
+  /** Default render width for window */
+  RENDER_WIDTH: 1200,
+  /** Default render height for window */
+  RENDER_HEIGHT: 800,
   /** Default column width in pixels */
   DEFAULT_COL_WIDTH: 100,
-  /** Minimum page width */
-  MIN_WIDTH: 800,
-  /** Device scale factor */
-  DEVICE_SCALE_FACTOR: 2,
   /** Excel column width multiplier (Excel units to pixels) */
   COLUMN_WIDTH_MULTIPLIER: 8,
+  /** Render timeout in milliseconds */
+  RENDER_TIMEOUT: 60000,
 } as const;
 
 /**
@@ -92,7 +89,9 @@ interface MergeRange {
  * - Preserves cell styles: background colors, fonts, borders
  * - Handles merged cells with colspan/rowspan
  * - Uses papaparse to parse CSV files (RFC 4180 compatible)
- * - Splits by sheets + vertical pagination for long content
+ * - Converts HTML to PDF using Electron's printToPDF
+ * - Converts PDF to images using pdf-to-png-converter
+ * - This approach preserves complete content without truncation
  */
 export class ExcelSplitter implements ISplitter {
   private readonly uploadsDir: string;
@@ -136,7 +135,7 @@ export class ExcelSplitter implements ISplitter {
       const selectedIndices = new Set(sheetRange);
 
       const pages: PageInfo[] = [];
-      let pageIndex = 0;
+      let pageIndex = 1;
 
       for (let i = 0; i < sheets.length; i++) {
         if (!selectedIndices.has(i + 1)) {
@@ -144,7 +143,7 @@ export class ExcelSplitter implements ISplitter {
         }
 
         const sheet = sheets[i];
-        const sheetPages = await this.renderSheet(sheet, taskId, pageIndex);
+        const sheetPages = await this.renderSheetWithPrintToPDF(sheet, taskId, pageIndex);
 
         for (const page of sheetPages) {
           page.sheetName = sheet.name;
@@ -503,53 +502,157 @@ export class ExcelSplitter implements ISplitter {
   }
 
   /**
-   * Render a sheet to page images.
+   * Render a sheet using printToPDF approach.
+   * This preserves complete content without truncation.
    */
-  private async renderSheet(
+  private async renderSheetWithPrintToPDF(
     sheet: SheetData,
     taskId: string,
     startPageIndex: number
   ): Promise<PageInfo[]> {
+    // Determine if table is wide (needs landscape)
+    const totalWidth = sheet.colWidths.reduce((a, b) => a + b, 0);
+    const isWideTable = totalWidth > 700; // More than ~A4 portrait width
+
     const tableHtml = this.buildTableHtml(sheet);
-    const width = Math.min(
-      Math.max(
-        sheet.colWidths.reduce((a, b) => a + b, 0) + 40, // Add padding
-        EXCEL_CONFIG.MIN_WIDTH
-      ),
-      EXCEL_CONFIG.MAX_WIDTH
-    );
-    const fullHtml = this.buildExcelHtml(tableHtml, sheet.name, width);
+    const fullHtml = this.buildExcelHtmlForPrint(tableHtml, sheet.name, isWideTable);
 
     const tempHtmlPath = await this.tempFileManager.createHtmlFile(fullHtml);
-    const window = await this.windowPool.acquire(width, EXCEL_CONFIG.CHUNK_HEIGHT);
+    const tempPdfPath = path.join(
+      path.dirname(tempHtmlPath),
+      `excel-${Date.now()}.pdf`
+    );
 
-    const chunkedRenderer = new ChunkedRenderer({
-      chunkHeight: EXCEL_CONFIG.CHUNK_HEIGHT,
-      deviceScaleFactor: EXCEL_CONFIG.DEVICE_SCALE_FACTOR,
-      pageWidth: width,
-      pageHeight: EXCEL_CONFIG.PAGE_HEIGHT,
-    });
+    const window = await this.windowPool.acquire(
+      EXCEL_CONFIG.RENDER_WIDTH,
+      EXCEL_CONFIG.RENDER_HEIGHT
+    );
 
     try {
+      // Load and wait for render
       await this.loadAndWait(window, tempHtmlPath);
 
-      const pages: PageInfo[] = [];
-
-      // Chunked screenshot rendering (handles zoom and height calculation internally)
-      await chunkedRenderer.renderToPages(window, 0, (num) => {
-        const imagePath = ImagePathUtil.getPath(taskId, startPageIndex + num);
-        pages.push({
-          page: startPageIndex + num,
-          pageSource: startPageIndex + num,
-          imagePath,
-        });
-        return imagePath;
+      // Print to PDF using Chromium's print engine
+      console.log(`[ExcelSplitter] Converting sheet "${sheet.name}" to PDF (${isWideTable ? 'landscape' : 'portrait'})...`);
+      const pdfBuffer = await window.webContents.printToPDF({
+        pageSize: 'A4',
+        landscape: isWideTable,
+        printBackground: true,
+        margins: {
+          top: 0,
+          bottom: 0,
+          left: 0,
+          right: 0,
+        },
+        preferCSSPageSize: true,
       });
+
+      // Write PDF to temp file
+      await fs.writeFile(tempPdfPath, pdfBuffer);
+      console.log(`[ExcelSplitter] PDF created: ${pdfBuffer.length} bytes`);
+
+      // Convert PDF to images
+      const pages = await this.convertPdfToImages(tempPdfPath, taskId, startPageIndex);
 
       return pages;
     } finally {
       await this.windowPool.release(window);
       await this.tempFileManager.deleteFile(tempHtmlPath);
+      await fs.unlink(tempPdfPath).catch(() => {});
+    }
+  }
+
+  /**
+   * Convert PDF to page images using pdf-to-png-converter.
+   * Automatically detects and removes blank pages.
+   */
+  private async convertPdfToImages(
+    pdfPath: string,
+    taskId: string,
+    startPageIndex: number
+  ): Promise<PageInfo[]> {
+    const taskDir = ImagePathUtil.getTaskDir(taskId);
+    const relativeOutputFolder = path.relative(process.cwd(), taskDir);
+
+    // Convert PDF to PNG images
+    const pngResults = await pdfToPng(pdfPath, {
+      outputFolder: relativeOutputFolder,
+      viewportScale: WORKER_CONFIG.splitter.viewportScale,
+      strictPagesToProcess: false,
+      verbosityLevel: 0,
+    });
+
+    if (!pngResults || pngResults.length === 0) {
+      throw new Error('PDF conversion produced no output');
+    }
+
+    console.log(`[ExcelSplitter] PDF converted to ${pngResults.length} page images`);
+
+    // Rename files and build PageInfo array
+    const pages: PageInfo[] = [];
+    let currentPageNum = startPageIndex;
+    let blankPagesRemoved = 0;
+
+    for (let i = 0; i < pngResults.length; i++) {
+      // Check if page is blank
+      const isBlank = await this.isBlankPage(pngResults[i].path);
+      if (isBlank) {
+        console.log(`[ExcelSplitter] Removing blank page`);
+        await fs.unlink(pngResults[i].path).catch(() => {});
+        blankPagesRemoved++;
+        continue;
+      }
+
+      const targetPath = ImagePathUtil.getPath(taskId, currentPageNum);
+
+      // Rename from temporary name to standard format
+      if (pngResults[i].path !== targetPath) {
+        await fs.rename(pngResults[i].path, targetPath);
+      }
+
+      pages.push({
+        page: currentPageNum,
+        pageSource: currentPageNum,
+        imagePath: targetPath,
+      });
+      currentPageNum++;
+    }
+
+    if (blankPagesRemoved > 0) {
+      console.log(`[ExcelSplitter] Removed ${blankPagesRemoved} blank page(s)`);
+    }
+
+    return pages;
+  }
+
+  /**
+   * Detect if a page image is blank (nearly all white).
+   * Uses sharp to analyze pixel statistics.
+   */
+  private async isBlankPage(imagePath: string): Promise<boolean> {
+    try {
+      const sharp = (await import('sharp')).default;
+
+      // Get image statistics
+      const stats = await sharp(imagePath).stats();
+
+      // Check all channels (R, G, B)
+      const channels = stats.channels;
+
+      // Calculate average mean and std across RGB channels
+      const avgMean = (channels[0].mean + channels[1].mean + channels[2].mean) / 3;
+      const avgStd = (channels[0].stdev + channels[1].stdev + channels[2].stdev) / 3;
+
+      // Thresholds for blank page detection:
+      // - Mean should be > 250 (very close to white 255)
+      // - Std should be < 5 (very uniform color)
+      const isBlank = avgMean > 250 && avgStd < 5;
+
+      return isBlank;
+    } catch (error) {
+      // If analysis fails, assume page is not blank
+      console.warn(`[ExcelSplitter] Failed to analyze page for blank detection:`, error);
+      return false;
     }
   }
 
@@ -639,57 +742,96 @@ export class ExcelSplitter implements ISplitter {
   }
 
   /**
-   * Build complete HTML for Excel table.
+   * Build complete HTML for Excel table optimized for printToPDF.
+   * Uses @page CSS rules to control page size and avoid row truncation.
    */
-  private buildExcelHtml(tableHtml: string, sheetName: string, width: number): string {
+  private buildExcelHtmlForPrint(tableHtml: string, sheetName: string, isLandscape: boolean): string {
+    const pageOrientation = isLandscape ? 'landscape' : 'portrait';
+
     return `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    /* CSS @page rule for precise PDF page control */
+    @page {
+      size: A4 ${pageOrientation};
+      margin: 10mm;
+    }
+
+    @media print {
+      html, body {
+        margin: 0;
+        padding: 0;
+      }
+
+      /* Prevent rows from breaking across pages */
+      tr {
+        page-break-inside: avoid !important;
+      }
+
+      /* Keep header with first rows */
+      thead {
+        display: table-header-group;
+      }
+
+      /* Prevent table from breaking awkwardly */
+      table {
+        page-break-inside: auto;
+      }
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     html, body {
-      width: ${width}px;
       background: white;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif;
+      font-size: 11px;
+      line-height: 1.4;
     }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 13px;
-      padding: 20px;
+      padding: 10mm;
     }
+
     .sheet-name {
-      font-size: 16px;
+      font-size: 14px;
       font-weight: bold;
       color: #333;
-      margin-bottom: 15px;
-      padding-bottom: 8px;
+      margin-bottom: 10px;
+      padding-bottom: 6px;
       border-bottom: 2px solid #4CAF50;
     }
+
     table {
       border-collapse: collapse;
       width: 100%;
-      table-layout: fixed;
+      table-layout: auto;
     }
+
     th, td {
-      border: 1px solid #ddd;
-      padding: 8px 12px;
+      border: 1px solid #ccc;
+      padding: 6px 8px;
       text-align: left;
-      overflow: hidden;
-      text-overflow: ellipsis;
       vertical-align: middle;
       word-wrap: break-word;
+      /* Allow content to wrap instead of truncating */
+      white-space: pre-wrap;
     }
+
     th {
       background-color: #f5f5f5;
       font-weight: 600;
       color: #333;
     }
+
     tr:nth-child(even) td:not([style*="background-color"]) {
       background-color: #fafafa;
-    }
-    tr:hover td:not([style*="background-color"]) {
-      background-color: #f0f7ff;
     }
   </style>
 </head>
@@ -700,6 +842,9 @@ export class ExcelSplitter implements ISplitter {
 </html>`;
   }
 
+  /**
+   * Load HTML file and wait for rendering to complete.
+   */
   private loadAndWait(window: Electron.BrowserWindow, htmlPath: string): Promise<void> {
     return new Promise((resolve, reject) => {
       const cleanup = () => clearTimeout(timeoutId);
@@ -707,11 +852,12 @@ export class ExcelSplitter implements ISplitter {
       const timeoutId = setTimeout(() => {
         cleanup();
         reject(new Error('Page load timeout'));
-      }, 30000);
+      }, EXCEL_CONFIG.RENDER_TIMEOUT);
 
       window.webContents.once('did-finish-load', () => {
         cleanup();
-        setTimeout(resolve, 200);
+        // Wait for rendering to stabilize
+        setTimeout(resolve, 300);
       });
 
       window.webContents.once('did-fail-load', (_event, errorCode, errorDesc) => {
@@ -726,6 +872,9 @@ export class ExcelSplitter implements ISplitter {
     });
   }
 
+  /**
+   * Escape HTML special characters.
+   */
   private escapeHtml(text: string): string {
     return text
       .replace(/&/g, '&amp;')
@@ -735,6 +884,9 @@ export class ExcelSplitter implements ISplitter {
       .replace(/'/g, '&#039;');
   }
 
+  /**
+   * Wrap errors with user-friendly messages.
+   */
   private wrapError(error: unknown, filename: string): Error {
     const err = error as Error;
     const message = err.message.toLowerCase();
@@ -750,6 +902,9 @@ export class ExcelSplitter implements ISplitter {
     return new Error(`Failed to process Excel file ${filename}: ${err.message}`);
   }
 
+  /**
+   * Clean up temporary files for a task.
+   */
   async cleanup(taskId: string): Promise<void> {
     const taskDir = ImagePathUtil.getTaskDir(taskId);
     await fs.rm(taskDir, { recursive: true, force: true }).catch(() => {});

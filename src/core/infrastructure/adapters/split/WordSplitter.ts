@@ -2,14 +2,15 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { app } from 'electron';
 import mammoth from 'mammoth';
+import { pdfToPng } from 'pdf-to-png-converter';
 import { ISplitter, SplitResult, PageInfo } from '../../../domain/split/ISplitter.js';
 import { Task } from '../../../../shared/types/index.js';
 import { ImagePathUtil } from './ImagePathUtil.js';
 import { RenderWindowPoolFactory, RenderWindowPool } from './RenderWindowPoolFactory.js';
 import { TempFileManager } from './TempFileManager.js';
-import { ChunkedRenderer } from './ChunkedRenderer.js';
 import { PageRangeParser } from '../../../domain/split/PageRangeParser.js';
 import { PathValidator } from './PathValidator.js';
+import { WORKER_CONFIG } from '../../config/worker.config.js';
 
 /**
  * Get the directory path for loading bundles.
@@ -32,16 +33,14 @@ function getBundleDir(): string {
 
 /**
  * Page configuration constants.
+ * A4 size: 210mm x 297mm
+ * At 96 DPI: 794px x 1123px
  */
 const PAGE_CONFIG = {
   /** A4 page width (pixels at 96 DPI) */
   PAGE_WIDTH: 794,
   /** A4 page height (pixels at 96 DPI) */
   PAGE_HEIGHT: 1123,
-  /** Device scale factor for high DPI */
-  DEVICE_SCALE_FACTOR: 2,
-  /** Chunk height for chunked rendering */
-  CHUNK_HEIGHT: 4000,
   /** Render timeout in milliseconds */
   RENDER_TIMEOUT: 60000,
 } as const;
@@ -52,30 +51,23 @@ const PAGE_CONFIG = {
  * Supports: .docx, .dotx
  *
  * Technical approach:
- * - Primary: Uses docx-preview for high-fidelity rendering with styles, images, tables
- * - Fallback: Uses mammoth for basic HTML conversion
- * - Uses ChunkedRenderer for memory-optimized screenshots
- * - Splits into A4-sized pages
+ * - Primary: Uses docx-preview for high-fidelity HTML rendering
+ * - Converts HTML to PDF using Electron's printToPDF (Chromium engine)
+ * - Converts PDF to images using pdf-to-png-converter
+ * - This approach preserves Word's logical page breaks accurately
  *
- * Note: pageRange is based on rendered page numbers, not original document pages.
+ * Fallback: Uses mammoth for basic HTML conversion when docx-preview fails
  */
 export class WordSplitter implements ISplitter {
   private readonly uploadsDir: string;
   private readonly windowPool: RenderWindowPool;
   private readonly tempFileManager: TempFileManager;
-  private readonly chunkedRenderer: ChunkedRenderer;
   private bundleCache: string | null = null;
 
   constructor(uploadsDir: string) {
     this.uploadsDir = uploadsDir;
     this.windowPool = RenderWindowPoolFactory.create({ maxSize: 2, acquireTimeout: 60000 });
     this.tempFileManager = new TempFileManager();
-    this.chunkedRenderer = new ChunkedRenderer({
-      chunkHeight: PAGE_CONFIG.CHUNK_HEIGHT,
-      deviceScaleFactor: PAGE_CONFIG.DEVICE_SCALE_FACTOR,
-      pageWidth: PAGE_CONFIG.PAGE_WIDTH,
-      pageHeight: PAGE_CONFIG.PAGE_HEIGHT,
-    });
   }
 
   /**
@@ -98,12 +90,12 @@ export class WordSplitter implements ISplitter {
       const taskDir = ImagePathUtil.getTaskDir(taskId);
       await fs.mkdir(taskDir, { recursive: true });
 
-      // Try docx-preview rendering first
+      // Try docx-preview + printToPDF rendering first
       try {
-        return await this.renderWithDocxPreview(sourcePath, taskId, task.page_range);
+        return await this.renderWithPrintToPDF(sourcePath, taskId, task.page_range);
       } catch (previewError) {
         console.warn(
-          'docx-preview rendering failed, falling back to mammoth:',
+          '[WordSplitter] docx-preview + printToPDF failed, falling back to mammoth:',
           previewError
         );
         // Fallback to mammoth
@@ -130,53 +122,91 @@ export class WordSplitter implements ISplitter {
   }
 
   /**
-   * Build HTML template for docx-preview rendering.
+   * Build HTML template for docx-preview rendering optimized for printToPDF.
+   * Uses @page CSS rules to control page size and margins precisely.
    */
-  private buildDocxPreviewHtml(base64Data: string, bundle: string): string {
+  private buildDocxPreviewHtmlForPrint(base64Data: string, bundle: string): string {
     return `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    /* CSS @page rule for precise PDF page control */
+    @page {
+      size: A4;
+      margin: 0;
+    }
+
+    @media print {
+      html, body {
+        width: 210mm;
+        height: 297mm;
+        margin: 0;
+        padding: 0;
+      }
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     html, body {
-      width: ${PAGE_CONFIG.PAGE_WIDTH}px;
+      width: 210mm;
       background: white;
+      font-family: 'Times New Roman', serif;
     }
+
     #docx-container {
-      width: ${PAGE_CONFIG.PAGE_WIDTH}px;
+      width: 210mm;
     }
-    /* docx-preview default styles override */
+
+    /* docx-preview wrapper styles */
     .docx-wrapper {
       background: white !important;
       padding: 0 !important;
     }
+
+    /* Each section represents a page from Word */
     .docx-wrapper > section.docx {
       box-shadow: none !important;
-      margin-bottom: 0 !important;
-      padding: 60px 50px !important;
-      min-height: auto !important;
-      height: auto !important;
-    }
-    /* Remove page breaks and their spacing */
-    .docx-wrapper > section.docx + section.docx {
-      padding-top: 20px !important;
-    }
-    /* Hide page break elements */
-    .docx [style*="page-break"],
-    .docx [style*="break-after"],
-    .docx [style*="break-before"],
-    .docx br[clear="all"],
-    .docx .page-break {
-      display: none !important;
-      height: 0 !important;
       margin: 0 !important;
-      padding: 0 !important;
+      width: 210mm !important;
+      min-height: 297mm !important;
+      padding: 20mm 15mm !important;
+      page-break-after: always !important;
+      page-break-inside: avoid !important;
+      overflow: hidden !important;
+      background: white !important;
     }
-    /* Collapse empty paragraphs that might be used for spacing */
-    .docx p:empty {
-      display: none !important;
+
+    /* Remove page break after the last section */
+    .docx-wrapper > section.docx:last-child {
+      page-break-after: auto !important;
+    }
+
+    /* Ensure images don't break across pages */
+    .docx img {
+      max-width: 100%;
+      page-break-inside: avoid;
+    }
+
+    /* Ensure tables don't break awkwardly */
+    .docx table {
+      page-break-inside: avoid;
+    }
+
+    /* Handle Word's page break elements */
+    .docx [style*="page-break-before: always"],
+    .docx [style*="break-before: page"] {
+      page-break-before: always !important;
+    }
+
+    .docx [style*="page-break-after: always"],
+    .docx [style*="break-after: page"] {
+      page-break-after: always !important;
     }
   </style>
 </head>
@@ -198,14 +228,15 @@ export class WordSplitter implements ISplitter {
         }
         const arrayBuffer = bytes.buffer;
 
-        // Render with docx-preview (use window.docxPreview for explicit global access)
+        // Render with docx-preview
         const container = document.getElementById('docx-container');
         await window.docxPreview.renderAsync(arrayBuffer, container, null, {
           className: 'docx',
           inWrapper: true,
           ignoreWidth: false,
-          ignoreHeight: true,
-          breakPages: false,
+          ignoreHeight: false,
+          breakPages: true,
+          ignoreLastRenderedPageBreak: false,
           renderHeaders: true,
           renderFooters: true,
           renderFootnotes: true,
@@ -224,9 +255,11 @@ export class WordSplitter implements ISplitter {
           });
         }));
 
-        // Additional wait for fonts
+        // Wait for fonts to load
         await document.fonts.ready;
-        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // Additional stabilization delay
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         window.renderComplete = true;
       } catch (error) {
@@ -240,9 +273,10 @@ export class WordSplitter implements ISplitter {
   }
 
   /**
-   * Render document using docx-preview.
+   * Render document using docx-preview + printToPDF + pdf-to-png.
+   * This approach provides accurate page breaks matching the original Word document.
    */
-  private async renderWithDocxPreview(
+  private async renderWithPrintToPDF(
     sourcePath: string,
     taskId: string,
     pageRange?: string
@@ -250,15 +284,22 @@ export class WordSplitter implements ISplitter {
     const fileBuffer = await fs.readFile(sourcePath);
     const base64Data = fileBuffer.toString('base64');
     const bundle = await this.loadDocxPreviewBundle();
-    const html = this.buildDocxPreviewHtml(base64Data, bundle);
+    const html = this.buildDocxPreviewHtmlForPrint(base64Data, bundle);
     const tempHtmlPath = await this.tempFileManager.createHtmlFile(html);
+
+    // Create temp PDF path
+    const tempPdfPath = path.join(
+      path.dirname(tempHtmlPath),
+      `word-${Date.now()}.pdf`
+    );
 
     const window = await this.windowPool.acquire(
       PAGE_CONFIG.PAGE_WIDTH,
-      PAGE_CONFIG.CHUNK_HEIGHT
+      PAGE_CONFIG.PAGE_HEIGHT
     );
 
     try {
+      // Step 1: Load and render HTML
       await this.loadAndWaitForRender(window, tempHtmlPath);
 
       // Check for render errors
@@ -267,40 +308,153 @@ export class WordSplitter implements ISplitter {
         throw new Error(`docx-preview render error: ${renderError}`);
       }
 
-      // Chunked screenshot rendering (handles zoom and height calculation internally)
-      const totalPages = await this.chunkedRenderer.renderToPages(window, 0, (pageNum) =>
-        ImagePathUtil.getPath(taskId, pageNum)
+      // Get section count for logging
+      const sectionCount = await window.webContents.executeJavaScript(
+        'document.querySelectorAll("section.docx").length'
       );
+      console.log(`[WordSplitter] Document rendered with ${sectionCount} sections`);
 
-      // Build page info
-      let pages: PageInfo[] = Array.from({ length: totalPages }, (_, i) => ({
-        page: i + 1,
-        pageSource: i + 1,
-        imagePath: ImagePathUtil.getPath(taskId, i + 1),
-      }));
+      // Step 2: Print to PDF using Chromium's print engine
+      console.log('[WordSplitter] Converting to PDF via printToPDF...');
+      const pdfBuffer = await window.webContents.printToPDF({
+        pageSize: 'A4',
+        printBackground: true,
+        margins: {
+          top: 0,
+          bottom: 0,
+          left: 0,
+          right: 0,
+        },
+        preferCSSPageSize: true,
+      });
 
-      // Apply page range filter
-      if (pageRange) {
-        const parsed = PageRangeParser.parse(pageRange, totalPages);
-        const keepPages = new Set(parsed);
+      // Write PDF to temp file
+      await fs.writeFile(tempPdfPath, pdfBuffer);
+      console.log(`[WordSplitter] PDF created: ${pdfBuffer.length} bytes`);
 
-        // Delete unwanted page files
-        for (const page of pages) {
-          if (!keepPages.has(page.page)) {
-            await fs.unlink(page.imagePath).catch(() => {});
-          }
-        }
+      // Step 3: Convert PDF to images using pdf-to-png-converter
+      const result = await this.convertPdfToImages(tempPdfPath, taskId, pageRange);
 
-        // Filter and renumber
-        pages = pages
-          .filter((p) => keepPages.has(p.page))
-          .map((p, idx) => ({ ...p, page: idx + 1 }));
-      }
-
-      return { pages, totalPages: pages.length };
+      return result;
     } finally {
       await this.windowPool.release(window);
       await this.tempFileManager.deleteFile(tempHtmlPath);
+      // Clean up temp PDF
+      await fs.unlink(tempPdfPath).catch(() => {});
+    }
+  }
+
+  /**
+   * Convert PDF to page images using pdf-to-png-converter.
+   * Reuses the same logic as PDFSplitter for consistency.
+   * Automatically detects and removes blank pages.
+   */
+  private async convertPdfToImages(
+    pdfPath: string,
+    taskId: string,
+    pageRange?: string
+  ): Promise<SplitResult> {
+    const taskDir = ImagePathUtil.getTaskDir(taskId);
+    const relativeOutputFolder = path.relative(process.cwd(), taskDir);
+
+    // Convert PDF to PNG images
+    const pngResults = await pdfToPng(pdfPath, {
+      outputFolder: relativeOutputFolder,
+      viewportScale: WORKER_CONFIG.splitter.viewportScale,
+      strictPagesToProcess: false,
+      verbosityLevel: 0,
+    });
+
+    if (!pngResults || pngResults.length === 0) {
+      throw new Error('PDF conversion produced no output');
+    }
+
+    const totalPages = pngResults.length;
+    console.log(`[WordSplitter] PDF converted to ${totalPages} page images`);
+
+    // Parse page range
+    const pageNumbers = pageRange
+      ? PageRangeParser.parse(pageRange, totalPages)
+      : Array.from({ length: totalPages }, (_, i) => i + 1);
+
+    const selectedPages = new Set(pageNumbers);
+
+    // Rename files and build PageInfo array
+    const pages: PageInfo[] = [];
+    let outputPageNum = 1;
+    let blankPagesRemoved = 0;
+
+    for (let i = 0; i < pngResults.length; i++) {
+      const sourcePageNum = i + 1;
+
+      if (!selectedPages.has(sourcePageNum)) {
+        // Delete unwanted page
+        await fs.unlink(pngResults[i].path).catch(() => {});
+        continue;
+      }
+
+      // Check if page is blank
+      const isBlank = await this.isBlankPage(pngResults[i].path);
+      if (isBlank) {
+        console.log(`[WordSplitter] Removing blank page ${sourcePageNum}`);
+        await fs.unlink(pngResults[i].path).catch(() => {});
+        blankPagesRemoved++;
+        continue;
+      }
+
+      const targetPath = ImagePathUtil.getPath(taskId, outputPageNum);
+
+      // Rename from temporary name to standard format
+      if (pngResults[i].path !== targetPath) {
+        await fs.rename(pngResults[i].path, targetPath);
+      }
+
+      pages.push({
+        page: outputPageNum,
+        pageSource: sourcePageNum,
+        imagePath: targetPath,
+      });
+      outputPageNum++;
+    }
+
+    if (blankPagesRemoved > 0) {
+      console.log(`[WordSplitter] Removed ${blankPagesRemoved} blank page(s)`);
+    }
+
+    return { pages, totalPages: pages.length };
+  }
+
+  /**
+   * Detect if a page image is blank (nearly all white).
+   * Uses sharp to analyze pixel statistics.
+   */
+  private async isBlankPage(imagePath: string): Promise<boolean> {
+    try {
+      const sharp = (await import('sharp')).default;
+
+      // Get image statistics
+      const stats = await sharp(imagePath).stats();
+
+      // Check all channels (R, G, B)
+      // A blank page should have:
+      // 1. Very high mean values (close to 255 for white)
+      // 2. Very low standard deviation (uniform color)
+      const channels = stats.channels;
+
+      // Calculate average mean and std across RGB channels
+      const avgMean = (channels[0].mean + channels[1].mean + channels[2].mean) / 3;
+      const avgStd = (channels[0].stdev + channels[1].stdev + channels[2].stdev) / 3;
+
+      // Thresholds for blank page detection:
+      // - Mean should be > 250 (very close to white 255)
+      // - Std should be < 5 (very uniform color)
+      const isBlank = avgMean > 250 && avgStd < 5;
+
+      return isBlank;
+    } catch (error) {
+      // If analysis fails, assume page is not blank
+      console.warn(`[WordSplitter] Failed to analyze page for blank detection:`, error);
+      return false;
     }
   }
 
@@ -355,7 +509,7 @@ export class WordSplitter implements ISplitter {
   }
 
   /**
-   * Fallback: Render document using mammoth.
+   * Fallback: Render document using mammoth + printToPDF.
    */
   private async renderWithMammoth(
     sourcePath: string,
@@ -374,91 +528,135 @@ export class WordSplitter implements ISplitter {
       }
     );
 
-    const html = this.buildWordHtml(result.value);
+    const html = this.buildMammothHtmlForPrint(result.value);
     const tempHtmlPath = await this.tempFileManager.createHtmlFile(html);
+    const tempPdfPath = path.join(
+      path.dirname(tempHtmlPath),
+      `mammoth-${Date.now()}.pdf`
+    );
 
-    // Get render window
     const window = await this.windowPool.acquire(
       PAGE_CONFIG.PAGE_WIDTH,
-      PAGE_CONFIG.CHUNK_HEIGHT
+      PAGE_CONFIG.PAGE_HEIGHT
     );
 
     try {
       await this.loadAndWait(window, tempHtmlPath);
 
-      // Chunked screenshot rendering (handles zoom and height calculation internally)
-      const totalPages = await this.chunkedRenderer.renderToPages(window, 0, (pageNum) =>
-        ImagePathUtil.getPath(taskId, pageNum)
-      );
+      // Print to PDF
+      const pdfBuffer = await window.webContents.printToPDF({
+        pageSize: 'A4',
+        printBackground: true,
+        margins: {
+          top: 0,
+          bottom: 0,
+          left: 0,
+          right: 0,
+        },
+        preferCSSPageSize: true,
+      });
 
-      // Build page info
-      let pages: PageInfo[] = Array.from({ length: totalPages }, (_, i) => ({
-        page: i + 1,
-        pageSource: i + 1,
-        imagePath: ImagePathUtil.getPath(taskId, i + 1),
-      }));
+      await fs.writeFile(tempPdfPath, pdfBuffer);
 
-      // Apply page range filter
-      if (pageRange) {
-        const parsed = PageRangeParser.parse(pageRange, totalPages);
-        const keepPages = new Set(parsed);
-
-        // Delete unwanted page files
-        for (const page of pages) {
-          if (!keepPages.has(page.page)) {
-            await fs.unlink(page.imagePath).catch(() => {});
-          }
-        }
-
-        // Filter and renumber
-        pages = pages
-          .filter((p) => keepPages.has(p.page))
-          .map((p, idx) => ({ ...p, page: idx + 1 }));
-      }
-
-      return { pages, totalPages: pages.length };
+      // Convert PDF to images
+      return await this.convertPdfToImages(tempPdfPath, taskId, pageRange);
     } finally {
       await this.windowPool.release(window);
       await this.tempFileManager.deleteFile(tempHtmlPath);
+      await fs.unlink(tempPdfPath).catch(() => {});
     }
   }
 
   /**
-   * Build complete HTML for Word document (fallback).
+   * Build HTML for mammoth output optimized for printToPDF.
    */
-  private buildWordHtml(content: string): string {
+  private buildMammothHtmlForPrint(content: string): string {
     return `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    @page {
+      size: A4;
+      margin: 20mm 15mm;
+    }
+
+    @media print {
+      html, body {
+        width: 210mm;
+        margin: 0;
+        padding: 0;
+      }
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     html, body {
-      width: ${PAGE_CONFIG.PAGE_WIDTH}px;
+      width: 210mm;
       background: white;
     }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      font-size: 14px;
-      line-height: 1.6;
-      padding: 60px 50px;
+      font-family: 'Times New Roman', Georgia, serif;
+      font-size: 12pt;
+      line-height: 1.5;
+      padding: 20mm 15mm;
     }
+
     h1, h2, h3, h4, h5, h6 {
       margin-top: 1em;
       margin-bottom: 0.5em;
       font-weight: bold;
+      page-break-after: avoid;
     }
-    h1 { font-size: 24px; }
-    h2 { font-size: 20px; }
-    h3 { font-size: 18px; }
-    p { margin-bottom: 0.8em; text-align: justify; }
-    table { border-collapse: collapse; width: 100%; margin: 1em 0; }
-    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-    th { background-color: #f5f5f5; }
-    img { max-width: 100%; height: auto; }
-    ul, ol { margin-left: 2em; margin-bottom: 1em; }
-    li { margin-bottom: 0.3em; }
+
+    h1 { font-size: 18pt; }
+    h2 { font-size: 16pt; }
+    h3 { font-size: 14pt; }
+
+    p {
+      margin-bottom: 0.8em;
+      text-align: justify;
+      orphans: 3;
+      widows: 3;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 1em 0;
+      page-break-inside: avoid;
+    }
+
+    th, td {
+      border: 1px solid #333;
+      padding: 6px 8px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f0f0f0;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+      page-break-inside: avoid;
+    }
+
+    ul, ol {
+      margin-left: 2em;
+      margin-bottom: 1em;
+    }
+
+    li {
+      margin-bottom: 0.3em;
+    }
   </style>
 </head>
 <body>${content}</body>
@@ -466,7 +664,7 @@ export class WordSplitter implements ISplitter {
   }
 
   /**
-   * Load HTML file and wait for rendering to complete (fallback).
+   * Load HTML file and wait for rendering to complete.
    */
   private loadAndWait(window: Electron.BrowserWindow, htmlPath: string): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -481,7 +679,8 @@ export class WordSplitter implements ISplitter {
 
       window.webContents.once('did-finish-load', () => {
         cleanup();
-        setTimeout(resolve, 200);
+        // Wait for rendering to stabilize
+        setTimeout(resolve, 500);
       });
 
       window.webContents.once('did-fail-load', (_event, errorCode, errorDesc) => {
