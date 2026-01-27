@@ -578,7 +578,6 @@ export class ExcelSplitter implements ISplitter {
     const pngResults = await pdfToPng(pdfPath, {
       outputFolder: relativeOutputFolder,
       viewportScale: WORKER_CONFIG.splitter.viewportScale,
-      strictPagesToProcess: false,
       verbosityLevel: 0,
     });
 

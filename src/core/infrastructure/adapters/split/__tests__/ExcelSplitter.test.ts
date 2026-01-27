@@ -217,12 +217,6 @@ describe('ExcelSplitter', () => {
 
   describe('CSV parsing', () => {
     it('should parse CSV file correctly', async () => {
-      const task = {
-        id: 'task123',
-        filename: 'data.csv',
-        page_range: '',
-      };
-
       vi.mocked(fs.access).mockResolvedValue(undefined);
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
       vi.mocked(fs.readFile).mockResolvedValue(Buffer.from('col1,col2\nval1,val2'));
@@ -239,7 +233,7 @@ describe('ExcelSplitter', () => {
       });
 
       // Mock window and PDF generation
-      mockWindow.webContents.once.mockImplementation((event: string, callback: Function) => {
+      mockWindow.webContents.once.mockImplementation((event: string, callback: () => void) => {
         if (event === 'did-finish-load') {
           setTimeout(() => callback(), 10);
         }
@@ -405,10 +399,8 @@ describe('ExcelSplitter', () => {
 
   describe('sheet range handling', () => {
     it('should process only selected sheets', () => {
-      // PageRangeParser is used for sheet selection
+      // PageRangeParser is used for sheet selection (e.g., '1,3' from 4 sheets)
       // Sheet indices are 1-based
-      const sheetRange = '1,3';
-      const totalSheets = 4;
       const selectedIndices = new Set([1, 3]);
 
       expect(selectedIndices.has(1)).toBe(true);

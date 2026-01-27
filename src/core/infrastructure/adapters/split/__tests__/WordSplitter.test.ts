@@ -240,12 +240,6 @@ describe('WordSplitter', () => {
 
   describe('mammoth fallback', () => {
     it('should use mammoth when docx-preview fails', async () => {
-      const task = {
-        id: 'task123',
-        filename: 'document.docx',
-        page_range: '',
-      };
-
       vi.mocked(fs.access).mockResolvedValue(undefined);
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
       vi.mocked(fs.readFile).mockResolvedValue(Buffer.from('mock-docx'));
@@ -257,7 +251,7 @@ describe('WordSplitter', () => {
       });
 
       // Mock window loading to simulate docx-preview failure then mammoth success
-      mockWindow.webContents.once.mockImplementation((event: string, callback: Function) => {
+      mockWindow.webContents.once.mockImplementation((event: string, callback: () => void) => {
         if (event === 'did-finish-load') {
           setTimeout(() => callback(), 10);
         }
@@ -300,11 +294,8 @@ describe('WordSplitter', () => {
 
   describe('page range handling', () => {
     it('should filter pages based on page range', async () => {
-      // This tests the page range parsing logic
+      // This tests the page range parsing logic (e.g., '1,3,5' from 5 pages)
       // The actual filtering happens in convertPdfToImages
-      const pageRange = '1,3,5';
-      const totalPages = 5;
-
       // PageRangeParser is tested separately, but we verify integration
       const expectedPages = [1, 3, 5];
       expect(expectedPages).toHaveLength(3);
