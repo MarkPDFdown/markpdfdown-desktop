@@ -38,5 +38,9 @@
     "delete_failed": "タスクの削除に失敗しました",
     "action_success": "{{action}}が完了しました",
     "action_failed": "{{action}}に失敗しました"
+  },
+  "task_type": {
+    "cloud": "クラウドタスク",
+    "local": "ローカルタスク"
   }
 }

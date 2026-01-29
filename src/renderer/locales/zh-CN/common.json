@@ -29,5 +29,8 @@
   "closeConfirm": {
     "title": "确认退出",
     "content": "当前有 {{count}} 个任务正在进行中，关闭将中断任务。确认退出吗？"
+  },
+  "auth": {
+    "not_signed_in": "未登录"
   }
 }

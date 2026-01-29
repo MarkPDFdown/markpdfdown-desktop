@@ -1,11 +1,13 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Card, Button, Avatar, Typography, Divider, Row, Col, Statistic, Alert, Table, Tag, Tooltip, Space } from 'antd';
+import { Card, Button, Avatar, Typography, Divider, Row, Col, Statistic, Table, Tag, Tooltip, Space } from 'antd';
 import { UserOutlined, LogoutOutlined, CrownOutlined, SafetyCertificateOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { CloudContext, CreditHistoryItem } from '../contexts/CloudContextDefinition';
 
 const { Title, Text } = Typography;
 
 const AccountCenter: React.FC = () => {
+  const { t } = useTranslation('account');
   const context = useContext(CloudContext);
   const [history, setHistory] = useState<CreditHistoryItem[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -44,26 +46,39 @@ const AccountCenter: React.FC = () => {
   if (!isAuthenticated) {
     return (
       <div style={{ padding: '24px', textAlign: 'center' }}>
-        <Title level={3}>Account Center</Title>
+        <Title level={3}>{t('title')}</Title>
         <Text type="secondary" style={{ display: 'block', marginBottom: '24px' }}>
-          Sign in to manage your cloud account and credits.
+          {t('sign_in_hint')}
         </Text>
         <Button type="primary" size="large" onClick={login} icon={<UserOutlined />}>
-          Sign In / Sign Up
+          {t('sign_in_button')}
         </Button>
       </div>
     );
   }
 
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case 'consumption':
+        return t('history.types.consumption');
+      case 'recharge':
+        return t('history.types.recharge');
+      case 'bonus':
+        return t('history.types.bonus');
+      default:
+        return type.toUpperCase();
+    }
+  };
+
   const columns = [
     {
-      title: 'Time',
+      title: t('history.columns.time'),
       dataIndex: 'createdAt',
       key: 'createdAt',
       render: (text: string) => new Date(text).toLocaleString(),
     },
     {
-      title: 'Type',
+      title: t('history.columns.type'),
       dataIndex: 'type',
       key: 'type',
       render: (type: string) => {
@@ -71,17 +86,17 @@ const AccountCenter: React.FC = () => {
         if (type === 'consumption') color = 'blue';
         if (type === 'recharge') color = 'green';
         if (type === 'bonus') color = 'orange';
-        return <Tag color={color}>{type.toUpperCase()}</Tag>;
+        return <Tag color={color}>{getTypeLabel(type)}</Tag>;
       },
       width: 100,
     },
     {
-      title: 'Description',
+      title: t('history.columns.description'),
       dataIndex: 'description',
       key: 'description',
     },
     {
-      title: 'Credits',
+      title: t('history.columns.credits'),
       dataIndex: 'amount',
       key: 'amount',
       render: (amount: number) => (
@@ -103,21 +118,21 @@ const AccountCenter: React.FC = () => {
           <Text type="secondary">{user.email}</Text>
         </div>
         <Button danger icon={<LogoutOutlined />} onClick={logout}>
-          Sign Out
+          {t('sign_out_button')}
         </Button>
       </div>
 
       <Divider />
 
-      <Title level={4}>Credit Balance</Title>
+      <Title level={4}>{t('credit_balance')}</Title>
       <Row gutter={24}>
         <Col span={12}>
           <Card variant="borderless" style={{ background: '#e6f7ff', height: '100%' }}>
             <Statistic
               title={
                 <Space>
-                  Monthly Free Credits
-                  <Tooltip title="日使用上限200">
+                  {t('monthly_free.title')}
+                  <Tooltip title={t('monthly_free.daily_limit_tooltip', { limit: credits.dailyLimit })}>
                     <InfoCircleOutlined style={{ fontSize: '14px', color: 'rgba(0,0,0,0.45)' }} />
                   </Tooltip>
                 </Space>
@@ -127,26 +142,26 @@ const AccountCenter: React.FC = () => {
               prefix={<SafetyCertificateOutlined style={{ color: '#1890ff' }} />}
               valueStyle={{ color: '#1890ff' }}
             />
-            <Text type="secondary" style={{ fontSize: '12px' }}>每月1日0时重置</Text>
+            <Text type="secondary" style={{ fontSize: '12px' }}>{t('monthly_free.reset_hint')}</Text>
           </Card>
         </Col>
         <Col span={12}>
           <Card variant="borderless" style={{ background: '#f9f0ff', position: 'relative', height: '100%' }}>
             <Statistic
-              title="Paid Credits"
+              title={t('paid_credits.title')}
               value={credits.paid}
               prefix={<CrownOutlined style={{ color: '#722ed1' }} />}
               valueStyle={{ color: '#722ed1' }}
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-              <Text type="secondary" style={{ fontSize: '12px' }}>Never expire</Text>
+              <Text type="secondary" style={{ fontSize: '12px' }}>{t('paid_credits.never_expire')}</Text>
               <Button
                 type="primary"
                 size="small"
                 style={{ backgroundColor: '#722ed1' }}
                 onClick={() => window.open('https://markpdfdown.com/pricing', '_blank')}
               >
-                Recharge
+                {t('paid_credits.recharge')}
               </Button>
             </div>
           </Card>
@@ -155,7 +170,7 @@ const AccountCenter: React.FC = () => {
 
       <Divider />
 
-      <Title level={4} style={{ marginTop: '24px', marginBottom: '16px' }}>Credit History</Title>
+      <Title level={4} style={{ marginTop: '24px', marginBottom: '16px' }}>{t('history.title')}</Title>
       <Table
         dataSource={history}
         columns={columns}

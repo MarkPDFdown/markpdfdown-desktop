@@ -24,5 +24,13 @@
     "upload_error": "خطا در بارگذاری",
     "invalid_file_type": "فایل {{filename}} یک فایل PDF معتبر نیست",
     "invalid_file_path": "نمی‌توان مسیر فایل {{filename}} را دریافت کرد"
+  },
+  "cloud": {
+    "provider_name": "ابر Markdown.Fit",
+    "model_name": "Fit Lite",
+    "sign_in_required": "برای استفاده از تبدیل ابری وارد شوید",
+    "credits_apply": "(مصرف اعتبار)",
+    "upload_failed": "بارگذاری {{filename}} ناموفق بود: {{error}}",
+    "upload_success": "{{count}} فایل با موفقیت به ابر بارگذاری شد"
   }
 }

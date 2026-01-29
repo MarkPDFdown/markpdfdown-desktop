@@ -24,5 +24,13 @@
     "upload_error": "فشل التحميل",
     "invalid_file_type": "الملف {{filename}} ليس ملف PDF صالح",
     "invalid_file_path": "تعذر الحصول على مسار الملف {{filename}}"
+  },
+  "cloud": {
+    "provider_name": "سحابة Markdown.Fit",
+    "model_name": "Fit Lite",
+    "sign_in_required": "يرجى تسجيل الدخول لاستخدام التحويل السحابي",
+    "credits_apply": "(تُطبق الاعتمادات)",
+    "upload_failed": "فشل تحميل {{filename}}: {{error}}",
+    "upload_success": "تم تحميل {{count}} ملفات إلى السحابة بنجاح"
   }
 }

@@ -24,5 +24,13 @@
     "upload_error": "Ошибка загрузки",
     "invalid_file_type": "Файл {{filename}} не является действительным PDF-файлом",
     "invalid_file_path": "Не удалось получить путь к файлу {{filename}}"
+  },
+  "cloud": {
+    "provider_name": "Markdown.Fit Облако",
+    "model_name": "Fit Lite",
+    "sign_in_required": "Войдите для использования облачной конвертации",
+    "credits_apply": "(Расход кредитов)",
+    "upload_failed": "Не удалось загрузить {{filename}}: {{error}}",
+    "upload_success": "Успешно загружено {{count}} файлов в облако"
   }
 }

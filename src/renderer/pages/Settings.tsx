@@ -13,7 +13,7 @@ const Settings: React.FC = () => {
   const items: TabsProps["items"] = [
     {
       key: "3",
-      label: "Account", // TODO: Add translation key 'tabs.account'
+      label: t('tabs.account'),
       icon: <UserOutlined />,
       children: <AccountCenter />,
     },

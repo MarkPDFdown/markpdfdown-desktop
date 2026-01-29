@@ -1,0 +1,31 @@
+{
+  "title": "Центр аккаунта",
+  "sign_in_hint": "Войдите, чтобы управлять облачным аккаунтом и кредитами.",
+  "sign_in_button": "Вход / Регистрация",
+  "sign_out_button": "Выйти",
+  "credit_balance": "Баланс кредитов",
+  "monthly_free": {
+    "title": "Ежемесячные бесплатные кредиты",
+    "daily_limit_tooltip": "Дневной лимит: {{limit}}",
+    "reset_hint": "Сбрасывается 1-го числа каждого месяца"
+  },
+  "paid_credits": {
+    "title": "Платные кредиты",
+    "never_expire": "Бессрочные",
+    "recharge": "Пополнить"
+  },
+  "history": {
+    "title": "История кредитов",
+    "columns": {
+      "time": "Время",
+      "type": "Тип",
+      "description": "Описание",
+      "credits": "Кредиты"
+    },
+    "types": {
+      "consumption": "РАСХОД",
+      "recharge": "ПОПОЛНЕНИЕ",
+      "bonus": "БОНУС"
+    }
+  }
+}

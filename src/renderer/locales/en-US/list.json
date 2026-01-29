@@ -38,5 +38,9 @@
     "delete_failed": "Failed to delete task",
     "action_success": "{{action}} successful",
     "action_failed": "{{action}} failed"
+  },
+  "task_type": {
+    "cloud": "Cloud Task",
+    "local": "Local Task"
   }
 }

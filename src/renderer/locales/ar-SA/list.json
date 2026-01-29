@@ -38,5 +38,9 @@
     "delete_failed": "فشل في حذف المهمة",
     "action_success": "تم {{action}} بنجاح",
     "action_failed": "فشل {{action}}"
+  },
+  "task_type": {
+    "cloud": "مهمة سحابية",
+    "local": "مهمة محلية"
   }
 }

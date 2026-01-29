@@ -9,6 +9,7 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => {
       const translations: Record<string, string> = {
+        'tabs.account': 'Account',
         'tabs.model_service': 'Model Service',
         'tabs.about': 'About'
       }

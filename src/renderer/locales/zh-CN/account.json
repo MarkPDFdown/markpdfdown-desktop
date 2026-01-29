@@ -1,0 +1,31 @@
+{
+  "title": "账户中心",
+  "sign_in_hint": "登录以管理您的云端账户和积分。",
+  "sign_in_button": "登录 / 注册",
+  "sign_out_button": "退出登录",
+  "credit_balance": "积分余额",
+  "monthly_free": {
+    "title": "每月免费积分",
+    "daily_limit_tooltip": "每日使用上限: {{limit}}",
+    "reset_hint": "每月1日0时重置"
+  },
+  "paid_credits": {
+    "title": "付费积分",
+    "never_expire": "永不过期",
+    "recharge": "充值"
+  },
+  "history": {
+    "title": "积分记录",
+    "columns": {
+      "time": "时间",
+      "type": "类型",
+      "description": "描述",
+      "credits": "积分"
+    },
+    "types": {
+      "consumption": "消费",
+      "recharge": "充值",
+      "bonus": "赠送"
+    }
+  }
+}

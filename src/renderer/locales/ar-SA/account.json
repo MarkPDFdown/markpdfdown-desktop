@@ -1,0 +1,31 @@
+{
+  "title": "مركز الحساب",
+  "sign_in_hint": "سجّل الدخول لإدارة حسابك السحابي ورصيدك.",
+  "sign_in_button": "تسجيل الدخول / إنشاء حساب",
+  "sign_out_button": "تسجيل الخروج",
+  "credit_balance": "رصيد الاعتمادات",
+  "monthly_free": {
+    "title": "الاعتمادات الشهرية المجانية",
+    "daily_limit_tooltip": "الحد اليومي للاستخدام: {{limit}}",
+    "reset_hint": "يُعاد تعيينه في الأول من كل شهر"
+  },
+  "paid_credits": {
+    "title": "الاعتمادات المدفوعة",
+    "never_expire": "لا تنتهي صلاحيتها",
+    "recharge": "إعادة الشحن"
+  },
+  "history": {
+    "title": "سجل الاعتمادات",
+    "columns": {
+      "time": "الوقت",
+      "type": "النوع",
+      "description": "الوصف",
+      "credits": "الاعتمادات"
+    },
+    "types": {
+      "consumption": "استهلاك",
+      "recharge": "شحن",
+      "bonus": "مكافأة"
+    }
+  }
+}

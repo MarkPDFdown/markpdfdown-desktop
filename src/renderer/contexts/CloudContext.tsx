@@ -85,7 +85,7 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
     }
 
     try {
-      let fileData: { path?: string; content?: ArrayBuffer; name: string } = {
+      const fileData: { path?: string; content?: ArrayBuffer; name: string } = {
         name: file.name
       };
 

@@ -1,0 +1,31 @@
+{
+  "title": "アカウントセンター",
+  "sign_in_hint": "ログインしてクラウドアカウントとクレジットを管理します。",
+  "sign_in_button": "ログイン / 登録",
+  "sign_out_button": "ログアウト",
+  "credit_balance": "クレジット残高",
+  "monthly_free": {
+    "title": "月間無料クレジット",
+    "daily_limit_tooltip": "1日の使用上限: {{limit}}",
+    "reset_hint": "毎月1日にリセット"
+  },
+  "paid_credits": {
+    "title": "有料クレジット",
+    "never_expire": "有効期限なし",
+    "recharge": "チャージ"
+  },
+  "history": {
+    "title": "クレジット履歴",
+    "columns": {
+      "time": "日時",
+      "type": "種類",
+      "description": "説明",
+      "credits": "クレジット"
+    },
+    "types": {
+      "consumption": "消費",
+      "recharge": "チャージ",
+      "bonus": "ボーナス"
+    }
+  }
+}

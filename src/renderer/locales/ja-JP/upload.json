@@ -24,5 +24,13 @@
     "upload_error": "アップロードに失敗しました",
     "invalid_file_type": "ファイル {{filename}} は有効なPDFファイルではありません",
     "invalid_file_path": "ファイル {{filename}} のパスを取得できません"
+  },
+  "cloud": {
+    "provider_name": "Markdown.Fit クラウド",
+    "model_name": "Fit Lite",
+    "sign_in_required": "クラウド変換を使用するにはログインしてください",
+    "credits_apply": "(クレジット消費)",
+    "upload_failed": "{{filename}} のアップロードに失敗: {{error}}",
+    "upload_success": "{{count}} 件のファイルをクラウドにアップロードしました"
   }
 }

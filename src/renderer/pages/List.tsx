@@ -360,11 +360,11 @@ const List: React.FC = () => {
             })()}
           </Tooltip>
           {record.provider === -1 ? (
-             <Tooltip title="Cloud Task">
+             <Tooltip title={t('task_type.cloud')}>
                <CloudOutlined style={{ color: '#1890ff' }} />
              </Tooltip>
           ) : (
-             <Tooltip title="Local Task">
+             <Tooltip title={t('task_type.local')}>
                <HomeOutlined style={{ color: '#8c8c8c' }} />
              </Tooltip>
           )}
@@ -422,7 +422,7 @@ const List: React.FC = () => {
           {(() => {
             // Cloud tasks currently don't support preview/actions in this version
             if (record.provider === -1) {
-               return <Text type="secondary" style={{ fontSize: '12px' }}>Cloud Task</Text>;
+               return <Text type="secondary" style={{ fontSize: '12px' }}>{t('task_type.cloud')}</Text>;
             }
 
             // 可查看: SPLITTING(2), PROCESSING(3), READY_TO_MERGE(4), MERGING(5), COMPLETED(6), PARTIAL_FAILED(8)

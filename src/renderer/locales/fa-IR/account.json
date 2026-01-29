@@ -1,0 +1,31 @@
+{
+  "title": "مرکز حساب کاربری",
+  "sign_in_hint": "وارد شوید تا حساب ابری و اعتبار خود را مدیریت کنید.",
+  "sign_in_button": "ورود / ثبت‌نام",
+  "sign_out_button": "خروج",
+  "credit_balance": "موجودی اعتبار",
+  "monthly_free": {
+    "title": "اعتبار رایگان ماهانه",
+    "daily_limit_tooltip": "سقف استفاده روزانه: {{limit}}",
+    "reset_hint": "اول هر ماه بازنشانی می‌شود"
+  },
+  "paid_credits": {
+    "title": "اعتبار پرداختی",
+    "never_expire": "بدون انقضا",
+    "recharge": "شارژ"
+  },
+  "history": {
+    "title": "تاریخچه اعتبار",
+    "columns": {
+      "time": "زمان",
+      "type": "نوع",
+      "description": "توضیحات",
+      "credits": "اعتبار"
+    },
+    "types": {
+      "consumption": "مصرف",
+      "recharge": "شارژ",
+      "bonus": "جایزه"
+    }
+  }
+}

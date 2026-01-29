@@ -29,5 +29,8 @@
   "closeConfirm": {
     "title": "Confirm Exit",
     "content": "There are {{count}} tasks in progress. Closing will interrupt them. Are you sure you want to exit?"
+  },
+  "auth": {
+    "not_signed_in": "Not Signed In"
   }
 }

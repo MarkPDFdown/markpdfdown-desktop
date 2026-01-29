@@ -24,5 +24,13 @@
     "upload_error": "Upload failed",
     "invalid_file_type": "File {{filename}} is not a valid PDF file",
     "invalid_file_path": "Cannot get file path for {{filename}}"
+  },
+  "cloud": {
+    "provider_name": "Markdown.Fit Cloud",
+    "model_name": "Fit Lite",
+    "sign_in_required": "Please sign in to use cloud conversion",
+    "credits_apply": "(Credits apply)",
+    "upload_failed": "Failed to upload {{filename}}: {{error}}",
+    "upload_success": "Successfully uploaded {{count}} files to cloud"
   }
 }

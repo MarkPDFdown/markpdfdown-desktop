@@ -38,5 +38,9 @@
     "delete_failed": "حذف تسک ناموفق بود",
     "action_success": "{{action}} با موفقیت انجام شد",
     "action_failed": "{{action}} ناموفق بود"
+  },
+  "task_type": {
+    "cloud": "تسک ابری",
+    "local": "تسک محلی"
   }
 }

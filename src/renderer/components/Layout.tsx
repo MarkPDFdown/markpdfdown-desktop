@@ -115,7 +115,7 @@ const WindowControls: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   );
 };
 
-const UserProfileIcon: React.FC<{ navigate: (path: string) => void }> = ({ navigate }) => {
+const UserProfileIcon: React.FC<{ navigate: (path: string) => void; notSignedInText: string }> = ({ navigate, notSignedInText }) => {
   const cloudContext = useContext(CloudContext);
 
   // Guard against missing context
@@ -128,7 +128,7 @@ const UserProfileIcon: React.FC<{ navigate: (path: string) => void }> = ({ navig
       onClick={() => navigate('/settings')}
       style={{ cursor: 'pointer', marginBottom: '16px' }}
     >
-      <Tooltip placement="right" title={isAuthenticated ? user.fullName || user.email : "Not Signed In"}>
+      <Tooltip placement="right" title={isAuthenticated ? user.fullName || user.email : notSignedInText}>
         <Avatar
           src={user.imageUrl}
           icon={<UserOutlined />}
@@ -317,7 +317,7 @@ const AppLayout: React.FC = () => {
             justifyContent: 'center',
             padding: '16px 0'
           }}>
-            <UserProfileIcon navigate={navigate} />
+            <UserProfileIcon navigate={navigate} notSignedInText={t('auth.not_signed_in')} />
           </div>
         </Sider>
 

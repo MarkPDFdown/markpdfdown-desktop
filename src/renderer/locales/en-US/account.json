@@ -1,0 +1,31 @@
+{
+  "title": "Account Center",
+  "sign_in_hint": "Sign in to manage your cloud account and credits.",
+  "sign_in_button": "Sign In / Sign Up",
+  "sign_out_button": "Sign Out",
+  "credit_balance": "Credit Balance",
+  "monthly_free": {
+    "title": "Monthly Free Credits",
+    "daily_limit_tooltip": "Daily usage limit: {{limit}}",
+    "reset_hint": "Resets on the 1st of each month"
+  },
+  "paid_credits": {
+    "title": "Paid Credits",
+    "never_expire": "Never expire",
+    "recharge": "Recharge"
+  },
+  "history": {
+    "title": "Credit History",
+    "columns": {
+      "time": "Time",
+      "type": "Type",
+      "description": "Description",
+      "credits": "Credits"
+    },
+    "types": {
+      "consumption": "CONSUMPTION",
+      "recharge": "RECHARGE",
+      "bonus": "BONUS"
+    }
+  }
+}

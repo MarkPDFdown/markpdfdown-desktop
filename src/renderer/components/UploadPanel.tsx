@@ -70,10 +70,10 @@ const UploadPanel: React.FC = () => {
         // Inject Cloud Model
         const cloudGroup: ModelGroupType = {
           provider: CLOUD_PROVIDER_ID,
-          providerName: "Markdown.Fit Cloud",
+          providerName: t('cloud.provider_name'),
           models: [{
             id: CLOUD_MODEL_ID,
-            name: "Fit Lite",
+            name: t('cloud.model_name'),
             provider: CLOUD_PROVIDER_ID
           }]
         };
@@ -132,9 +132,9 @@ const UploadPanel: React.FC = () => {
         title: group.providerName,
         options: group.models.map((model) => ({
           label: (
-            <Tooltip title={isDisabled ? "Please sign in to use cloud conversion" : ""}>
+            <Tooltip title={isDisabled ? t('cloud.sign_in_required') : ""}>
               <span style={isDisabled ? { color: '#d9d9d9', cursor: 'not-allowed' } : {}}>
-                 {model.name} {isCloud && "(Credits apply)"}
+                 {model.name} {isCloud && t('cloud.credits_apply')}
               </span>
             </Tooltip>
           ),
@@ -264,12 +264,12 @@ const UploadPanel: React.FC = () => {
           if (result.success) {
             successCount++;
           } else {
-            message.error(`Failed to upload ${file.name}: ${result.error}`);
+            message.error(t('cloud.upload_failed', { filename: file.name, error: result.error }));
           }
         }
 
         if (successCount > 0) {
-          message.success(`Successfully uploaded ${successCount} files to cloud`);
+          message.success(t('cloud.upload_success', { count: successCount }));
           setFileList([]);
           navigate("/list", { replace: true });
         }

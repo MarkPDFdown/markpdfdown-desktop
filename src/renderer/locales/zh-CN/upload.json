@@ -24,5 +24,13 @@
     "upload_error": "上传失败",
     "invalid_file_type": "文件 {{filename}} 不是有效的PDF文件",
     "invalid_file_path": "无法获取文件 {{filename}} 的路径"
+  },
+  "cloud": {
+    "provider_name": "Markdown.Fit",
+    "model_name": "Fit Lite",
+    "sign_in_required": "请登录后使用云端转换",
+    "credits_apply": "(使用积分)",
+    "upload_failed": "上传 {{filename}} 失败: {{error}}",
+    "upload_success": "已成功上传 {{count}} 个文件到云端"
   }
 }
