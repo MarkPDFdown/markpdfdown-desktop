@@ -81,6 +81,12 @@ interface WindowAPI {
     markImagedown: (providerId: number, modelId: string, url: string) => Promise<any>;
     testConnection: (providerId: number, modelId: string) => Promise<any>;
   };
+  cloud: {
+    setToken: (token: string | null) => Promise<any>;
+    convert: (fileData: { path?: string; content?: ArrayBuffer; name: string }) => Promise<any>;
+    getTasks: (params: { page: number; pageSize: number }) => Promise<any>;
+    getCreditHistory: (params: { page: number; pageSize: number }) => Promise<any>;
+  };
   shell: {
     openExternal: (url: string) => void;
   };

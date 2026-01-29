@@ -1,10 +1,9 @@
 import React, { CSSProperties, useState, useContext } from "react";
-import { ConfigProvider, Layout, Menu, Modal, theme, Avatar, Tooltip, Space } from "antd";
+import { ConfigProvider, Layout, Menu, Modal, theme, Avatar, Tooltip } from "antd";
 import {
   HomeOutlined,
   UnorderedListOutlined,
   SettingOutlined,
-  GithubOutlined,
   CloseOutlined,
   MinusOutlined,
   BorderOutlined,
@@ -221,17 +220,6 @@ const AppLayout: React.FC = () => {
   // 定义自定义样式
   const headerStyle: CustomCSSProperties = {
     WebkitAppRegion: 'drag'
-  };
-
-  // 打开外部链接
-  const openExternalLink = (url: string) => {
-    if (window.electron?.ipcRenderer) {
-      // 使用通过上下文桥接口提供的IPC
-      window.electron.ipcRenderer.send('open-external-link', url);
-    } else {
-      // 降级为普通链接（在浏览器中运行时）
-      window.open(url, '_blank', 'noopener,noreferrer');
-    }
   };
 
   return (

@@ -26,6 +26,13 @@ export interface CreditHistoryItem {
   taskId?: string;
 }
 
+// File input type for cloud conversion (supports both UploadFile and File)
+export interface CloudFileInput {
+  name: string;
+  url?: string;  // File path from dialog selection
+  originFileObj?: File;  // File object from drag and drop
+}
+
 export interface CloudContextType {
   user: UserProfile;
   credits: Credits;
@@ -38,7 +45,7 @@ export interface CloudContextType {
   logout: () => void;
   refreshCredits: () => Promise<void>;
   getToken: () => Promise<string | null>;
-  convertFile: (file: File) => Promise<{ success: boolean; taskId?: string; error?: string }>;
+  convertFile: (file: CloudFileInput) => Promise<{ success: boolean; taskId?: string; error?: string }>;
   getTasks: (page?: number, pageSize?: number) => Promise<{ success: boolean; data?: any[]; total?: number; error?: string }>;
   getCreditHistory: (page?: number, pageSize?: number) => Promise<{ success: boolean; data?: CreditHistoryItem[]; total?: number; error?: string }>;
 }

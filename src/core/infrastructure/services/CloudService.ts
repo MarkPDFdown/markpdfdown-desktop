@@ -1,16 +1,9 @@
-import { net } from 'electron';
-import fs from 'fs';
-import path from 'path';
-import FormData from 'form-data';
-
 /**
  * CloudService handles interaction with the MarkPDFDown Cloud API
  */
 class CloudService {
   private static instance: CloudService;
   private token: string | null = null;
-  // TODO: Replace with actual production URL
-  private baseUrl: string = 'https://api.markpdfdown.com/v1';
 
   private constructor() {}
 
@@ -87,6 +80,44 @@ class CloudService {
           status: 'processing',
           createdAt: new Date().toISOString(),
           credits: 3
+        }
+      ],
+      total: 2,
+      page,
+      pageSize
+    };
+  }
+
+  /**
+   * Get credit history from the cloud API
+   */
+  public async getCreditHistory(page: number = 1, pageSize: number = 10): Promise<any> {
+    if (!this.token) {
+      throw new Error('Authentication required');
+    }
+
+    console.log(`[CloudService] Fetching credit history page ${page}`);
+
+    // Simulating API call delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    // Mock response
+    return {
+      success: true,
+      data: [
+        {
+          id: 'credit-1',
+          type: 'usage',
+          amount: -5,
+          description: 'Document conversion',
+          createdAt: new Date(Date.now() - 3600000).toISOString()
+        },
+        {
+          id: 'credit-2',
+          type: 'purchase',
+          amount: 100,
+          description: 'Credit purchase',
+          createdAt: new Date(Date.now() - 86400000).toISOString()
         }
       ],
       total: 2,

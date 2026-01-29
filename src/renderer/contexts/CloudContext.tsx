@@ -1,6 +1,6 @@
 import React, { useState, useEffect, ReactNode, useCallback } from 'react';
 import { useUser, useAuth, useClerk } from '@clerk/clerk-react';
-import { CloudContext, UserProfile, Credits } from './CloudContextDefinition';
+import { CloudContext, UserProfile, Credits, CloudFileInput } from './CloudContextDefinition';
 
 interface CloudProviderProps {
   children: ReactNode;
@@ -79,7 +79,7 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
   }, [isSignedIn, clerkUser?.id, getToken]);
 
   // Cloud conversion function
-  const convertFile = useCallback(async (file: any) => {
+  const convertFile = useCallback(async (file: CloudFileInput) => {
     if (!isSignedIn) {
       return { success: false, error: 'User not signed in' };
     }

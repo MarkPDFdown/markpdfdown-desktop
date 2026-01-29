@@ -187,6 +187,7 @@ interface ElectronAPI {
     getById: (id: string) => Promise<IpcResponse<Task>>;
     update: (id: string, data: UpdateTaskDTO) => Promise<IpcResponse<Task>>;
     delete: (id: string) => Promise<IpcResponse<Task>>;
+    hasRunningTasks: () => Promise<IpcResponse<{ hasRunning: boolean; count: number }>>;
   };
 
   taskDetail: {
@@ -227,13 +228,32 @@ interface ElectronAPI {
     ) => Promise<IpcResponse<string>>;
   };
 
+  cloud: {
+    setToken: (token: string | null) => Promise<IpcResponse<void>>;
+    convert: (fileData: { path?: string; content?: ArrayBuffer; name: string }) => Promise<IpcResponse<any>>;
+    getTasks: (params: { page: number; pageSize: number }) => Promise<IpcResponse<any>>;
+    getCreditHistory: (params: { page: number; pageSize: number }) => Promise<IpcResponse<any>>;
+  };
+
   shell: {
     openExternal: (url: string) => void;
+  };
+
+  window: {
+    minimize: () => void;
+    maximize: () => void;
+    close: () => void;
   };
 
   events: {
     onTaskEvent: (callback: (event: TaskEvent) => void) => () => void;
     onTaskDetailEvent: (callback: (event: TaskDetailEvent) => void) => () => void;
+  };
+
+  platform: string;
+
+  app: {
+    getVersion: () => Promise<IpcResponse<string>>;
   };
 }
 

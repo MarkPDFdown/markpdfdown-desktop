@@ -260,7 +260,11 @@ const UploadPanel: React.FC = () => {
 
         let successCount = 0;
         for (const file of fileList) {
-          const result = await cloudContext.convertFile(file);
+          const result = await cloudContext.convertFile({
+            name: file.name,
+            url: file.url,
+            originFileObj: file.originFileObj as File | undefined
+          });
           if (result.success) {
             successCount++;
           } else {
