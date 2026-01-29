@@ -7,8 +7,7 @@ import {
   FileWordTwoTone,
   FilePptTwoTone,
   FileExcelTwoTone,
-  CloudOutlined,
-  HomeOutlined
+  CloudOutlined
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -359,13 +358,9 @@ const List: React.FC = () => {
               }
             })()}
           </Tooltip>
-          {record.provider === -1 ? (
+          {record.provider === -1 && (
              <Tooltip title={t('task_type.cloud')}>
                <CloudOutlined style={{ color: '#1890ff' }} />
-             </Tooltip>
-          ) : (
-             <Tooltip title={t('task_type.local')}>
-               <HomeOutlined style={{ color: '#8c8c8c' }} />
              </Tooltip>
           )}
         </Space>
