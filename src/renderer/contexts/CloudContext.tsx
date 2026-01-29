@@ -1,5 +1,5 @@
 import React, { useState, useEffect, ReactNode, useCallback } from 'react';
-import { useUser, useAuth, useClerk } from '@clerk/clerk-react';
+import { useUser, useAuth } from '@clerk/clerk-react';
 import { CloudContext, UserProfile, Credits, CloudFileInput } from './CloudContextDefinition';
 
 interface CloudProviderProps {
@@ -9,8 +9,8 @@ interface CloudProviderProps {
 export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
   const { user: clerkUser, isLoaded: isUserLoaded, isSignedIn } = useUser();
   const { getToken, signOut } = useAuth();
-  const { openSignIn } = useClerk();
 
+  const [showSignIn, setShowSignIn] = useState(false);
   const [credits, setCredits] = useState<Credits>({
     total: 0,
     free: 0,
@@ -29,10 +29,15 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
     isSignedIn: !!isSignedIn
   };
 
-  // Login action - opens Clerk modal
+  // Login action - shows inline SignIn component
   const login = useCallback(() => {
-    openSignIn();
-  }, [openSignIn]);
+    setShowSignIn(true);
+  }, []);
+
+  // Close SignIn modal
+  const closeSignIn = useCallback(() => {
+    setShowSignIn(false);
+  }, []);
 
   // Logout action
   const logout = useCallback(() => {
@@ -178,6 +183,27 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
     }
   }, [isSignedIn, refreshCredits]);
 
+  // Auto close SignIn modal when user signs in
+  useEffect(() => {
+    if (isSignedIn && showSignIn) {
+      setShowSignIn(false);
+    }
+  }, [isSignedIn, showSignIn]);
+
+  // Listen for OAuth callback from main process (when user completes OAuth in browser)
+  useEffect(() => {
+    if (!window.api?.events?.onOAuthCallback) return;
+
+    const cleanup = window.api.events.onOAuthCallback((url) => {
+      console.log('[CloudContext] OAuth callback received:', url);
+      // Clerk will automatically detect the session change
+      // We just need to close the SignIn modal if it's open
+      setShowSignIn(false);
+    });
+
+    return cleanup;
+  }, []);
+
   return (
     <CloudContext.Provider
       value={{
@@ -186,8 +212,10 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
         isAuthenticated: !!isSignedIn,
         isLoading: !isUserLoaded,
         token: null, // Token is retrieved async via getToken()
+        showSignIn,
         login,
         logout,
+        closeSignIn,
         refreshCredits,
         getToken: getAuthToken,
         convertFile,

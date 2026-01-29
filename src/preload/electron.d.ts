@@ -99,6 +99,7 @@ interface WindowAPI {
   events: {
     onTaskEvent: (callback: (event: TaskEventData) => void) => () => void;
     onTaskDetailEvent: (callback: (event: TaskDetailEventData) => void) => () => void;
+    onOAuthCallback: (callback: (url: string) => void) => () => void;
   };
   platform: NodeJS.Platform;
   app: {

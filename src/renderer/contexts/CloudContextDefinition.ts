@@ -39,10 +39,12 @@ export interface CloudContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   token: string | null;
+  showSignIn: boolean;
 
   // Actions
   login: () => void;
   logout: () => void;
+  closeSignIn: () => void;
   refreshCredits: () => Promise<void>;
   getToken: () => Promise<string | null>;
   convertFile: (file: CloudFileInput) => Promise<{ success: boolean; taskId?: string; error?: string }>;

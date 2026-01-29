@@ -248,6 +248,7 @@ interface ElectronAPI {
   events: {
     onTaskEvent: (callback: (event: TaskEvent) => void) => () => void;
     onTaskDetailEvent: (callback: (event: TaskDetailEvent) => void) => () => void;
+    onOAuthCallback: (callback: (url: string) => void) => () => void;
   };
 
   platform: string;

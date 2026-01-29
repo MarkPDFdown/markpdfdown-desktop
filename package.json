@@ -80,12 +80,24 @@
     "mac": {
       "category": "public.app-category.productivity",
       "artifactName": "${productName}-${version}-${arch}.${ext}",
-      "icon": "public/icons/mac/icon.icns"
+      "icon": "public/icons/mac/icon.icns",
+      "extendInfo": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": ["markpdfdown"],
+            "CFBundleURLName": "com.markpdfdown.desktop"
+          }
+        ]
+      }
     },
     "win": {
       "target": "nsis",
       "artifactName": "${productName}-${version}-${arch}.${ext}",
-      "icon": "public/icons/win/icon.ico"
+      "icon": "public/icons/win/icon.ico",
+      "protocols": {
+        "name": "MarkPDFdown URL",
+        "schemes": ["markpdfdown"]
+      }
     },
     "nsis": {
       "artifactName": "${productName}-${version}-${arch}.${ext}",
@@ -98,7 +110,8 @@
     "linux": {
       "target": "AppImage",
       "artifactName": "${productName}-${version}-${arch}.${ext}",
-      "icon": "public/icons/png"
+      "icon": "public/icons/png",
+      "mimeTypes": ["x-scheme-handler/markpdfdown"]
     },
     "electronDownload": {
       "mirror": "https://github.com/electron/electron/releases/download/"

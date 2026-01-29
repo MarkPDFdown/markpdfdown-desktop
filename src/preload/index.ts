@@ -130,6 +130,21 @@ contextBridge.exposeInMainWorld("api", {
         ipcRenderer.removeListener('taskDetail:event', handler);
       };
     },
+
+    /**
+     * 监听 OAuth 回调事件
+     * @param callback 事件回调函数，接收回调 URL
+     * @returns 清理函数
+     */
+    onOAuthCallback: (callback: (url: string) => void) => {
+      const handler = (_event: any, url: string) => callback(url);
+      ipcRenderer.on('auth:oauth-callback', handler);
+
+      // 返回清理函数
+      return () => {
+        ipcRenderer.removeListener('auth:oauth-callback', handler);
+      };
+    },
   },
 
   // ==================== Platform APIs ====================

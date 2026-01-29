@@ -47,7 +47,8 @@ const mockWindowApi = {
   },
   events: {
     onTaskEvent: vi.fn(() => () => {}),
-    onTaskDetailEvent: vi.fn(() => () => {})
+    onTaskDetailEvent: vi.fn(() => () => {}),
+    onOAuthCallback: vi.fn(() => () => {})
   }
 }
 

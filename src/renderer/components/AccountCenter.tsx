@@ -1,7 +1,8 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Card, Button, Avatar, Typography, Divider, Row, Col, Statistic, Table, Tag, Tooltip, Space } from 'antd';
+import { Card, Button, Avatar, Typography, Divider, Row, Col, Statistic, Table, Tag, Tooltip, Space, Modal } from 'antd';
 import { UserOutlined, LogoutOutlined, CrownOutlined, SafetyCertificateOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
+import { SignIn } from '@clerk/clerk-react';
 import { CloudContext, CreditHistoryItem } from '../contexts/CloudContextDefinition';
 
 const { Title, Text } = Typography;
@@ -37,7 +38,7 @@ const AccountCenter: React.FC = () => {
 
   if (!context) return null;
 
-  const { user, credits, isAuthenticated, login, logout, isLoading } = context;
+  const { user, credits, isAuthenticated, login, logout, isLoading, showSignIn, closeSignIn } = context;
 
   if (isLoading) {
     return <Card loading bordered={false} />;
@@ -53,6 +54,19 @@ const AccountCenter: React.FC = () => {
         <Button type="primary" size="large" onClick={login} icon={<UserOutlined />}>
           {t('sign_in_button')}
         </Button>
+        <Modal
+          open={showSignIn}
+          onCancel={closeSignIn}
+          footer={null}
+          centered
+          width="auto"
+          styles={{ body: { padding: 0 } }}
+          destroyOnClose
+        >
+          <SignIn
+            forceRedirectUrl="markpdfdown://auth/callback"
+          />
+        </Modal>
       </div>
     );
   }

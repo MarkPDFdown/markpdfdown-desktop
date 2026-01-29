@@ -13,7 +13,10 @@ if (!PUBLISHABLE_KEY) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
+    <ClerkProvider
+      publishableKey={PUBLISHABLE_KEY}
+      allowedRedirectProtocols={['markpdfdown://']}
+    >
       <CloudProvider>
         <App />
       </CloudProvider>

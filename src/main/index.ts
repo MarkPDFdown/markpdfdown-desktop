@@ -81,6 +81,9 @@ import { windowManager } from './WindowManager.js';
 import { eventBridge } from './ipc/eventBridge.js';
 import fileLogic from "../core/infrastructure/services/FileService.js";
 
+// 自定义协议名称（用于 OAuth 回调）
+const PROTOCOL_NAME = 'markpdfdown';
+
 // 在 app ready 之前注册自定义协议的权限
 protocol.registerSchemesAsPrivileged([
   {
@@ -93,6 +96,65 @@ protocol.registerSchemesAsPrivileged([
     }
   }
 ]);
+
+// 注册为默认协议客户端（处理 markpdfdown:// 链接）
+if (process.defaultApp) {
+  // 开发模式下需要传递额外参数
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient(PROTOCOL_NAME, process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  // 生产模式
+  app.setAsDefaultProtocolClient(PROTOCOL_NAME);
+}
+
+// 处理自定义协议 URL（用于 OAuth 回调）
+function handleProtocolUrl(url: string) {
+  console.log('[Main] Received protocol URL:', url);
+
+  // 解析 URL：markpdfdown://auth/callback?...
+  if (url.startsWith(`${PROTOCOL_NAME}://`)) {
+    // 聚焦主窗口
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore();
+      }
+      mainWindow.focus();
+
+      // 将 OAuth 回调信息发送给渲染进程
+      mainWindow.webContents.send('auth:oauth-callback', url);
+    }
+  }
+}
+
+// macOS: 通过 open-url 事件处理协议 URL
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  handleProtocolUrl(url);
+});
+
+// Windows/Linux: 处理单实例锁和协议 URL
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (_event, commandLine) => {
+    // 用户尝试启动第二个实例时，聚焦到主窗口
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore();
+      }
+      mainWindow.focus();
+    }
+
+    // Windows/Linux: 协议 URL 通过命令行参数传递
+    const url = commandLine.find(arg => arg.startsWith(`${PROTOCOL_NAME}://`));
+    if (url) {
+      handleProtocolUrl(url);
+    }
+  });
+}
 
 let mainWindow: BrowserWindow | null;
 
