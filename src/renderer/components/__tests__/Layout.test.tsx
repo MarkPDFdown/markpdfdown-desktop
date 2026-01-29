@@ -34,6 +34,15 @@ vi.mock('../../hooks/useLanguage', () => ({
   })
 }))
 
+// Mock CloudContext - return null to simulate context not available
+vi.mock('../../contexts/CloudContextDefinition', () => ({
+  CloudContext: {
+    Provider: ({ children }: any) => children,
+    Consumer: ({ children }: any) => children(null),
+    _currentValue: null
+  }
+}))
+
 // Mock window.api
 const mockApi = {
   platform: 'win32',
@@ -265,37 +274,17 @@ describe('Layout', () => {
     })
   })
 
-  describe('GitHub Link', () => {
-    it('should render GitHub icon', () => {
+  describe('Sidebar Bottom Section', () => {
+    it('should render sidebar bottom section', () => {
       render(
         <MemoryRouter>
           <Layout />
         </MemoryRouter>
       )
 
-      // GitHub icon should be in the sidebar
-      const githubIcon = document.querySelector('[aria-label="github"]')
-      expect(githubIcon).toBeInTheDocument()
-    })
-
-    it('should open GitHub link when clicked', () => {
-      const mockSend = vi.fn()
-      vi.stubGlobal('electron', { ipcRenderer: { send: mockSend } })
-
-      render(
-        <MemoryRouter>
-          <Layout />
-        </MemoryRouter>
-      )
-
-      const githubIcon = document.querySelector('[aria-label="github"]')
-      if (githubIcon) {
-        const clickableElement = githubIcon.closest('[style*="cursor: pointer"]')
-        if (clickableElement) {
-          fireEvent.click(clickableElement)
-          // Either IPC send or window.open should be called
-        }
-      }
+      // The sidebar should render (UserProfileIcon will not render when CloudContext is null)
+      const sider = document.querySelector('.ant-layout-sider')
+      expect(sider).toBeInTheDocument()
     })
   })
 

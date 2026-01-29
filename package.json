@@ -120,14 +120,15 @@
   },
   "dependencies": {
     "@ant-design/icons": "^5.6.1",
+    "@clerk/clerk-react": "^5.60.0",
     "@prisma/client": "^6.5.0",
-    "prisma": "^6.5.0",
     "@types/sharp": "^0.31.1",
     "antd": "^5.24.4",
     "electron-is-dev": "^3.0.1",
     "katex": "^0.16.21",
     "pdf-lib": "^1.17.1",
     "pdf-to-png-converter": "^3.11.0",
+    "prisma": "^6.5.0",
     "prismjs": "^1.30.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -142,7 +143,6 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
-    "electron": "^38.0.0",
     "@eslint/js": "^9.21.0",
     "@testing-library/jest-dom": "^6.1.5",
     "@testing-library/react": "^14.0.0",
@@ -152,6 +152,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "@vitest/coverage-v8": "^2.1.8",
     "concurrently": "^9.1.2",
+    "electron": "^38.0.0",
     "electron-builder": "^25.1.8",
     "electron-icon-builder": "^2.0.1",
     "electron-vite": "^3.1.0",

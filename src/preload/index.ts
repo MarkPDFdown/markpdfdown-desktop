@@ -76,6 +76,17 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("completion:testConnection", providerId, modelId),
   },
 
+  // ==================== Cloud APIs ====================
+  cloud: {
+    setToken: (token: string | null) => ipcRenderer.invoke("cloud:setToken", token),
+    convert: (fileData: { path?: string; content?: ArrayBuffer; name: string }) =>
+      ipcRenderer.invoke("cloud:convert", fileData),
+    getTasks: (params: { page: number; pageSize: number }) =>
+      ipcRenderer.invoke("cloud:getTasks", params),
+    getCreditHistory: (params: { page: number; pageSize: number }) =>
+      ipcRenderer.invoke("cloud:getCreditHistory", params),
+  },
+
   // ==================== Shell APIs ====================
   shell: {
     openExternal: (url: string) => ipcRenderer.send("open-external-link", url),

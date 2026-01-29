@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   Button,
   Col,
@@ -11,11 +11,18 @@ import {
   Upload,
   UploadFile,
   UploadProps,
+  Tooltip
 } from "antd";
-import { FileMarkdownOutlined, InboxOutlined } from "@ant-design/icons";
+import { FileMarkdownOutlined, InboxOutlined, CloudOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { CloudContext } from "../contexts/CloudContextDefinition";
+
 const { Text } = Typography;
+
+// Cloud Constants
+const CLOUD_PROVIDER_ID = -1;
+const CLOUD_MODEL_ID = "markpdfdown-cloud";
 
 // 定义模型数据接口
 interface ModelType {
@@ -36,6 +43,8 @@ const UploadPanel: React.FC = () => {
   const navigate = useNavigate();
   const { message } = App.useApp();
   const { t } = useTranslation('upload');
+  const cloudContext = useContext(CloudContext);
+
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [modelGroups, setModelGroups] = useState<ModelGroupType[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -51,25 +60,42 @@ const UploadPanel: React.FC = () => {
         setLoading(true);
         const result = await window.api.model.getAll();
 
+        let groups: ModelGroupType[] = [];
         if (result.success && result.data) {
-          setModelGroups(result.data);
-
-          // 尝试恢复上次选择的模型
-          const savedModel = localStorage.getItem(SELECTED_MODEL_KEY);
-          if (savedModel) {
-            // 检查保存的模型是否在当前列表中存在
-            const modelExists = result.data.some((group: ModelGroupType) =>
-              group.models.some(
-                (model: ModelType) => `${model.id}@${model.provider}` === savedModel
-              )
-            );
-            if (modelExists) {
-              setSelectedModel(savedModel);
-            }
-          }
+          groups = result.data;
         } else {
           message.error(result.error || t('messages.fetch_models_failed'));
         }
+
+        // Inject Cloud Model
+        const cloudGroup: ModelGroupType = {
+          provider: CLOUD_PROVIDER_ID,
+          providerName: "Markdown.Fit Cloud",
+          models: [{
+            id: CLOUD_MODEL_ID,
+            name: "Fit Lite",
+            provider: CLOUD_PROVIDER_ID
+          }]
+        };
+
+        // Add cloud group to the beginning
+        groups = [cloudGroup, ...groups];
+        setModelGroups(groups);
+
+        // 尝试恢复上次选择的模型
+        const savedModel = localStorage.getItem(SELECTED_MODEL_KEY);
+        if (savedModel) {
+          // 检查保存的模型是否在当前列表中存在
+          const modelExists = groups.some((group: ModelGroupType) =>
+            group.models.some(
+              (model: ModelType) => `${model.id}@${model.provider}` === savedModel
+            )
+          );
+          if (modelExists) {
+            setSelectedModel(savedModel);
+          }
+        }
+
       } catch (error) {
         console.error("Failed to fetch model list:", error);
         message.error(
@@ -92,14 +118,31 @@ const UploadPanel: React.FC = () => {
 
   // 将模型数据转换为Select选项格式
   const getModelOptions = () => {
-    const options = modelGroups.map((group) => ({
-      label: <span>{group.providerName}</span>,
-      title: group.providerName,
-      options: group.models.map((model) => ({
-        label: <span>{model.name}</span>,
-        value: model.id + "@" + model.provider,
-      })),
-    }));
+    const options = modelGroups.map((group) => {
+      const isCloud = group.provider === CLOUD_PROVIDER_ID;
+      const isDisabled = isCloud && !cloudContext?.isAuthenticated;
+
+      return {
+        label: (
+          <span>
+            {isCloud && <CloudOutlined style={{ marginRight: 8, color: '#1890ff' }} />}
+            {group.providerName}
+          </span>
+        ),
+        title: group.providerName,
+        options: group.models.map((model) => ({
+          label: (
+            <Tooltip title={isDisabled ? "Please sign in to use cloud conversion" : ""}>
+              <span style={isDisabled ? { color: '#d9d9d9', cursor: 'not-allowed' } : {}}>
+                 {model.name} {isCloud && "(Credits apply)"}
+              </span>
+            </Tooltip>
+          ),
+          value: model.id + "@" + model.provider,
+          disabled: isDisabled
+        })),
+      };
+    });
 
     // 如果没有数据，提供默认选项
     if (options.length === 0) {
@@ -208,6 +251,30 @@ const UploadPanel: React.FC = () => {
       // 解析选中的模型ID和提供商ID
       const [modelId, providerIdStr] = selectedModel.split("@");
       const providerId = parseInt(providerIdStr, 10);
+
+      // Check if it is a cloud conversion
+      if (providerId === CLOUD_PROVIDER_ID) {
+        if (!cloudContext) {
+          throw new Error("Cloud context not initialized");
+        }
+
+        let successCount = 0;
+        for (const file of fileList) {
+          const result = await cloudContext.convertFile(file);
+          if (result.success) {
+            successCount++;
+          } else {
+            message.error(`Failed to upload ${file.name}: ${result.error}`);
+          }
+        }
+
+        if (successCount > 0) {
+          message.success(`Successfully uploaded ${successCount} files to cloud`);
+          setFileList([]);
+          navigate("/list", { replace: true });
+        }
+        return;
+      }
 
       // 获取选中的模型名称，模型名称为 模型name@提供商name
       const selectedModelGroup = modelGroups.find(

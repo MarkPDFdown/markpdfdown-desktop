@@ -29,6 +29,10 @@ vi.mock('../../components/About', () => ({
   default: () => <div data-testid="about">About Mock</div>
 }))
 
+vi.mock('../../components/AccountCenter', () => ({
+  default: () => <div data-testid="account-center">Account Center Mock</div>
+}))
+
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
   <BrowserRouter>
     <App>{children}</App>
@@ -88,27 +92,52 @@ describe('Settings', () => {
       expect(screen.getByText('About')).toBeInTheDocument()
     })
 
-    it('should have Model Service tab active by default', () => {
+    it('should display Account tab', () => {
       render(
         <Wrapper>
           <Settings />
         </Wrapper>
       )
 
-      const modelServiceTab = screen.getByText('Model Service').closest('.ant-tabs-tab')
-      expect(modelServiceTab).toHaveClass('ant-tabs-tab-active')
+      expect(screen.getByText('Account')).toBeInTheDocument()
+    })
+
+    it('should have Account tab active by default', () => {
+      render(
+        <Wrapper>
+          <Settings />
+        </Wrapper>
+      )
+
+      const accountTab = screen.getByText('Account').closest('.ant-tabs-tab')
+      expect(accountTab).toHaveClass('ant-tabs-tab-active')
     })
   })
 
   describe('Tab Content', () => {
-    it('should render ModelService component by default', () => {
+    it('should render AccountCenter component by default', () => {
       render(
         <Wrapper>
           <Settings />
         </Wrapper>
       )
 
-      expect(screen.getByTestId('model-service')).toBeInTheDocument()
+      expect(screen.getByTestId('account-center')).toBeInTheDocument()
+    })
+
+    it('should render ModelService component when Model Service tab is clicked', async () => {
+      render(
+        <Wrapper>
+          <Settings />
+        </Wrapper>
+      )
+
+      const modelServiceTab = screen.getByText('Model Service')
+      fireEvent.click(modelServiceTab)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('model-service')).toBeInTheDocument()
+      })
     })
 
     it('should render About component when About tab is clicked', async () => {
@@ -128,6 +157,18 @@ describe('Settings', () => {
   })
 
   describe('Tab Icons', () => {
+    it('should display user icon for Account tab', () => {
+      render(
+        <Wrapper>
+          <Settings />
+        </Wrapper>
+      )
+
+      const accountTab = screen.getByText('Account').closest('.ant-tabs-tab')
+      const icon = accountTab?.querySelector('[aria-label="user"]')
+      expect(icon).toBeInTheDocument()
+    })
+
     it('should display API icon for Model Service tab', () => {
       render(
         <Wrapper>
@@ -154,6 +195,22 @@ describe('Settings', () => {
   })
 
   describe('Tab Switching', () => {
+    it('should switch to Model Service tab when clicked', async () => {
+      render(
+        <Wrapper>
+          <Settings />
+        </Wrapper>
+      )
+
+      const modelServiceTab = screen.getByText('Model Service')
+      fireEvent.click(modelServiceTab)
+
+      await waitFor(() => {
+        const modelServiceTabElement = screen.getByText('Model Service').closest('.ant-tabs-tab')
+        expect(modelServiceTabElement).toHaveClass('ant-tabs-tab-active')
+      })
+    })
+
     it('should switch to About tab when clicked', async () => {
       render(
         <Wrapper>
@@ -170,7 +227,7 @@ describe('Settings', () => {
       })
     })
 
-    it('should switch back to Model Service tab', async () => {
+    it('should switch back to Account tab', async () => {
       render(
         <Wrapper>
           <Settings />
@@ -184,12 +241,12 @@ describe('Settings', () => {
         expect(screen.getByText('About').closest('.ant-tabs-tab')).toHaveClass('ant-tabs-tab-active')
       })
 
-      // Click Model Service tab
-      fireEvent.click(screen.getByText('Model Service'))
+      // Click Account tab
+      fireEvent.click(screen.getByText('Account'))
 
       await waitFor(() => {
-        const modelServiceTab = screen.getByText('Model Service').closest('.ant-tabs-tab')
-        expect(modelServiceTab).toHaveClass('ant-tabs-tab-active')
+        const accountTab = screen.getByText('Account').closest('.ant-tabs-tab')
+        expect(accountTab).toHaveClass('ant-tabs-tab-active')
       })
     })
   })

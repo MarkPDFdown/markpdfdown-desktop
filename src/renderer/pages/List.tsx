@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useRef, useContext } from "react";
 import { Progress, Space, Table, Tooltip, Typography, Tag, App } from "antd";
 import {
   FilePdfTwoTone,
@@ -7,16 +7,22 @@ import {
   FileWordTwoTone,
   FilePptTwoTone,
   FileExcelTwoTone,
+  CloudOutlined,
+  HomeOutlined
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Task } from "../../shared/types/Task";
+import { CloudContext } from "../contexts/CloudContextDefinition";
+
 const { Text } = Typography;
 
 const List: React.FC = () => {
   const { message, modal } = App.useApp();
   const { t } = useTranslation('list');
   const { t: tCommon } = useTranslation('common');
+  const cloudContext = useContext(CloudContext);
+
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<Task[]>([]);
   const [pagination, setPagination] = useState({
@@ -35,25 +41,64 @@ const List: React.FC = () => {
   const fetchTasks = useCallback(async (page = 1, pageSize = 10) => {
     setLoading(true);
     try {
-      const result = await window.api.task.getAll({ page, pageSize });
+      // Parallel fetch local and cloud tasks
+      const promises: Promise<any>[] = [window.api.task.getAll({ page, pageSize })];
 
-      if (result.success && result.data) {
-        setData(result.data.list);
-        setPagination(prev => ({
-          ...prev,
-          current: page,
-          total: result.data.total,
-        }));
-      } else {
-        message.error(result.error || t('messages.fetch_failed'));
+      // Only fetch cloud tasks if authenticated
+      if (cloudContext?.isAuthenticated) {
+        promises.push(cloudContext.getTasks(page, pageSize));
       }
+
+      const results = await Promise.all(promises);
+      const localResult = results[0];
+      const cloudResult = results.length > 1 ? results[1] : null;
+
+      let combinedList: Task[] = [];
+      let totalCount = 0;
+
+      // Handle local tasks
+      if (localResult.success && localResult.data) {
+        combinedList = [...localResult.data.list];
+        totalCount += localResult.data.total;
+      } else {
+        message.error(localResult.error || t('messages.fetch_failed'));
+      }
+
+      // Handle cloud tasks
+      if (cloudResult) {
+        if (cloudResult.success && cloudResult.data) {
+          // Add marker to cloud tasks
+          const cloudTasks = cloudResult.data.map((task: Task) => ({
+            ...task,
+            isCloud: true,
+            provider: -1 // Ensure provider is set to cloud
+          }));
+          combinedList = [...cloudTasks, ...combinedList];
+          // Note: Cloud pagination total logic might need adjustment based on backend response
+          // For now, we just add the current page's count if we want strictly page-by-page
+          // But usually we'd want a unified total.
+          // Since we can't easily merge pagination across two services without a unified backend,
+          // we'll just display them together for the current page request.
+          // In a real scenario, we might want separate tabs or a unified BFF.
+        } else {
+           console.error("Failed to fetch cloud tasks:", cloudResult.error);
+        }
+      }
+
+      setData(combinedList);
+      setPagination(prev => ({
+        ...prev,
+        current: page,
+        total: totalCount, // Using local total for pagination for now as basic implementation
+      }));
+
     } catch (error) {
       console.error("Failed to fetch task list:", error);
       message.error(t('messages.fetch_failed'));
     } finally {
       setLoading(false);
     }
-  }, [message, t]);
+  }, [message, t, cloudContext]);
 
   const handleTaskEvent = useCallback((event: any) => {
     const { type, taskId, task } = event;
@@ -314,6 +359,15 @@ const List: React.FC = () => {
               }
             })()}
           </Tooltip>
+          {record.provider === -1 ? (
+             <Tooltip title="Cloud Task">
+               <CloudOutlined style={{ color: '#1890ff' }} />
+             </Tooltip>
+          ) : (
+             <Tooltip title="Local Task">
+               <HomeOutlined style={{ color: '#8c8c8c' }} />
+             </Tooltip>
+          )}
         </Space>
       ),
     },
@@ -366,6 +420,11 @@ const List: React.FC = () => {
       render: (_text: string, record: Task) => (
         <Space size="small">
           {(() => {
+            // Cloud tasks currently don't support preview/actions in this version
+            if (record.provider === -1) {
+               return <Text type="secondary" style={{ fontSize: '12px' }}>Cloud Task</Text>;
+            }
+
             // 可查看: SPLITTING(2), PROCESSING(3), READY_TO_MERGE(4), MERGING(5), COMPLETED(6), PARTIAL_FAILED(8)
             if (record.status && (record.status > 1 && record.status < 7 || record.status === 8)) {
               return (

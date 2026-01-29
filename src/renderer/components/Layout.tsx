@@ -1,5 +1,5 @@
-import React, { CSSProperties, useState } from "react";
-import { ConfigProvider, Layout, Menu, Modal, theme } from "antd";
+import React, { CSSProperties, useState, useContext } from "react";
+import { ConfigProvider, Layout, Menu, Modal, theme, Avatar, Tooltip, Space } from "antd";
 import {
   HomeOutlined,
   UnorderedListOutlined,
@@ -7,12 +7,14 @@ import {
   GithubOutlined,
   CloseOutlined,
   MinusOutlined,
-  BorderOutlined
+  BorderOutlined,
+  UserOutlined
 } from "@ant-design/icons";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "../hooks/useLanguage";
 import ImgLogo from "../assets/MarkPDFdown.png";
+import { CloudContext } from "../contexts/CloudContextDefinition";
 
 const { Header, Sider, Content, Footer } = Layout;
 
@@ -113,6 +115,30 @@ const WindowControls: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   );
 };
 
+const UserProfileIcon: React.FC<{ navigate: (path: string) => void }> = ({ navigate }) => {
+  const cloudContext = useContext(CloudContext);
+
+  // Guard against missing context
+  if (!cloudContext) return null;
+
+  const { user, isAuthenticated } = cloudContext;
+
+  return (
+    <div
+      onClick={() => navigate('/settings')}
+      style={{ cursor: 'pointer', marginBottom: '16px' }}
+    >
+      <Tooltip placement="right" title={isAuthenticated ? user.fullName || user.email : "Not Signed In"}>
+        <Avatar
+          src={user.imageUrl}
+          icon={<UserOutlined />}
+          style={{ backgroundColor: isAuthenticated ? '#1890ff' : '#ccc' }}
+        />
+      </Tooltip>
+    </div>
+  );
+};
+
 const AppLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -177,9 +203,9 @@ const AppLayout: React.FC = () => {
     const hash = location.hash;
     const hashPath = hash.startsWith('#') ? hash.substring(1) : '';
     const currentPath = hashPath || location.pathname;
-    
+
     // console.log('Current path:', currentPath); // 调试用
-    
+
     // 检查是否为子路径
     for (const item of menuItems) {
       // 如果当前路径以某个菜单项的路径为开头，则选中该菜单项
@@ -187,7 +213,7 @@ const AppLayout: React.FC = () => {
         return item.key;
       }
     }
-    
+
     // 如果没有匹配，则默认选中首页
     return "1";
   };
@@ -196,7 +222,7 @@ const AppLayout: React.FC = () => {
   const headerStyle: CustomCSSProperties = {
     WebkitAppRegion: 'drag'
   };
-  
+
   // 打开外部链接
   const openExternalLink = (url: string) => {
     if (window.electron?.ipcRenderer) {
@@ -279,32 +305,19 @@ const AppLayout: React.FC = () => {
               }
             }}
           />
-          
-          <div style={{ 
+
+          <div style={{
             position: 'absolute',
             bottom: '24px',
             left: 0,
             right: 0,
-            display: 'flex', 
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
             justifyContent: 'center',
             padding: '16px 0'
           }}>
-            <div
-              onClick={() => openExternalLink('https://github.com/MarkPDFdown/markpdfdown-desktop')}
-              style={{ 
-                color: 'rgba(255, 255, 255, 0.65)', 
-                fontSize: '20px', 
-                transition: 'color 0.3s',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.color = 'white'}
-              onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.65)'}
-            >
-              <GithubOutlined />
-            </div>
+            <UserProfileIcon navigate={navigate} />
           </div>
         </Sider>
 

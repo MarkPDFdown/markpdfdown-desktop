@@ -48,6 +48,34 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
+// Mock CloudContext
+const mockCloudContext = {
+  user: { id: '', email: '', fullName: null, imageUrl: '', isLoaded: true, isSignedIn: false },
+  isAuthenticated: false,
+  getTasks: vi.fn().mockResolvedValue({ success: false, error: 'Not authenticated' })
+}
+
+vi.mock('../../contexts/CloudContextDefinition', () => ({
+  CloudContext: {
+    Provider: ({ children }: any) => children,
+    Consumer: ({ children }: any) => children(mockCloudContext)
+  }
+}))
+
+vi.mock('react', async () => {
+  const actual = await vi.importActual('react')
+  return {
+    ...actual,
+    useContext: (context: any) => {
+      // Return mock for CloudContext
+      if (context?.Consumer) {
+        return mockCloudContext
+      }
+      return (actual as any).useContext(context)
+    }
+  }
+})
+
 // Mock window.api.events - extend the existing mock from setup
 const mockEventListeners: Record<string, (event: any) => void> = {}
 
