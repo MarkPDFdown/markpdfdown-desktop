@@ -5,13 +5,13 @@
   "sign_out_button": "تسجيل الخروج",
   "credit_balance": "رصيد الاعتمادات",
   "monthly_free": {
-    "title": "الاعتمادات الشهرية المجانية",
-    "daily_limit_tooltip": "الحد اليومي للاستخدام: {{limit}}",
-    "reset_hint": "يُعاد تعيينه في الأول من كل شهر"
+    "title": "الاعتمادات المجانية",
+    "description": "٣٬٠٠٠ اعتماد مجاني شهرياً، يُعاد تعيينه في الأول من كل شهر الساعة ٠٠:٠٠ (UTC+0)",
+    "daily_limit_tooltip": "الحد اليومي للاستخدام: {{limit}}"
   },
   "paid_credits": {
     "title": "الاعتمادات المدفوعة",
-    "never_expire": "لا تنتهي صلاحيتها",
+    "description": "١ دولار = ١٬٥٠٠ اعتماد",
     "recharge": "إعادة الشحن"
   },
   "history": {

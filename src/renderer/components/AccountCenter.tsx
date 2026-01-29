@@ -142,7 +142,9 @@ const AccountCenter: React.FC = () => {
               prefix={<SafetyCertificateOutlined style={{ color: '#1890ff' }} />}
               valueStyle={{ color: '#1890ff' }}
             />
-            <Text type="secondary" style={{ fontSize: '12px' }}>{t('monthly_free.reset_hint')}</Text>
+            <div style={{ marginTop: 4 }}>
+              <Text type="secondary" style={{ fontSize: '12px' }}>{t('monthly_free.description')}</Text>
+            </div>
           </Card>
         </Col>
         <Col span={12}>
@@ -154,7 +156,7 @@ const AccountCenter: React.FC = () => {
               valueStyle={{ color: '#722ed1' }}
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-              <Text type="secondary" style={{ fontSize: '12px' }}>{t('paid_credits.never_expire')}</Text>
+              <Text type="secondary" style={{ fontSize: '12px' }}>{t('paid_credits.description')}</Text>
               <Button
                 type="primary"
                 size="small"

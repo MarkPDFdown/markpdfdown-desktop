@@ -5,13 +5,13 @@
   "sign_out_button": "خروج",
   "credit_balance": "موجودی اعتبار",
   "monthly_free": {
-    "title": "اعتبار رایگان ماهانه",
-    "daily_limit_tooltip": "سقف استفاده روزانه: {{limit}}",
-    "reset_hint": "اول هر ماه بازنشانی می‌شود"
+    "title": "اعتبار رایگان",
+    "description": "۳٬۰۰۰ اعتبار رایگان در ماه، اول هر ماه ساعت ۰۰:۰۰ بازنشانی می‌شود (UTC+0)",
+    "daily_limit_tooltip": "سقف استفاده روزانه: {{limit}}"
   },
   "paid_credits": {
     "title": "اعتبار پرداختی",
-    "never_expire": "بدون انقضا",
+    "description": "۱ دلار = ۱٬۵۰۰ اعتبار",
     "recharge": "شارژ"
   },
   "history": {

@@ -5,13 +5,13 @@
   "sign_out_button": "退出登录",
   "credit_balance": "积分余额",
   "monthly_free": {
-    "title": "每月免费积分",
-    "daily_limit_tooltip": "每日使用上限: {{limit}}",
-    "reset_hint": "每月1日0时重置"
+    "title": "免费积分",
+    "description": "每月可享3000免费积分，每月1号0点刷新额度（UTC+0）",
+    "daily_limit_tooltip": "每日使用上限: {{limit}}"
   },
   "paid_credits": {
     "title": "付费积分",
-    "never_expire": "永不过期",
+    "description": "1美元可兑换1500积分",
     "recharge": "充值"
   },
   "history": {

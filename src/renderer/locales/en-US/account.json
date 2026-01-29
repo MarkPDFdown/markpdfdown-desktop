@@ -5,13 +5,13 @@
   "sign_out_button": "Sign Out",
   "credit_balance": "Credit Balance",
   "monthly_free": {
-    "title": "Monthly Free Credits",
-    "daily_limit_tooltip": "Daily usage limit: {{limit}}",
-    "reset_hint": "Resets on the 1st of each month"
+    "title": "Free Credits",
+    "description": "3,000 free credits per month, resets on the 1st at 00:00 (UTC+0)",
+    "daily_limit_tooltip": "Daily usage limit: {{limit}}"
   },
   "paid_credits": {
     "title": "Paid Credits",
-    "never_expire": "Never expire",
+    "description": "$1 USD = 1,500 credits",
     "recharge": "Recharge"
   },
   "history": {
