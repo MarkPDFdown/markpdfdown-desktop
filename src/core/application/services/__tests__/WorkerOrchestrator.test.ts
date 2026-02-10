@@ -79,6 +79,7 @@ describe('WorkerOrchestrator', () => {
     // Default: no orphaned work
     prismaMock.taskDetail.updateMany.mockResolvedValue({ count: 0 } as any)
     prismaMock.task.updateMany.mockResolvedValue({ count: 0 } as any)
+    prismaMock.task.findMany.mockResolvedValue([] as any)
   })
 
   afterEach(() => {
@@ -250,9 +251,15 @@ describe('WorkerOrchestrator', () => {
   })
 
   describe('cleanupOrphanedWork', () => {
+    // Helper to set up default mocks for cleanup (no terminal tasks with orphaned pages)
+    function setupDefaultCleanupMocks() {
+      prismaMock.task.findMany.mockResolvedValue([] as any)
+    }
+
     it('should reset PROCESSING pages to PENDING', async () => {
       prismaMock.taskDetail.updateMany.mockResolvedValue({ count: 5 } as any)
       prismaMock.task.updateMany.mockResolvedValue({ count: 0 } as any)
+      setupDefaultCleanupMocks()
 
       const result = await orchestrator.cleanupOrphanedWork()
 
@@ -275,6 +282,7 @@ describe('WorkerOrchestrator', () => {
       prismaMock.task.updateMany
         .mockResolvedValueOnce({ count: 2 } as any) // SPLITTING -> PENDING
         .mockResolvedValueOnce({ count: 0 } as any)  // MERGING -> READY_TO_MERGE
+      setupDefaultCleanupMocks()
 
       const result = await orchestrator.cleanupOrphanedWork()
 
@@ -296,6 +304,7 @@ describe('WorkerOrchestrator', () => {
       prismaMock.task.updateMany
         .mockResolvedValueOnce({ count: 0 } as any) // SPLITTING -> PENDING
         .mockResolvedValueOnce({ count: 3 } as any)  // MERGING -> READY_TO_MERGE
+      setupDefaultCleanupMocks()
 
       const result = await orchestrator.cleanupOrphanedWork()
 
@@ -312,9 +321,35 @@ describe('WorkerOrchestrator', () => {
       expect(result.orphanedMergingTasks).toBe(3)
     })
 
+    it('should mark orphaned PENDING pages from terminal tasks as FAILED', async () => {
+      prismaMock.taskDetail.updateMany
+        .mockResolvedValueOnce({ count: 0 } as any)  // PROCESSING -> PENDING (first call)
+        .mockResolvedValueOnce({ count: 4 } as any)  // orphaned PENDING -> FAILED (second call)
+      prismaMock.task.updateMany.mockResolvedValue({ count: 0 } as any)
+      prismaMock.task.findMany.mockResolvedValue([
+        { id: 'failed-task-1' },
+        { id: 'cancelled-task-2' },
+      ] as any)
+
+      const result = await orchestrator.cleanupOrphanedWork()
+
+      expect(prismaMock.taskDetail.updateMany).toHaveBeenCalledWith({
+        where: {
+          task: { in: ['failed-task-1', 'cancelled-task-2'] },
+          status: PageStatus.PENDING,
+        },
+        data: {
+          status: PageStatus.FAILED,
+          error: 'Orphaned: parent task no longer active',
+        }
+      })
+      expect(result.orphanedPendingPages).toBe(4)
+    })
+
     it('should return total=0 when no orphaned work', async () => {
       prismaMock.taskDetail.updateMany.mockResolvedValue({ count: 0 } as any)
       prismaMock.task.updateMany.mockResolvedValue({ count: 0 } as any)
+      setupDefaultCleanupMocks()
 
       const result = await orchestrator.cleanupOrphanedWork()
 
@@ -322,6 +357,7 @@ describe('WorkerOrchestrator', () => {
       expect(result.orphanedPages).toBe(0)
       expect(result.orphanedSplittingTasks).toBe(0)
       expect(result.orphanedMergingTasks).toBe(0)
+      expect(result.orphanedPendingPages).toBe(0)
     })
 
     it('should return sum of all orphaned items as total', async () => {
@@ -329,10 +365,11 @@ describe('WorkerOrchestrator', () => {
       prismaMock.task.updateMany
         .mockResolvedValueOnce({ count: 2 } as any)
         .mockResolvedValueOnce({ count: 3 } as any)
+      setupDefaultCleanupMocks()
 
       const result = await orchestrator.cleanupOrphanedWork()
 
-      expect(result.total).toBe(10) // 5 + 2 + 3
+      expect(result.total).toBe(10) // 5 + 2 + 3 + 0 (no terminal tasks)
     })
 
     it('should return empty result on error without interrupting startup', async () => {
@@ -344,6 +381,7 @@ describe('WorkerOrchestrator', () => {
         orphanedPages: 0,
         orphanedSplittingTasks: 0,
         orphanedMergingTasks: 0,
+        orphanedPendingPages: 0,
         total: 0
       })
     })
@@ -352,6 +390,7 @@ describe('WorkerOrchestrator', () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
       prismaMock.taskDetail.updateMany.mockResolvedValue({ count: 2 } as any)
       prismaMock.task.updateMany.mockResolvedValue({ count: 0 } as any)
+      setupDefaultCleanupMocks()
 
       await orchestrator.cleanupOrphanedWork()
 

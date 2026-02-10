@@ -26,6 +26,7 @@ export interface CleanupResult {
   orphanedPages: number;
   orphanedSplittingTasks: number;
   orphanedMergingTasks: number;
+  orphanedPendingPages: number;
   total: number;
 }
 

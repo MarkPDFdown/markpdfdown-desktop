@@ -8,6 +8,7 @@ vi.mock('../../../infrastructure/db/index.js', () => ({
   prisma: {
     $transaction: vi.fn(),
     task: {
+      findMany: vi.fn().mockResolvedValue([]),
       findUnique: vi.fn(),
       update: vi.fn(),
     },
@@ -91,8 +92,8 @@ describe('ConverterWorker', () => {
 
   describe('run()', () => {
     it('should set isRunning to true when started', async () => {
-      // Mock claimPage to return null (no pages)
-      vi.mocked(prisma.taskDetail.findFirst).mockResolvedValue(null);
+      // Mock claimPage to return null (no active tasks)
+      vi.mocked(prisma.task.findMany).mockResolvedValue([]);
 
       const runPromise = worker.run();
       await new Promise((resolve) => setTimeout(resolve, 50));
@@ -104,7 +105,7 @@ describe('ConverterWorker', () => {
     });
 
     it('should stop when stop() is called', async () => {
-      vi.mocked(prisma.taskDetail.findFirst).mockResolvedValue(null);
+      vi.mocked(prisma.task.findMany).mockResolvedValue([]);
 
       const runPromise = worker.run();
       await new Promise((resolve) => setTimeout(resolve, 50));
@@ -118,12 +119,12 @@ describe('ConverterWorker', () => {
     it('should continue running after error in main loop', async () => {
       let callCount = 0;
 
-      vi.mocked(prisma.taskDetail.findFirst).mockImplementation(async () => {
+      vi.mocked(prisma.task.findMany).mockImplementation(async () => {
         callCount++;
         if (callCount === 1) {
           throw new Error('Transient error');
         }
-        return null;
+        return [];
       });
 
       const runPromise = worker.run();
@@ -159,8 +160,8 @@ describe('ConverterWorker', () => {
         updatedAt: new Date(),
       };
 
+      vi.mocked(prisma.task.findMany).mockResolvedValue([{ id: 'task123' }] as any);
       vi.mocked(prisma.taskDetail.findFirst).mockResolvedValue(mockPage as any);
-      vi.mocked(prisma.task.findUnique).mockResolvedValue({ status: TaskStatus.PROCESSING } as any);
       vi.mocked(prisma.taskDetail.updateMany).mockResolvedValue({ count: 1 });
       vi.mocked(prisma.taskDetail.findUnique).mockResolvedValue({
         ...mockPage,
@@ -174,29 +175,18 @@ describe('ConverterWorker', () => {
       expect(prisma.taskDetail.updateMany).toHaveBeenCalled();
     });
 
-    it('should return null if no PENDING pages exist', async () => {
-      vi.mocked(prisma.taskDetail.findFirst).mockResolvedValue(null);
+    it('should return null if no active tasks exist', async () => {
+      vi.mocked(prisma.task.findMany).mockResolvedValue([]);
 
       const result = await (worker as any).claimPage();
 
       expect(result).toBeNull();
+      expect(prisma.taskDetail.findFirst).not.toHaveBeenCalled();
     });
 
-    it('should skip pages from tasks not in PROCESSING state', async () => {
-      const mockPage = {
-        id: 1,
-        task: 'task123',
-        status: PageStatus.PENDING,
-        worker_id: null,
-      };
-
-      // First call returns a page, second call returns null
-      vi.mocked(prisma.taskDetail.findFirst)
-        .mockResolvedValueOnce(mockPage as any)
-        .mockResolvedValueOnce(null);
-
-      // Task is not in PROCESSING state
-      vi.mocked(prisma.task.findUnique).mockResolvedValue({ status: TaskStatus.CANCELLED } as any);
+    it('should return null if no PENDING pages exist in active tasks', async () => {
+      vi.mocked(prisma.task.findMany).mockResolvedValue([{ id: 'task123' }] as any);
+      vi.mocked(prisma.taskDetail.findFirst).mockResolvedValue(null);
 
       const result = await (worker as any).claimPage();
 
@@ -211,10 +201,10 @@ describe('ConverterWorker', () => {
         worker_id: null,
       };
 
+      vi.mocked(prisma.task.findMany).mockResolvedValue([{ id: 'task123' }] as any);
       vi.mocked(prisma.taskDetail.findFirst)
         .mockResolvedValueOnce(mockPage as any)
         .mockResolvedValueOnce(null);
-      vi.mocked(prisma.task.findUnique).mockResolvedValue({ status: TaskStatus.PROCESSING } as any);
       // First attempt fails (another worker claimed it)
       vi.mocked(prisma.taskDetail.updateMany).mockResolvedValueOnce({ count: 0 });
 
@@ -227,6 +217,7 @@ describe('ConverterWorker', () => {
     it('should prioritize pages with lower retry_count', async () => {
       let queryParams: any;
 
+      vi.mocked(prisma.task.findMany).mockResolvedValue([{ id: 'task123' }] as any);
       vi.mocked(prisma.taskDetail.findFirst).mockImplementation(async (params: any) => {
         queryParams = params;
         return null;
@@ -235,6 +226,23 @@ describe('ConverterWorker', () => {
       await (worker as any).claimPage();
 
       expect(queryParams.orderBy).toEqual([{ retry_count: 'asc' }, { page: 'asc' }]);
+    });
+
+    it('should only search within active task IDs', async () => {
+      let queryParams: any;
+
+      vi.mocked(prisma.task.findMany).mockResolvedValue([
+        { id: 'task-a' },
+        { id: 'task-b' },
+      ] as any);
+      vi.mocked(prisma.taskDetail.findFirst).mockImplementation(async (params: any) => {
+        queryParams = params;
+        return null;
+      });
+
+      await (worker as any).claimPage();
+
+      expect(queryParams.where.task).toEqual({ in: ['task-a', 'task-b'] });
     });
   });
 

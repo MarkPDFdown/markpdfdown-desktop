@@ -241,11 +241,53 @@ export class WorkerOrchestrator implements IWorkerOrchestrator {
         console.log(`[WorkerOrchestrator] Reset ${orphanedMergingTasks.count} orphaned MERGING tasks to READY_TO_MERGE`);
       }
 
+      // Clean up orphaned TaskDetail records whose parent Task is in a terminal/non-processing state.
+      // These are pages left in PENDING state from tasks that have been FAILED, CANCELLED, etc.
+      // Without cleanup, these orphaned pages block ConverterWorker from finding valid work.
+      // Note: This step intentionally runs after the PROCESSING->PENDING reset above,
+      // so that any pages from terminal tasks that were both orphaned AND in PROCESSING state
+      // are first reset to PENDING, then caught here and marked as FAILED.
+      const terminalTaskStatuses = [
+        TaskStatus.CREATED,
+        TaskStatus.FAILED,
+        TaskStatus.CANCELLED,
+        TaskStatus.COMPLETED,
+        TaskStatus.PARTIAL_FAILED,
+      ];
+
+      // Find tasks in terminal states that still have PENDING pages
+      const terminalTasks = await prisma.task.findMany({
+        where: {
+          status: { in: terminalTaskStatuses },
+        },
+        select: { id: true },
+      });
+
+      let orphanedPendingPages = 0;
+      if (terminalTasks.length > 0) {
+        const terminalTaskIds = terminalTasks.map((t) => t.id);
+        const result = await prisma.taskDetail.updateMany({
+          where: {
+            task: { in: terminalTaskIds },
+            status: PageStatus.PENDING,
+          },
+          data: {
+            status: PageStatus.FAILED,
+            error: 'Orphaned: parent task no longer active',
+          },
+        });
+        orphanedPendingPages = result.count;
+        if (orphanedPendingPages > 0) {
+          console.log(`[WorkerOrchestrator] Marked ${orphanedPendingPages} orphaned PENDING pages as FAILED (parent task in terminal state)`);
+        }
+      }
+
       const result: CleanupResult = {
         orphanedPages: orphanedPages.count,
         orphanedSplittingTasks: orphanedSplittingTasks.count,
         orphanedMergingTasks: orphanedMergingTasks.count,
-        total: orphanedPages.count + orphanedSplittingTasks.count + orphanedMergingTasks.count,
+        orphanedPendingPages,
+        total: orphanedPages.count + orphanedSplittingTasks.count + orphanedMergingTasks.count + orphanedPendingPages,
       };
 
       if (result.total === 0) {
@@ -262,6 +304,7 @@ export class WorkerOrchestrator implements IWorkerOrchestrator {
         orphanedPages: 0,
         orphanedSplittingTasks: 0,
         orphanedMergingTasks: 0,
+        orphanedPendingPages: 0,
         total: 0,
       };
     }
