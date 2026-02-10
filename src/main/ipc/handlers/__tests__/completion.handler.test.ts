@@ -177,7 +177,7 @@ describe('Completion Handler', () => {
                 }),
                 expect.objectContaining({
                   type: 'text',
-                  text: 'Test connection.'
+                  text: 'Please identify the largest letter in the image.'
                 })
               ])
             })
