@@ -19,7 +19,9 @@ const mockFs = {
   mkdirSync: vi.fn(),
   copyFileSync: vi.fn(),
   statSync: vi.fn(),
-  writeFileSync: vi.fn()
+  writeFileSync: vi.fn(),
+  accessSync: vi.fn(),
+  constants: { W_OK: 2 }
 }
 
 const mockPath = {

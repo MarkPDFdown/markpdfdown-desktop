@@ -28,7 +28,7 @@ const findById = async (id: string) => {
 const create = async (task: Task) => {
   return await prisma.task.create({
     data: {
-      id: uuidv4(),
+      id: task?.id || uuidv4(),
       filename: task?.filename || '',
       type: task?.type || '',
       page_range: task?.page_range || '',
@@ -36,8 +36,8 @@ const create = async (task: Task) => {
       provider: task?.provider || 0,
       model: task?.model || '',
       model_name: task?.model_name || '',
-      progress: 0,
-      status: 0,
+      progress: task?.progress ?? 0,
+      status: task?.status ?? 0,
     }
   });
 };

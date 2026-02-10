@@ -152,7 +152,10 @@ vi.mock('fs', () => ({
     existsSync: vi.fn(() => true),
     mkdirSync: vi.fn(),
     copyFileSync: vi.fn(),
-    statSync: vi.fn(() => ({ size: 1024 }))
+    statSync: vi.fn(() => ({ size: 1024 })),
+    writeFileSync: vi.fn(),
+    accessSync: vi.fn(),
+    constants: { W_OK: 2 }
   }
 }))
 

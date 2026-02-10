@@ -135,8 +135,9 @@ export function registerFileHandlers() {
           return { success: false, error: "Task ID and file path are required" };
         }
 
-        // Check if file exists
+        // Check if source file exists
         if (!fs.existsSync(filePath)) {
+          console.error(`[IPC] file:upload - Source file does not exist: ${filePath}`);
           return { success: false, error: "File does not exist" };
         }
 
@@ -148,15 +149,37 @@ export function registerFileHandlers() {
           fs.mkdirSync(uploadDir, { recursive: true });
         }
 
+        // Verify directory was created and is writable
+        try {
+          fs.accessSync(uploadDir, fs.constants.W_OK);
+        } catch {
+          console.error(`[IPC] file:upload - Upload directory is not writable: ${uploadDir}`);
+          return { success: false, error: `Upload directory is not writable: ${uploadDir}` };
+        }
+
         // Get file info
         const fileName = path.basename(filePath);
         const destPath = path.join(uploadDir, fileName);
 
         // Copy file
+        console.log(`[IPC] file:upload - Copying file: ${filePath} -> ${destPath}`);
         fs.copyFileSync(filePath, destPath);
+
+        // Verify copied file exists and has content
+        if (!fs.existsSync(destPath)) {
+          console.error(`[IPC] file:upload - File copy verification failed, destination not found: ${destPath}`);
+          return { success: false, error: "File copy failed: destination file not found after copy" };
+        }
 
         // Get file stats
         const stats = fs.statSync(destPath);
+
+        if (stats.size === 0) {
+          console.error(`[IPC] file:upload - Copied file is empty: ${destPath}`);
+          return { success: false, error: "File copy failed: destination file is empty" };
+        }
+
+        console.log(`[IPC] file:upload - File copied successfully: ${destPath} (${stats.size} bytes)`);
 
         const fileInfo = {
           originalName: fileName,
@@ -250,19 +273,42 @@ export function registerFileHandlers() {
           fs.mkdirSync(uploadDir, { recursive: true });
         }
 
-        // Build destination path
-        const destPath = path.join(uploadDir, fileName);
+        // Verify directory was created and is writable
+        try {
+          fs.accessSync(uploadDir, fs.constants.W_OK);
+        } catch {
+          console.error(`[IPC] file:uploadFileContent - Upload directory is not writable: ${uploadDir}`);
+          return { success: false, error: `Upload directory is not writable: ${uploadDir}` };
+        }
+
+        // Sanitize filename to prevent path traversal
+        const safeName = path.basename(fileName);
+        const destPath = path.join(uploadDir, safeName);
 
         // Convert ArrayBuffer to Buffer and write to file
         const buffer = Buffer.from(fileBuffer);
+        console.log(`[IPC] file:uploadFileContent - Writing file: ${destPath} (${buffer.length} bytes)`);
         fs.writeFileSync(destPath, buffer);
+
+        // Verify written file exists and has content
+        if (!fs.existsSync(destPath)) {
+          console.error(`[IPC] file:uploadFileContent - File write verification failed, not found: ${destPath}`);
+          return { success: false, error: "File write failed: file not found after write" };
+        }
 
         // Get file stats
         const stats = fs.statSync(destPath);
 
+        if (stats.size === 0) {
+          console.error(`[IPC] file:uploadFileContent - Written file is empty: ${destPath}`);
+          return { success: false, error: "File write failed: file is empty" };
+        }
+
+        console.log(`[IPC] file:uploadFileContent - File written successfully: ${destPath} (${stats.size} bytes)`);
+
         const fileInfo = {
-          originalName: fileName,
-          savedName: fileName,
+          originalName: safeName,
+          savedName: safeName,
           path: destPath,
           size: stats.size,
           taskId: taskId,
