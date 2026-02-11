@@ -15,7 +15,7 @@ import {
   List,
   App,
 } from "antd";
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 interface ProviderProps {
@@ -50,9 +50,6 @@ const Provider: React.FC<ProviderProps> = ({
 
   // 添加测试状态
   const [testingModelId, setTestingModelId] = useState<string>("");
-
-  // 使用 ref 存储 fetchModels 函数，避免初始化顺序问题
-  const fetchModelsRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
   useEffect(() => {
     // 如果有providerId，则获取该服务商的详细信息
@@ -113,13 +110,10 @@ const Provider: React.FC<ProviderProps> = ({
       };
 
       fetchProviderDetails();
-
-      // 获取该服务商下的所有模型
-      fetchModelsRef.current();
     }
   }, [providerId, t]);
 
-  // 获取服务商下的模型列表
+  // 获取该服务商下的所有模型
   const fetchModels = useCallback(async () => {
     if (!providerId) return;
 
@@ -140,10 +134,12 @@ const Provider: React.FC<ProviderProps> = ({
     }
   }, [providerId, message, t]);
 
-  // 更新 ref
+  // 初始加载时获取模型列表
   useEffect(() => {
-    fetchModelsRef.current = fetchModels;
-  }, [fetchModels]);
+    if (providerId) {
+      fetchModels();
+    }
+  }, [providerId, fetchModels]);
 
   // 删除模型
   const deleteModel = async (modelId: string) => {
@@ -158,7 +154,7 @@ const Provider: React.FC<ProviderProps> = ({
 
       message.success(t('messages.delete_model_success'));
       // 刷新模型列表
-      fetchModelsRef.current();
+      fetchModels();
     } catch (error) {
       console.error("Failed to delete model:", error);
       message.error(
@@ -191,7 +187,7 @@ const Provider: React.FC<ProviderProps> = ({
       setNewModelId("");
       message.success(t('messages.add_model_success'));
       // 刷新模型列表
-      fetchModelsRef.current();
+      fetchModels();
     } catch (error) {
       console.error("Failed to add model:", error);
       message.error(

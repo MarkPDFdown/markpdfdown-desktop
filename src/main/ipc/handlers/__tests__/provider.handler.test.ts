@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // Mock dependencies
 const mockProviderRepository = {
   findAll: vi.fn(),
+  findAllIncludeDisabled: vi.fn(),
   findById: vi.fn(),
   create: vi.fn(),
   update: vi.fn(),
@@ -57,7 +58,7 @@ describe('Provider Handler', () => {
         { id: 1, name: 'OpenAI', type: 'openai' },
         { id: 2, name: 'Anthropic', type: 'anthropic' }
       ]
-      mockProviderRepository.findAll.mockResolvedValue(mockProviders)
+      mockProviderRepository.findAllIncludeDisabled.mockResolvedValue(mockProviders)
 
       const handler = handlers.get('provider:getAll')
       const result = await handler!({})
@@ -66,11 +67,11 @@ describe('Provider Handler', () => {
         success: true,
         data: mockProviders
       })
-      expect(mockProviderRepository.findAll).toHaveBeenCalled()
+      expect(mockProviderRepository.findAllIncludeDisabled).toHaveBeenCalled()
     })
 
     it('should handle errors', async () => {
-      mockProviderRepository.findAll.mockRejectedValue(new Error('Database error'))
+      mockProviderRepository.findAllIncludeDisabled.mockRejectedValue(new Error('Database error'))
 
       const handler = handlers.get('provider:getAll')
       const result = await handler!({})
