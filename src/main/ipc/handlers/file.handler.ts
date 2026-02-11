@@ -198,63 +198,6 @@ export function registerFileHandlers() {
   );
 
   /**
-   * Multiple file upload
-   */
-  ipcMain.handle(
-    IPC_CHANNELS.FILE.UPLOAD_MULTIPLE,
-    async (_, taskId: string, filePaths: string[]): Promise<IpcResponse> => {
-      try {
-        if (!taskId || !Array.isArray(filePaths) || filePaths.length === 0) {
-          return { success: false, error: "Task ID and file path list are required" };
-        }
-
-        const uploadResults = [];
-
-        for (const filePath of filePaths) {
-          // Check if file exists
-          if (!fs.existsSync(filePath)) {
-            continue;
-          }
-
-          const baseUploadDir = fileLogic.getUploadDir();
-          const uploadDir = path.join(baseUploadDir, taskId);
-
-          // Ensure directory exists
-          if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-          }
-
-          // Get file info
-          const fileName = path.basename(filePath);
-          const destPath = path.join(uploadDir, fileName);
-
-          // Copy file
-          fs.copyFileSync(filePath, destPath);
-
-          // Get file stats
-          const stats = fs.statSync(destPath);
-
-          uploadResults.push({
-            originalName: fileName,
-            savedName: fileName,
-            path: destPath,
-            size: stats.size,
-            taskId: taskId,
-          });
-        }
-
-        return {
-          success: true,
-          data: { message: "Files uploaded successfully", files: uploadResults },
-        };
-      } catch (error: any) {
-        console.error("[IPC] file:uploadMultiple error:", error);
-        return { success: false, error: error.message };
-      }
-    }
-  );
-
-  /**
    * File content upload (for drag and drop)
    */
   ipcMain.handle(

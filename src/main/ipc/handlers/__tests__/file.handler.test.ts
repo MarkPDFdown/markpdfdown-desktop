@@ -68,7 +68,6 @@ vi.mock('../../../../shared/ipc/channels.js', () => ({
       DOWNLOAD_MARKDOWN: 'file:downloadMarkdown',
       SELECT_DIALOG: 'file:selectDialog',
       UPLOAD: 'file:upload',
-      UPLOAD_MULTIPLE: 'file:uploadMultiple',
       UPLOAD_FILE_CONTENT: 'file:uploadFileContent'
     }
   }
@@ -326,52 +325,6 @@ describe('File Handler', () => {
         expect.stringContaining('task-1'),
         { recursive: true }
       )
-    })
-  })
-
-  describe('file:uploadMultiple', () => {
-    it('should upload multiple files successfully', async () => {
-      mockFs.existsSync.mockReturnValue(true)
-
-      const handler = handlers.get('file:uploadMultiple')
-      const result = await handler!({}, 'task-123', ['/file1.pdf', '/file2.pdf'])
-
-      expect(result.success).toBe(true)
-      expect(result.data.files).toHaveLength(2)
-      expect(mockFs.copyFileSync).toHaveBeenCalledTimes(2)
-    })
-
-    it('should return error when taskId is missing', async () => {
-      const handler = handlers.get('file:uploadMultiple')
-      const result = await handler!({}, '', ['/file.pdf'])
-
-      expect(result).toEqual({
-        success: false,
-        error: 'Task ID and file path list are required'
-      })
-    })
-
-    it('should return error when filePaths is empty', async () => {
-      const handler = handlers.get('file:uploadMultiple')
-      const result = await handler!({}, 'task-1', [])
-
-      expect(result).toEqual({
-        success: false,
-        error: 'Task ID and file path list are required'
-      })
-    })
-
-    it('should skip non-existent files', async () => {
-      mockFs.existsSync
-        .mockReturnValueOnce(true)  // file1 exists
-        .mockReturnValueOnce(true)  // upload dir check
-        .mockReturnValueOnce(false) // file2 doesn't exist
-
-      const handler = handlers.get('file:uploadMultiple')
-      const result = await handler!({}, 'task-1', ['/file1.pdf', '/non-existent.pdf'])
-
-      expect(result.success).toBe(true)
-      expect(result.data.files).toHaveLength(1)
     })
   })
 

@@ -33,7 +33,6 @@ const mockWindowApi = {
   file: {
     selectDialog: vi.fn(),
     upload: vi.fn(),
-    uploadMultiple: vi.fn(),
     downloadMarkdown: vi.fn()
   },
   completion: {

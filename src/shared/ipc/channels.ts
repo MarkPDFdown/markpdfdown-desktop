@@ -48,7 +48,6 @@ export const IPC_CHANNELS = {
     DOWNLOAD_MARKDOWN: 'file:downloadMarkdown',
     SELECT_DIALOG: 'file:selectDialog',
     UPLOAD: 'file:upload',
-    UPLOAD_MULTIPLE: 'file:uploadMultiple',
     UPLOAD_FILE_CONTENT: 'file:uploadFileContent',
   },
 

@@ -58,8 +58,6 @@ contextBridge.exposeInMainWorld("api", {
     selectDialog: () => ipcRenderer.invoke("file:selectDialog"),
     upload: (taskId: string, filePath: string) =>
       ipcRenderer.invoke("file:upload", taskId, filePath),
-    uploadMultiple: (taskId: string, filePaths: string[]) =>
-      ipcRenderer.invoke("file:uploadMultiple", taskId, filePaths),
     uploadFileContent: (taskId: string, fileName: string, fileBuffer: ArrayBuffer) =>
       ipcRenderer.invoke("file:uploadFileContent", taskId, fileName, fileBuffer),
     getImagePath: (taskId: string, page: number) =>
