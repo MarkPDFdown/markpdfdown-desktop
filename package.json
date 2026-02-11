@@ -79,8 +79,15 @@
     },
     "mac": {
       "category": "public.app-category.productivity",
+      "target": ["dmg"],
       "artifactName": "${productName}-${version}-${arch}.${ext}",
-      "icon": "public/icons/mac/icon.icns"
+      "icon": "public/icons/mac/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "forceCodeSigning": false,
+      "notarize": false
     },
     "win": {
       "target": "nsis",

@@ -21,13 +21,26 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Find previous stable tag
+        id: prev_tag
+        run: |
+          CURRENT_TAG="${{ github.ref_name }}"
+          # List all tags matching X.Y.Z (no suffix), sorted by version descending
+          # Exclude the current tag, then take the first match as the previous stable tag
+          PREV_TAG=$(git tag -l --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | grep -v "^${CURRENT_TAG}$" | head -n 1)
+          echo "prev_tag=${PREV_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Current tag: ${CURRENT_TAG}, Previous stable tag: ${PREV_TAG}"
 
       - name: Generate changelog
         id: changelog
         uses: requarks/changelog-action@v1
         with:
           token: ${{ github.token }}
-          tag: ${{ github.ref_name }}
+          fromTag: ${{ github.ref_name }}
+          toTag: ${{ steps.prev_tag.outputs.prev_tag }}
           writeToFile: false
 
       - name: Create Draft Release
