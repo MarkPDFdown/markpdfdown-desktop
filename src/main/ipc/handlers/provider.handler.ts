@@ -8,11 +8,11 @@ import type { IpcResponse } from "../../../shared/ipc/responses.js";
  */
 export function registerProviderHandlers() {
   /**
-   * Get all providers
+   * Get all providers (including disabled)
    */
   ipcMain.handle(IPC_CHANNELS.PROVIDER.GET_ALL, async (): Promise<IpcResponse> => {
     try {
-      const providers = await providerRepository.findAll();
+      const providers = await providerRepository.findAllIncludeDisabled();
       return { success: true, data: providers };
     } catch (error: any) {
       console.error("[IPC] provider:getAll error:", error);
