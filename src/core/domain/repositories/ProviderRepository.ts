@@ -22,6 +22,24 @@ const findAll = async () => {
   });
 };
 
+// 查找所有提供商（包括禁用的）
+const findAllIncludeDisabled = async () => {
+  return await prisma.provider.findMany({
+    select: {
+      id: true,
+      name: true,
+      type: true,
+      api_key: true,
+      base_url: true,
+      suffix: true,
+      status: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+    orderBy: [{ createdAt: "desc" }],
+  });
+};
+
 // 根据ID查找提供商
 const findById = async (id: number) => {
   return await prisma.provider.findUnique({
@@ -83,6 +101,7 @@ const updateStatus = async (id: number, status: number) => {
 
 export default {
   findAll,
+  findAllIncludeDisabled,
   findById,
   create,
   update,
