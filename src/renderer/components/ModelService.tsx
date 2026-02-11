@@ -159,6 +159,7 @@ const ModelService: React.FC = () => {
         onChange={setActiveKey}
         tabPosition="left"
         items={items}
+        className="model-service-tabs"
       />
     </ConfigProvider>
   );

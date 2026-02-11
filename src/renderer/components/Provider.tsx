@@ -421,24 +421,22 @@ const Provider: React.FC<ProviderProps> = ({
         )}
       />
 
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <Space>
-          <Typography.Text>{t('model_config.name_label')}</Typography.Text>
-          <Input
-            placeholder={t('model_config.name_placeholder')}
-            style={{ width: "290px" }}
-            value={newModelName}
-            onChange={(e) => setNewModelName(e.target.value)}
-          />
-          <Typography.Text>{t('model_config.id_label')}</Typography.Text>
-          <Input
-            placeholder={t('model_config.id_placeholder')}
-            style={{ width: "290px" }}
-            value={newModelId}
-            onChange={(e) => setNewModelId(e.target.value)}
-          />
-        </Space>
-        <Button type="primary" icon={<PlusOutlined />} onClick={addModel}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <Typography.Text style={{ whiteSpace: "nowrap", flexShrink: 0 }}>{t('model_config.name_label')}</Typography.Text>
+        <Input
+          placeholder={t('model_config.name_placeholder')}
+          style={{ flex: 1, minWidth: 0 }}
+          value={newModelName}
+          onChange={(e) => setNewModelName(e.target.value)}
+        />
+        <Typography.Text style={{ whiteSpace: "nowrap", flexShrink: 0 }}>{t('model_config.id_label')}</Typography.Text>
+        <Input
+          placeholder={t('model_config.id_placeholder')}
+          style={{ flex: 1, minWidth: 0 }}
+          value={newModelId}
+          onChange={(e) => setNewModelId(e.target.value)}
+        />
+        <Button type="primary" icon={<PlusOutlined />} onClick={addModel} style={{ whiteSpace: "nowrap", flexShrink: 0 }}>
           {t('model_config.add_button')}
         </Button>
       </div>
