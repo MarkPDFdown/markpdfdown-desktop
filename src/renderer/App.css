@@ -55,6 +55,30 @@
   overflow: hidden !important;
 }
 
+/* Model Service Tabs 内容区域滚动 - 仅滚动时显示滚动条 */
+.model-service-tabs .ant-tabs-content-holder {
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.model-service-tabs .ant-tabs-content-holder::-webkit-scrollbar {
+  width: 6px;
+}
+
+.model-service-tabs .ant-tabs-content-holder::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 3px;
+}
+
+.model-service-tabs .ant-tabs-content-holder:hover::-webkit-scrollbar-thumb,
+.model-service-tabs .ant-tabs-content-holder:active::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.model-service-tabs .ant-tabs-content-holder::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 /* Markdown 预览面板滚动 */
 .ant-splitter-panel:last-child {
   overflow: auto !important;
