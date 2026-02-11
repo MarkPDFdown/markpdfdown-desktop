@@ -16,6 +16,13 @@ vi.mock('pdf-lib', () => ({
   },
 }));
 
+// Mock FileWaitUtil
+vi.mock('../FileWaitUtil.js', () => ({
+  FileWaitUtil: {
+    waitForFile: vi.fn(),
+  },
+}));
+
 // Mock fs promises
 vi.mock('fs', () => ({
   promises: {
@@ -24,11 +31,15 @@ vi.mock('fs', () => ({
     rm: vi.fn(),
     unlink: vi.fn(),
     readFile: vi.fn(),
+    access: vi.fn(),
+    stat: vi.fn(),
+    readdir: vi.fn(),
   },
 }));
 
 import { pdfToPng } from 'pdf-to-png-converter';
 import { PDFDocument } from 'pdf-lib';
+import { FileWaitUtil } from '../FileWaitUtil.js';
 
 describe('PDFSplitter', () => {
   const uploadsDir = '/mock/uploads';
@@ -43,6 +54,9 @@ describe('PDFSplitter', () => {
 
     // Reset mocks
     vi.clearAllMocks();
+
+    // Setup default mock for FileWaitUtil (file available immediately)
+    vi.mocked(FileWaitUtil.waitForFile).mockResolvedValue(undefined);
 
     // Setup default mocks for PDFDocument
     vi.mocked(fs.readFile).mockResolvedValue(Buffer.from('mock-pdf-bytes'));
@@ -191,8 +205,10 @@ describe('PDFSplitter', () => {
         page_range: '',
       };
 
-      // Mock fs.readFile to throw file not found error
-      vi.mocked(fs.readFile).mockRejectedValue(new Error('ENOENT: no such file'));
+      // Mock FileWaitUtil to reject (file not found)
+      vi.mocked(FileWaitUtil.waitForFile).mockRejectedValue(
+        new Error('PDF file not found: missing.pdf. The file may have been moved or deleted.')
+      );
 
       await expect(splitter.split(task)).rejects.toThrow(/PDF file not found/);
     });

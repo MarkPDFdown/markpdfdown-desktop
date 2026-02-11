@@ -1,13 +1,23 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ImageSplitter } from '../ImageSplitter.js';
 import { ImagePathUtil } from '../ImagePathUtil.js';
+import { FileWaitUtil } from '../FileWaitUtil.js';
 import { promises as fs } from 'fs';
 import path from 'path';
+
+// Mock FileWaitUtil
+vi.mock('../FileWaitUtil.js', () => ({
+  FileWaitUtil: {
+    waitForFile: vi.fn(),
+  },
+}));
 
 // Mock fs promises
 vi.mock('fs', () => ({
   promises: {
     access: vi.fn(),
+    stat: vi.fn(),
+    readdir: vi.fn(),
     mkdir: vi.fn(),
     copyFile: vi.fn(),
     rm: vi.fn(),
@@ -27,6 +37,9 @@ describe('ImageSplitter', () => {
 
     // Reset mocks
     vi.clearAllMocks();
+
+    // Setup default mock for FileWaitUtil (file available immediately)
+    vi.mocked(FileWaitUtil.waitForFile).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -189,7 +202,10 @@ describe('ImageSplitter', () => {
         filename: 'missing.jpg',
       };
 
-      vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT: no such file'));
+      // Mock FileWaitUtil to reject (file not found)
+      vi.mocked(FileWaitUtil.waitForFile).mockRejectedValue(
+        new Error('Image file not found: missing.jpg. The file may have been moved or deleted.')
+      );
 
       await expect(splitter.split(task)).rejects.toThrow(/Image file not found/);
     });
@@ -200,7 +216,9 @@ describe('ImageSplitter', () => {
         filename: 'photo.jpg',
       };
 
-      vi.mocked(fs.access).mockRejectedValue(new Error('EACCES: permission denied'));
+      // FileWaitUtil passes, but file copy fails with permission denied
+      vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fs.copyFile).mockRejectedValue(new Error('EACCES: permission denied'));
 
       await expect(splitter.split(task)).rejects.toThrow(/Permission denied/);
     });

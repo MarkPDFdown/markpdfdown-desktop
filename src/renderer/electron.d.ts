@@ -202,10 +202,6 @@ interface ElectronAPI {
       taskId: string,
       filePath: string,
     ) => Promise<IpcResponse<FileUploadResult>>;
-    uploadMultiple: (
-      taskId: string,
-      filePaths: string[],
-    ) => Promise<IpcResponse<{ message: string; files: FileUploadResult[] }>>;
     getImagePath: (
       taskId: string,
       page: number,

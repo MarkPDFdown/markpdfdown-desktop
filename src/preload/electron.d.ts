@@ -72,7 +72,6 @@ interface WindowAPI {
   file: {
     selectDialog: () => Promise<any>;
     upload: (taskId: string, filePath: string) => Promise<any>;
-    uploadMultiple: (taskId: string, filePaths: string[]) => Promise<any>;
     uploadFileContent: (taskId: string, fileName: string, fileBuffer: ArrayBuffer) => Promise<any>;
     getImagePath: (taskId: string, page: number) => Promise<any>;
     downloadMarkdown: (taskId: string) => Promise<any>;

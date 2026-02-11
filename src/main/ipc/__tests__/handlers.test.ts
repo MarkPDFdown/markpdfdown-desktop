@@ -134,7 +134,6 @@ vi.mock('../../../shared/ipc/channels.js', () => ({
       DOWNLOAD_MARKDOWN: 'file:downloadMarkdown',
       SELECT_DIALOG: 'file:selectDialog',
       UPLOAD: 'file:upload',
-      UPLOAD_MULTIPLE: 'file:uploadMultiple',
       UPLOAD_FILE_CONTENT: 'file:uploadFileContent',
     },
     COMPLETION: {
@@ -153,7 +152,10 @@ vi.mock('fs', () => ({
     existsSync: vi.fn(() => true),
     mkdirSync: vi.fn(),
     copyFileSync: vi.fn(),
-    statSync: vi.fn(() => ({ size: 1024 }))
+    statSync: vi.fn(() => ({ size: 1024 })),
+    writeFileSync: vi.fn(),
+    accessSync: vi.fn(),
+    constants: { W_OK: 2 }
   }
 }))
 
