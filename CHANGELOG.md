@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.8-beta] - 2026-02-11
+### :bug: Bug Fixes
+- [`53a71a3`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/53a71a33ebb3ba795742e21675617c53e660bed0) - **ci**: avoid duplicate builds on release workflow *(PR [#13](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/13) by [@jorben](https://github.com/jorben))*
+- [`ef0d984`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/ef0d984cb46b320e83f0fcbf0dc1aa865e661248) - **deps**: ⬆️ upgrade Electron to v38 and fix deprecated boolean package *(PR [#9](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/9) by [@jorben](https://github.com/jorben))*
+- [`98f8ebf`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/98f8ebfc32f33f8b3b790b11fdb3a5d2873afc37) - **links**: update GitHub repository URLs to markpdfdown-desktop *(PR [#15](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/15) by [@jorben](https://github.com/jorben))*
+- [`00aa1d5`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/00aa1d54a7745d0cef91a840f5412ad773f19e87) - **worker**: 🐛 Fix ConverterWorker not picking up pages after split *(PR [#21](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/21) by [@jorben](https://github.com/jorben))*
+
+### :white_check_mark: Tests
+- [`d4393b6`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/d4393b61992a8523a5f462917420cb62445d606d) - add ResizeObserver and getComputedStyle mocks for renderer tests *(PR [#18](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/18) by [@jorben](https://github.com/jorben))*
+
+
 ## [0.1.7] - 2026-01-25
 ### :bug: Bug Fixes
 - [`cf5549e`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/cf5549e130e9394f4f1bc5f7c5b8e368596c0124) - **deps**: ⚡️ optimize electron dependency for smaller builds *(PR [#6](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/6) by [@jorben](https://github.com/jorben))*
@@ -80,3 +91,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.1.5]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.1.4...0.1.5
 [0.1.6]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.1.5...0.1.6
 [0.1.7]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.1.6...0.1.7
+[0.1.8-beta]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.1.7...0.1.8-beta
