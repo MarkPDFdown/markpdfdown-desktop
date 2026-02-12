@@ -87,6 +87,75 @@ describe('ModelService', () => {
     })
   })
 
+  describe('Preset Integration', () => {
+    it('should fetch both providers and presets on mount', async () => {
+      render(
+        <Wrapper>
+          <ModelService />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        expect(window.api.provider.getAll).toHaveBeenCalled()
+        expect(window.api.provider.getPresets).toHaveBeenCalled()
+      })
+    })
+
+    it('should sort providers by preset order', async () => {
+      vi.mocked(window.api.provider.getAll).mockResolvedValue({
+        success: true,
+        data: [
+          { id: 3, name: 'CustomProvider', type: 'openai', api_key: '', base_url: '', suffix: '', status: 0 },
+          { id: 2, name: 'Anthropic', type: 'anthropic', api_key: '', base_url: '', suffix: '', status: 0 },
+          { id: 1, name: 'OpenAI', type: 'openai-responses', api_key: '', base_url: '', suffix: '', status: 0 },
+        ]
+      })
+      vi.mocked(window.api.provider.getPresets).mockResolvedValue({
+        success: true,
+        data: [
+          { name: 'OpenAI', type: 'openai-responses' },
+          { name: 'Anthropic', type: 'anthropic' },
+        ]
+      })
+
+      render(
+        <Wrapper>
+          <ModelService />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        const tabs = document.querySelectorAll('.ant-tabs-tab')
+        const tabTexts = Array.from(tabs).map(tab => tab.textContent?.trim())
+        // Preset providers should come first (OpenAI, Anthropic), then custom, then Add Provider
+        const openaiIndex = tabTexts.findIndex(t => t?.includes('OpenAI'))
+        const anthropicIndex = tabTexts.findIndex(t => t?.includes('Anthropic'))
+        const customIndex = tabTexts.findIndex(t => t?.includes('CustomProvider'))
+        expect(openaiIndex).toBeLessThan(anthropicIndex)
+        expect(anthropicIndex).toBeLessThan(customIndex)
+      })
+    })
+
+    it('should handle getPresets failure gracefully', async () => {
+      vi.mocked(window.api.provider.getPresets).mockResolvedValue({
+        success: false,
+        error: 'Failed to fetch presets'
+      })
+
+      render(
+        <Wrapper>
+          <ModelService />
+        </Wrapper>
+      )
+
+      // Should still render providers even if presets fail
+      await waitFor(() => {
+        expect(screen.getByText('OpenAI')).toBeInTheDocument()
+        expect(screen.getByText('Anthropic')).toBeInTheDocument()
+      })
+    })
+  })
+
   describe('Provider Tabs', () => {
     it('should fetch providers on mount', async () => {
       render(

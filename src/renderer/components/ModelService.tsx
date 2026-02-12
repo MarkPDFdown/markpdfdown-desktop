@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { ConfigProvider, Tabs } from "antd";
 import { useTranslation } from "react-i18next";
 import AddProvider from "./AddProvider";
-import { PlusSquareOutlined, CloudOutlined } from "@ant-design/icons";
+import { PlusSquareOutlined } from "@ant-design/icons";
 import Provider from "./Provider";
 
 interface ProviderData {
@@ -22,7 +22,7 @@ interface ProviderPreset {
 
 interface TabItem {
   key: string;
-  label: string;
+  label: React.ReactNode;
   icon?: React.ReactNode;
   children: React.ReactNode;
 }
@@ -45,6 +45,7 @@ const ModelService: React.FC = () => {
     setActiveKey(providerId);
   });
   const handleProviderDeletedRef = useRef<() => void>(() => {});
+  const handleStatusChangedRef = useRef<() => void>(() => {});
   const fetchProvidersRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
   // 定义获取服务商列表的函数
@@ -81,14 +82,26 @@ const ModelService: React.FC = () => {
         const isPreset = presets.some(
           (preset) => preset.type === provider.type && preset.name === provider.name
         );
+        const isEnabled = provider.status === 0;
         return {
           key: provider.id.toString(),
-          label: provider.name,
-          icon: <CloudOutlined />,
+          label: (
+            <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span
+                className={
+                  isEnabled
+                    ? "provider-status-light provider-status-light--enabled"
+                    : "provider-status-light provider-status-light--disabled"
+                }
+              />
+              {provider.name}
+            </span>
+          ),
           children: (
             <Provider
               providerId={provider.id}
               onProviderDeleted={handleProviderDeletedRef.current}
+              onStatusChanged={handleStatusChangedRef.current}
               isPreset={isPreset}
             />
           ),
@@ -123,6 +136,11 @@ const ModelService: React.FC = () => {
       // 切换到新添加的服务商标签
       setActiveKey(providerId);
     });
+  }, [fetchProviders]);
+
+  // 处理服务商状态变更的函数（启用/禁用切换）
+  const handleStatusChanged = useCallback(() => {
+    fetchProviders();
   }, [fetchProviders]);
 
   // 处理删除服务商成功的函数
@@ -162,6 +180,10 @@ const ModelService: React.FC = () => {
   useEffect(() => {
     handleProviderDeletedRef.current = handleProviderDeleted;
   }, [handleProviderDeleted]);
+
+  useEffect(() => {
+    handleStatusChangedRef.current = handleStatusChanged;
+  }, [handleStatusChanged]);
 
   useEffect(() => {
     fetchProvidersRef.current = fetchProviders;

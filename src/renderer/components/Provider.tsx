@@ -23,6 +23,7 @@ import { useTranslation } from "react-i18next";
 interface ProviderProps {
   providerId?: number;
   onProviderDeleted?: () => void;
+  onStatusChanged?: () => void;
   isPreset?: boolean;
 }
 
@@ -35,6 +36,7 @@ interface ModelType {
 const Provider: React.FC<ProviderProps> = ({
   providerId,
   onProviderDeleted,
+  onStatusChanged,
   isPreset = false,
 }) => {
   const [providerData, setProviderData] = useState<any>(null);
@@ -392,6 +394,7 @@ const Provider: React.FC<ProviderProps> = ({
               }
 
               setProviderData(result.data);
+              onStatusChanged?.();
             } catch (error) {
               console.error("Failed to update provider status:", error);
             }

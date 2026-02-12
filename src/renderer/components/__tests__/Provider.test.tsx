@@ -40,7 +40,16 @@ vi.mock('react-i18next', () => ({
         'confirmations.delete_provider_title': 'Delete Provider',
         'confirmations.delete_provider_content': 'Are you sure?',
         'confirmations.ok': 'OK',
-        'confirmations.cancel': 'Cancel'
+        'confirmations.cancel': 'Cancel',
+        'details.no_suffix': 'No Suffix',
+        'model_list.button': 'Model List',
+        'model_list.modal_title': 'Model List',
+        'model_list.search_placeholder': 'Search models',
+        'model_list.empty_text': 'No models',
+        'model_list.add_button': 'Add',
+        'model_list.already_added': 'Added',
+        'messages.model_already_exists': 'Model already exists',
+        'messages.fetch_model_list_failed': 'Failed to fetch model list'
       }
       return translations[key] || key
     },
@@ -366,6 +375,136 @@ describe('Provider', () => {
       await waitFor(() => {
         expect(screen.getByText('Are you sure?')).toBeInTheDocument()
       })
+    })
+  })
+
+  describe('isPreset prop', () => {
+    it('should hide delete provider button when isPreset is true', async () => {
+      render(
+        <Wrapper>
+          <Provider providerId={1} isPreset={true} />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('OpenAI')).toBeInTheDocument()
+      })
+
+      // Delete Provider button should NOT be present
+      expect(screen.queryByText('Delete Provider')).not.toBeInTheDocument()
+    })
+
+    it('should show delete provider button when isPreset is false', async () => {
+      render(
+        <Wrapper>
+          <Provider providerId={1} isPreset={false} />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Delete Provider')).toBeInTheDocument()
+      })
+    })
+
+    it('should show delete provider button by default (isPreset not provided)', async () => {
+      render(
+        <Wrapper>
+          <Provider providerId={1} />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Delete Provider')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Model List Button', () => {
+    it('should render Model List button', async () => {
+      render(
+        <Wrapper>
+          <Provider providerId={1} />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Model List')).toBeInTheDocument()
+      })
+    })
+
+    it('should call fetchModelList when Model List button is clicked', async () => {
+      vi.mocked(window.api.provider.fetchModelList).mockResolvedValue({
+        success: true,
+        data: [
+          { id: 'model-1', name: 'Model 1' },
+          { id: 'model-2', name: 'Model 2' },
+        ]
+      })
+
+      render(
+        <Wrapper>
+          <Provider providerId={1} />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Model List')).toBeInTheDocument()
+      })
+
+      const modelListButton = screen.getByText('Model List')
+      fireEvent.click(modelListButton)
+
+      await waitFor(() => {
+        expect(window.api.provider.fetchModelList).toHaveBeenCalledWith(1)
+      })
+    })
+
+    it('should display fetched models in the modal', async () => {
+      vi.mocked(window.api.provider.fetchModelList).mockResolvedValue({
+        success: true,
+        data: [
+          { id: 'gpt-4', name: 'GPT-4' },
+          { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo' },
+        ]
+      })
+
+      render(
+        <Wrapper>
+          <Provider providerId={1} />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Model List')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByText('Model List'))
+
+      await waitFor(() => {
+        expect(screen.getByText('GPT-4')).toBeInTheDocument()
+        expect(screen.getByText('GPT-3.5 Turbo')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Suffix Select', () => {
+    it('should display No Suffix option for openai type', async () => {
+      render(
+        <Wrapper>
+          <Provider providerId={1} />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('OpenAI')).toBeInTheDocument()
+      })
+
+      // The suffix select should have /chat/completions as default for openai type
+      const selectElements = document.querySelectorAll('.ant-select-selection-item')
+      const suffixSelect = Array.from(selectElements).find(
+        el => el.textContent === '/chat/completions'
+      )
+      expect(suffixSelect).toBeInTheDocument()
     })
   })
 
