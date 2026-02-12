@@ -89,6 +89,12 @@ contextBridge.exposeInMainWorld("api", {
     close: () => ipcRenderer.send("window:close"),
   },
 
+  // ==================== Updater APIs ====================
+  updater: {
+    checkForUpdates: () => ipcRenderer.invoke("updater:checkForUpdates"),
+    quitAndInstall: () => ipcRenderer.invoke("updater:quitAndInstall"),
+  },
+
   // ==================== Event APIs ====================
   events: {
     /**
@@ -118,6 +124,20 @@ contextBridge.exposeInMainWorld("api", {
       // 返回清理函数
       return () => {
         ipcRenderer.removeListener('taskDetail:event', handler);
+      };
+    },
+
+    /**
+     * 监听更新状态事件
+     * @param callback 事件回调函数
+     * @returns 清理函数
+     */
+    onUpdaterStatus: (callback: (data: any) => void) => {
+      const handler = (_event: any, data: any) => callback(data);
+      ipcRenderer.on('updater:status', handler);
+
+      return () => {
+        ipcRenderer.removeListener('updater:status', handler);
       };
     },
   },

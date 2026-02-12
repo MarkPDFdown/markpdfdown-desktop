@@ -23,11 +23,18 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
-// Mock window.api.app.getVersion
+// Mock window.api
 vi.stubGlobal('api', {
   app: {
     getVersion: vi.fn().mockResolvedValue('1.0.0')
-  }
+  },
+  updater: {
+    checkForUpdates: vi.fn(),
+    quitAndInstall: vi.fn(),
+  },
+  events: {
+    onUpdaterStatus: vi.fn(() => vi.fn()),
+  },
 })
 
 // Mock window.open

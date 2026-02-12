@@ -90,10 +90,15 @@ interface WindowAPI {
     maximize: () => void;
     close: () => void;
   };
+  updater: {
+    checkForUpdates: () => Promise<void>;
+    quitAndInstall: () => Promise<void>;
+  };
   // 事件监听 API
   events: {
     onTaskEvent: (callback: (event: TaskEventData) => void) => () => void;
     onTaskDetailEvent: (callback: (event: TaskDetailEventData) => void) => () => void;
+    onUpdaterStatus: (callback: (data: any) => void) => () => void;
   };
   platform: NodeJS.Platform;
   app: {

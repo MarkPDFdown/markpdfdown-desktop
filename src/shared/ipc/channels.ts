@@ -64,6 +64,13 @@ export const IPC_CHANNELS = {
     TASK: 'task:event',
     TASK_DETAIL: 'taskDetail:event',
     APP_READY: 'app:ready',
+    UPDATER_STATUS: 'updater:status',
+  },
+
+  // Updater channels
+  UPDATER: {
+    CHECK_FOR_UPDATES: 'updater:checkForUpdates',
+    QUIT_AND_INSTALL: 'updater:quitAndInstall',
   },
 
   // Window control channels
@@ -82,5 +89,6 @@ export type IpcChannel =
   | typeof IPC_CHANNELS.TASK_DETAIL[keyof typeof IPC_CHANNELS.TASK_DETAIL]
   | typeof IPC_CHANNELS.FILE[keyof typeof IPC_CHANNELS.FILE]
   | typeof IPC_CHANNELS.COMPLETION[keyof typeof IPC_CHANNELS.COMPLETION]
+  | typeof IPC_CHANNELS.UPDATER[keyof typeof IPC_CHANNELS.UPDATER]
   | typeof IPC_CHANNELS.EVENTS[keyof typeof IPC_CHANNELS.EVENTS]
   | typeof IPC_CHANNELS.WINDOW[keyof typeof IPC_CHANNELS.WINDOW];

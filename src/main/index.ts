@@ -82,6 +82,7 @@ import { initDatabase, disconnect } from "../core/infrastructure/db/index.js";
 import { registerIpcHandlers } from "./ipc/handlers.js";
 import { windowManager } from './WindowManager.js';
 import { eventBridge } from './ipc/eventBridge.js';
+import { updateService } from './services/UpdateService.js';
 import fileLogic from "../core/infrastructure/services/FileService.js";
 
 // 在 app ready 之前注册自定义协议的权限
@@ -322,6 +323,13 @@ async function initializeBackgroundServices() {
     // 通知渲染进程初始化完成
     if (mainWindow) {
       mainWindow.webContents.send('app:ready');
+    }
+
+    // 启动时检测更新（fire-and-forget，不阻塞 UI）
+    if (app.isPackaged) {
+      updateService.checkForUpdates().catch(err =>
+        console.error('[Main] Auto-update check failed:', err)
+      );
     }
   } catch (error) {
     console.error("[Main] Background services initialization error:", error);
