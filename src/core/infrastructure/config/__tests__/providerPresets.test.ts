@@ -3,7 +3,6 @@ import {
   providerPresets,
   findProviderPreset,
   getProviderPresetKey,
-  type ProviderPreset,
 } from '../providerPresets.js'
 
 describe('providerPresets', () => {

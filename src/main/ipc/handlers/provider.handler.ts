@@ -286,7 +286,7 @@ export function registerProviderHandlers() {
             }
             break;
 
-          default:
+          default: {
             // Try to extract models from common formats
             const modelArray = data.data || data.models || [];
             if (Array.isArray(modelArray)) {
@@ -295,6 +295,7 @@ export function registerProviderHandlers() {
                 name: getNestedValue(item, modelNameField) || item.id || item.name,
               }));
             }
+          }
         }
 
         return { success: true, data: models };
