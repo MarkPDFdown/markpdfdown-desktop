@@ -174,18 +174,19 @@ export function registerProviderHandlers() {
           return { success: false, error: "Provider not found" };
         }
 
-        // Find preset configuration for this provider
+        // Find preset configuration for this provider (may be null for custom providers)
         const preset = findProviderPreset(provider.type, provider.name);
-        if (!preset) {
-          return {
-            success: false,
-            error: "No preset configuration found for this provider",
-          };
-        }
 
         // Construct the full URL for fetching models
-        const baseUrl = provider.base_url || preset.apiBase;
-        const modelListUrl = `${baseUrl}${preset.modelListApi}`;
+        const baseUrl = provider.base_url || preset?.apiBase;
+        if (!baseUrl) {
+          return {
+            success: false,
+            error: "No API base URL configured for this provider",
+          };
+        }
+        const modelListApi = preset?.modelListApi ?? "/models";
+        const modelListUrl = `${baseUrl}${modelListApi}`;
 
         // Prepare headers based on provider type
         const headers: Record<string, string> = {
@@ -207,10 +208,8 @@ export function registerProviderHandlers() {
           }
         }
 
-        const url = modelListUrl;
-
         // Fetch models from the provider
-        const response = await fetch(url, {
+        const response = await fetch(modelListUrl, {
           method: "GET",
           headers,
         });
@@ -231,7 +230,7 @@ export function registerProviderHandlers() {
 
         // Filter models by capability field configured in preset
         const filterByCapability = (items: any[]): any[] => {
-          if (!preset.capabilityField || !preset.capabilityFilter) return items;
+          if (!preset?.capabilityField || !preset?.capabilityFilter) return items;
           return items.filter((item) => {
             const value = getNestedValue(item, preset.capabilityField!);
             if (!Array.isArray(value)) return true;
@@ -242,14 +241,17 @@ export function registerProviderHandlers() {
         // Parse the response based on provider type
         let models: Array<{ id: string; name: string }> = [];
 
+        const modelIdField = preset?.modelIdField ?? "id";
+        const modelNameField = preset?.modelNameField ?? "id";
+
         switch (provider.type) {
           case "openai":
           case "openai-responses":
             // OpenAI format: { data: [{ id: string, ... }] }
             if (data.data && Array.isArray(data.data)) {
               models = filterByCapability(data.data).map((item: any) => ({
-                id: item[preset.modelIdField] || item.id,
-                name: item[preset.modelNameField] || item.id,
+                id: item[modelIdField] || item.id,
+                name: item[modelNameField] || item.id,
               }));
             }
             break;
@@ -258,8 +260,8 @@ export function registerProviderHandlers() {
             // Anthropic format: { data: [{ id: string, display_name: string, ... }] }
             if (data.data && Array.isArray(data.data)) {
               models = filterByCapability(data.data).map((item: any) => ({
-                id: item[preset.modelIdField] || item.id,
-                name: item[preset.modelNameField] || item.id,
+                id: item[modelIdField] || item.id,
+                name: item[modelNameField] || item.id,
               }));
             }
             break;
@@ -268,8 +270,8 @@ export function registerProviderHandlers() {
             // Gemini format: { models: [{ name: string, displayName: string, ... }] }
             if (data.models && Array.isArray(data.models)) {
               models = filterByCapability(data.models).map((item: any) => ({
-                id: item[preset.modelIdField]?.replace("models/", "") || item.name,
-                name: item[preset.modelNameField] || item.name,
+                id: item[modelIdField]?.replace("models/", "") || item.name,
+                name: item[modelNameField] || item.name,
               }));
             }
             break;
@@ -278,8 +280,8 @@ export function registerProviderHandlers() {
             // Ollama format: { models: [{ name: string, ... }] }
             if (data.models && Array.isArray(data.models)) {
               models = filterByCapability(data.models).map((item: any) => ({
-                id: item[preset.modelIdField] || item.name,
-                name: item[preset.modelNameField] || item.name,
+                id: item[modelIdField] || item.name,
+                name: item[modelNameField] || item.name,
               }));
             }
             break;
@@ -289,8 +291,8 @@ export function registerProviderHandlers() {
             const modelArray = data.data || data.models || [];
             if (Array.isArray(modelArray)) {
               models = filterByCapability(modelArray).map((item: any) => ({
-                id: getNestedValue(item, preset.modelIdField) || item.id || item.name,
-                name: getNestedValue(item, preset.modelNameField) || item.id || item.name,
+                id: getNestedValue(item, modelIdField) || item.id || item.name,
+                name: getNestedValue(item, modelNameField) || item.id || item.name,
               }));
             }
         }
