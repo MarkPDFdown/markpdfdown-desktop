@@ -4,7 +4,8 @@
     "api_key_label": "API Key:",
     "api_key_placeholder": "Enter API key",
     "api_url_label": "API URL:",
-    "api_url_placeholder": "Enter API URL"
+    "api_url_placeholder": "Enter API URL",
+    "no_suffix": "No Suffix"
   },
   "model_config": {
     "title": "Model Configuration",
@@ -43,7 +44,9 @@
     "test_failed": "Connection test failed",
     "delete_provider_success": "Provider deleted successfully",
     "delete_provider_failed": "Failed to delete provider",
-    "update_status_failed": "Failed to update provider status"
+    "update_status_failed": "Failed to update provider status",
+    "fetch_model_list_failed": "Failed to fetch remote model list",
+    "model_already_exists": "This model already exists in the list"
   },
   "add_provider": {
     "tab_label": "Add Provider",
@@ -56,5 +59,13 @@
     "submit_button": "Add Provider",
     "success": "Provider added successfully",
     "failed": "Failed to add provider"
+  },
+  "model_list": {
+    "button": "Model List",
+    "modal_title": "Fetch Models from Remote",
+    "search_placeholder": "Search model name or ID",
+    "empty_text": "No models found",
+    "add_button": "Add",
+    "already_added": "Added"
   }
 }

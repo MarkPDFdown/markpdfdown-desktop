@@ -4,7 +4,8 @@
     "api_key_label": "مفتاح API:",
     "api_key_placeholder": "أدخل مفتاح API",
     "api_url_label": "API URL:",
-    "api_url_placeholder": "أدخل API URL"
+    "api_url_placeholder": "أدخل API URL",
+    "no_suffix": "بدون لاحقة"
   },
   "model_config": {
     "title": "تكوين النموذج",
@@ -43,7 +44,9 @@
     "test_failed": "فشل اختبار الاتصال",
     "delete_provider_success": "تم حذف المزود بنجاح",
     "delete_provider_failed": "فشل في حذف المزود",
-    "update_status_failed": "فشل في تحديث حالة المزود"
+    "update_status_failed": "فشل في تحديث حالة المزود",
+    "fetch_model_list_failed": "فشل في جلب قائمة النماذج البعيدة",
+    "model_already_exists": "هذا النموذج موجود بالفعل في القائمة"
   },
   "add_provider": {
     "tab_label": "إضافة مزود",
@@ -56,5 +59,13 @@
     "submit_button": "إضافة مزود",
     "success": "تم إضافة المزود بنجاح",
     "failed": "فشل في إضافة المزود"
+  },
+  "model_list": {
+    "button": "قائمة النماذج",
+    "modal_title": "جلب النماذج من البعيد",
+    "search_placeholder": "البحث باسم النموذج أو المعرف",
+    "empty_text": "لم يتم العثور على نماذج",
+    "add_button": "إضافة",
+    "already_added": "تمت الإضافة"
   }
 }

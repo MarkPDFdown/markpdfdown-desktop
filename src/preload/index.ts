@@ -17,6 +17,9 @@ contextBridge.exposeInMainWorld("api", {
     delete: (id: number) => ipcRenderer.invoke("provider:delete", id),
     updateStatus: (id: number, status: number) =>
       ipcRenderer.invoke("provider:updateStatus", id, status),
+    getPresets: () => ipcRenderer.invoke("provider:getPresets"),
+    fetchModelList: (providerId: number) =>
+      ipcRenderer.invoke("provider:fetchModelList", providerId),
   },
 
   // ==================== Model APIs ====================

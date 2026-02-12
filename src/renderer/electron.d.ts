@@ -160,6 +160,17 @@ interface UpdateStatusData {
 }
 
 // Electron API 接口定义
+// Provider Preset 类型
+interface ProviderPreset {
+  name: string;
+  type: string;
+  apiBase: string;
+  modelListApi: string;
+  modelNameField: string;
+  modelIdField: string;
+  defaultModels?: Array<{ id: string; name: string }>;
+}
+
 interface ElectronAPI {
   provider: {
     getAll: () => Promise<IpcResponse<Provider[]>>;
@@ -174,6 +185,8 @@ interface ElectronAPI {
       id: number,
       status: number,
     ) => Promise<IpcResponse<Provider>>;
+    getPresets: () => Promise<IpcResponse<ProviderPreset[]>>;
+    fetchModelList: (providerId: number) => Promise<IpcResponse<Array<{ id: string; name: string }>>>;
   };
 
   model: {
