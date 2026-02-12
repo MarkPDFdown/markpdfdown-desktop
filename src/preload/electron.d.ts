@@ -48,6 +48,8 @@ interface WindowAPI {
     update: (id: number, data: any) => Promise<any>;
     delete: (id: number) => Promise<any>;
     updateStatus: (id: number, status: number) => Promise<any>;
+    getPresets: () => Promise<any>;
+    fetchModelList: (providerId: number) => Promise<any>;
   };
   model: {
     getAll: () => Promise<any>;
