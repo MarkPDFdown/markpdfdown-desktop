@@ -2,6 +2,7 @@ import { Flex, Typography, Button, Space, Badge } from "antd";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ImgLogo from "../assets/MarkPDFdown.png";
+import UpdateChecker from "./UpdateChecker";
 
 const About: React.FC = () => {
   const { Text, Title } = Typography;
@@ -62,6 +63,7 @@ const About: React.FC = () => {
             {t('about.buttons.contact')}
           </Button>
         </Space>
+        <UpdateChecker />
       </Flex>
     </div>
   );

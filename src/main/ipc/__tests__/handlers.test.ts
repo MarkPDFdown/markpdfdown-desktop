@@ -46,7 +46,27 @@ const mockIpcMain = {
 // Mock modules
 vi.mock('electron', () => ({
   ipcMain: mockIpcMain,
-  dialog: mockDialog
+  dialog: mockDialog,
+  app: { isPackaged: false },
+}))
+
+vi.mock('electron-updater', () => ({
+  default: {
+    autoUpdater: {
+      autoDownload: false,
+      allowPrerelease: false,
+      autoInstallOnAppQuit: false,
+      on: vi.fn(),
+      checkForUpdates: vi.fn(),
+      quitAndInstall: vi.fn(),
+    },
+  },
+}))
+
+vi.mock('../../WindowManager.js', () => ({
+  windowManager: {
+    sendToRenderer: vi.fn(),
+  },
 }))
 
 vi.mock('../../../core/domain/repositories/ProviderRepository.js', () => ({
@@ -139,6 +159,16 @@ vi.mock('../../../shared/ipc/channels.js', () => ({
     COMPLETION: {
       MARK_IMAGEDOWN: 'completion:markImagedown',
       TEST_CONNECTION: 'completion:testConnection',
+    },
+    UPDATER: {
+      CHECK_FOR_UPDATES: 'updater:checkForUpdates',
+      QUIT_AND_INSTALL: 'updater:quitAndInstall',
+    },
+    EVENTS: {
+      TASK: 'task:event',
+      TASK_DETAIL: 'taskDetail:event',
+      APP_READY: 'app:ready',
+      UPDATER_STATUS: 'updater:status',
     },
   },
 }))

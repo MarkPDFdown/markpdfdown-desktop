@@ -151,6 +151,14 @@ interface FileDialogResult {
   canceled: boolean;
 }
 
+// 更新状态数据
+interface UpdateStatusData {
+  status: 'idle' | 'checking' | 'available' | 'not_available' | 'downloading' | 'downloaded' | 'error';
+  version?: string;
+  progress?: number;
+  error?: string;
+}
+
 // Electron API 接口定义
 interface ElectronAPI {
   provider: {
@@ -227,9 +235,15 @@ interface ElectronAPI {
     openExternal: (url: string) => void;
   };
 
+  updater: {
+    checkForUpdates: () => Promise<void>;
+    quitAndInstall: () => Promise<void>;
+  };
+
   events: {
     onTaskEvent: (callback: (event: TaskEvent) => void) => () => void;
     onTaskDetailEvent: (callback: (event: TaskDetailEvent) => void) => () => void;
+    onUpdaterStatus: (callback: (data: UpdateStatusData) => void) => () => void;
   };
 }
 
