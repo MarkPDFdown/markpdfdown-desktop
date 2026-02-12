@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-02-12
+### :sparkles: New Features
+- [`10d9bcf`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/10d9bcf0942c915588e23b1dd1279248b5b99a60) - **updater**: add in-app auto-update with electron-updater *(PR [#33](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/33) by [@jorben](https://github.com/jorben))*
+- [`938af80`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/938af806c79235191d074da6470ed0869f347f28) - **provider**: ✨ add preset providers with auto-injection and capability filtering *(PR [#32](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/32) by [@jorben](https://github.com/jorben))*
+
+### :bug: Bug Fixes
+- [`b1ceeec`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/b1ceeecc7b41b53bc45d153d3c321d4967a15fc2) - **ci**: 🐛 skip lifecycle scripts during npm publish in release workflow *(PR [#30](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/30) by [@jorben](https://github.com/jorben))*
+- [`84b42f3`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/84b42f360c826a3276dc72ab286e3bd67eee6333) - **provider**: 🐛 improve model config layout responsiveness and scrolling *(PR [#31](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/31) by [@jorben](https://github.com/jorben))*
+
+
 ## [0.1.8] - 2026-02-11
 ### :bug: Bug Fixes
 - [`53a71a3`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/53a71a33ebb3ba795742e21675617c53e660bed0) - **ci**: avoid duplicate builds on release workflow *(PR [#13](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/13) by [@jorben](https://github.com/jorben))*
@@ -94,3 +104,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.1.6]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.1.5...0.1.6
 [0.1.7]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.1.6...0.1.7
 [0.1.8]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.1.7...0.1.8
+[0.2.0]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.1.8...0.2.0
