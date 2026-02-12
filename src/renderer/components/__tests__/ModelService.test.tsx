@@ -256,7 +256,7 @@ describe('ModelService', () => {
   })
 
   describe('Tab Icons', () => {
-    it('should display cloud icon for provider tabs', async () => {
+    it('should display status light for provider tabs', async () => {
       render(
         <Wrapper>
           <ModelService />
@@ -265,8 +265,22 @@ describe('ModelService', () => {
 
       await waitFor(() => {
         const openaiTab = screen.getByText('OpenAI').closest('.ant-tabs-tab')
-        const icon = openaiTab?.querySelector('[aria-label="cloud"]')
-        expect(icon).toBeInTheDocument()
+        const statusLight = openaiTab?.querySelector('.provider-status-light')
+        expect(statusLight).toBeInTheDocument()
+      })
+    })
+
+    it('should show enabled status light for active providers', async () => {
+      render(
+        <Wrapper>
+          <ModelService />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        const openaiTab = screen.getByText('OpenAI').closest('.ant-tabs-tab')
+        const statusLight = openaiTab?.querySelector('.provider-status-light--enabled')
+        expect(statusLight).toBeInTheDocument()
       })
     })
 
