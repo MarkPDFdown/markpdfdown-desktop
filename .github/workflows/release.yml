@@ -124,6 +124,13 @@ jobs:
           echo "Downloaded manifests:"
           find manifests -type f -name "*.yml" | sort
 
+      - name: Filter out builder-debug.yml and keep only latest manifests
+        run: |
+          # Remove builder-debug.yml from manifests directory (exists in all platform artifacts)
+          find manifests -name "builder-debug.yml" -delete
+          echo "Remaining manifests:"
+          find manifests -type f -name "*.yml" | sort
+
       - name: Upload update manifests to release
         uses: softprops/action-gh-release@v2
         with:
