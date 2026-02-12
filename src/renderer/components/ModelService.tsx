@@ -15,6 +15,11 @@ interface ProviderData {
   status: number;
 }
 
+interface ProviderPreset {
+  name: string;
+  type: string;
+}
+
 interface TabItem {
   key: string;
   label: string;
@@ -45,26 +50,50 @@ const ModelService: React.FC = () => {
   // 定义获取服务商列表的函数
   const fetchProviders = useCallback(async () => {
     try {
-      const response = await window.api.provider.getAll();
+      const [response, presetsResponse] = await Promise.all([
+        window.api.provider.getAll(),
+        window.api.provider.getPresets(),
+      ]);
 
       if (!response.success) {
         throw new Error(response.error || t("messages.fetch_providers_failed"));
       }
 
       const providers: ProviderData[] = response.data;
+      const presets: ProviderPreset[] = presetsResponse.success ? presetsResponse.data : [];
+
+      // 按预设顺序排序：预设服务商在前（按 providerPresets 数组顺序），非预设服务商在后
+      const getPresetIndex = (provider: ProviderData): number => {
+        const index = presets.findIndex(
+          (preset) => preset.type === provider.type && preset.name === provider.name
+        );
+        return index === -1 ? presets.length : index;
+      };
+
+      const sortedProviders = [...providers].sort((a, b) => {
+        const indexA = getPresetIndex(a);
+        const indexB = getPresetIndex(b);
+        return indexA - indexB;
+      });
 
       // 构建选项卡数据
-      const providerTabs = providers.map((provider) => ({
-        key: provider.id.toString(),
-        label: provider.name,
-        icon: <CloudOutlined />,
-        children: (
-          <Provider
-            providerId={provider.id}
-            onProviderDeleted={handleProviderDeletedRef.current}
-          />
-        ),
-      }));
+      const providerTabs = sortedProviders.map((provider) => {
+        const isPreset = presets.some(
+          (preset) => preset.type === provider.type && preset.name === provider.name
+        );
+        return {
+          key: provider.id.toString(),
+          label: provider.name,
+          icon: <CloudOutlined />,
+          children: (
+            <Provider
+              providerId={provider.id}
+              onProviderDeleted={handleProviderDeletedRef.current}
+              isPreset={isPreset}
+            />
+          ),
+        };
+      });
 
       // 更新添加服务商的选项卡
       const addProviderTab = {

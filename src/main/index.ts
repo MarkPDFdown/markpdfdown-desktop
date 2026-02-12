@@ -74,7 +74,10 @@ function getIconPath(): string {
   return possiblePaths[0];
 }
 import isDev from "electron-is-dev";
-import { workerOrchestrator } from "../core/application/services/index.js";
+import {
+  workerOrchestrator,
+  presetProviderService,
+} from "../core/application/services/index.js";
 import { initDatabase, disconnect } from "../core/infrastructure/db/index.js";
 import { registerIpcHandlers } from "./ipc/handlers.js";
 import { windowManager } from './WindowManager.js';
@@ -299,6 +302,12 @@ async function initializeBackgroundServices() {
     console.log("[Main] Initializing database in background...");
     await initDatabase();
     console.log(`[Main] Database initialized in ${Date.now() - startTime}ms`);
+
+    // 注入预设供应商
+    console.log("[Main] Injecting preset providers...");
+    const presetStartTime = Date.now();
+    await presetProviderService.initialize();
+    console.log(`[Main] Preset providers injected in ${Date.now() - presetStartTime}ms`);
 
     // 启动任务逻辑
     console.log("[Main] Starting task logic in background...");

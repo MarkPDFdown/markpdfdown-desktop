@@ -4,7 +4,8 @@
     "api_key_label": "APIキー:",
     "api_key_placeholder": "APIキーを入力してください",
     "api_url_label": "API URL:",
-    "api_url_placeholder": "API URLを入力してください"
+    "api_url_placeholder": "API URLを入力してください",
+    "no_suffix": "サフィックスなし"
   },
   "model_config": {
     "title": "モデル設定",
@@ -43,7 +44,9 @@
     "test_failed": "接続テストに失敗しました",
     "delete_provider_success": "プロバイダーの削除が完了しました",
     "delete_provider_failed": "プロバイダーの削除に失敗しました",
-    "update_status_failed": "プロバイダーのステータス更新に失敗しました"
+    "update_status_failed": "プロバイダーのステータス更新に失敗しました",
+    "fetch_model_list_failed": "リモートモデルリストの取得に失敗しました",
+    "model_already_exists": "このモデルは既にリストに存在します"
   },
   "add_provider": {
     "tab_label": "プロバイダーを追加",
@@ -56,5 +59,13 @@
     "submit_button": "プロバイダーを追加",
     "success": "プロバイダーの追加が完了しました",
     "failed": "プロバイダーの追加に失敗しました"
+  },
+  "model_list": {
+    "button": "モデルリスト",
+    "modal_title": "リモートからモデルを取得",
+    "search_placeholder": "モデル名またはIDで検索",
+    "empty_text": "モデルが見つかりません",
+    "add_button": "追加",
+    "already_added": "追加済み"
   }
 }

@@ -4,7 +4,8 @@
     "api_key_label": "API 密钥:",
     "api_key_placeholder": "请输入API密钥",
     "api_url_label": "API 地址:",
-    "api_url_placeholder": "请输入API地址"
+    "api_url_placeholder": "请输入API地址",
+    "no_suffix": "无后缀"
   },
   "model_config": {
     "title": "模型配置",
@@ -43,7 +44,9 @@
     "test_failed": "连接测试失败",
     "delete_provider_success": "服务商已成功删除",
     "delete_provider_failed": "删除服务商失败",
-    "update_status_failed": "更新服务商状态失败"
+    "update_status_failed": "更新服务商状态失败",
+    "fetch_model_list_failed": "获取远程模型列表失败",
+    "model_already_exists": "该模型已存在于列表中"
   },
   "add_provider": {
     "tab_label": "添加服务商",
@@ -56,5 +59,13 @@
     "submit_button": "确认添加",
     "success": "服务商添加成功",
     "failed": "添加服务商失败"
+  },
+  "model_list": {
+    "button": "模型列表",
+    "modal_title": "从远程获取模型列表",
+    "search_placeholder": "搜索模型名称或ID",
+    "empty_text": "未找到模型",
+    "add_button": "加入",
+    "already_added": "已加入"
   }
 }

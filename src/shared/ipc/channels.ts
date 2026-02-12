@@ -13,6 +13,8 @@ export const IPC_CHANNELS = {
     UPDATE: 'provider:update',
     DELETE: 'provider:delete',
     UPDATE_STATUS: 'provider:updateStatus',
+    GET_PRESETS: 'provider:getPresets',
+    FETCH_MODEL_LIST: 'provider:fetchModelList',
   },
 
   // Model channels

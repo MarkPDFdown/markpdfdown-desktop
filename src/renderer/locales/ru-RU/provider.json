@@ -4,7 +4,8 @@
     "api_key_label": "API-ключ:",
     "api_key_placeholder": "Введите API-ключ",
     "api_url_label": "API URL:",
-    "api_url_placeholder": "Введите API URL"
+    "api_url_placeholder": "Введите API URL",
+    "no_suffix": "Без суффикса"
   },
   "model_config": {
     "title": "Конфигурация модели",
@@ -43,7 +44,9 @@
     "test_failed": "Ошибка проверки подключения",
     "delete_provider_success": "Провайдер успешно удалён",
     "delete_provider_failed": "Не удалось удалить провайдера",
-    "update_status_failed": "Не удалось обновить статус провайдера"
+    "update_status_failed": "Не удалось обновить статус провайдера",
+    "fetch_model_list_failed": "Не удалось получить список удалённых моделей",
+    "model_already_exists": "Эта модель уже существует в списке"
   },
   "add_provider": {
     "tab_label": "Добавить провайдера",
@@ -56,5 +59,13 @@
     "submit_button": "Добавить провайдера",
     "success": "Провайдер успешно добавлен",
     "failed": "Не удалось добавить провайдера"
+  },
+  "model_list": {
+    "button": "Список моделей",
+    "modal_title": "Получить модели из удалённого источника",
+    "search_placeholder": "Поиск по названию или ID модели",
+    "empty_text": "Модели не найдены",
+    "add_button": "Добавить",
+    "already_added": "Добавлено"
   }
 }
