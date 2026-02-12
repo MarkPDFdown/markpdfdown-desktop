@@ -12,6 +12,17 @@
       "contact": "Contact Email"
     }
   },
+  "update": {
+    "check_for_updates": "Check for Updates",
+    "checking": "Checking for updates...",
+    "available": "Update available",
+    "downloading": "Downloading update...",
+    "ready": "Update ready to install",
+    "restart_to_update": "Restart to Update",
+    "up_to_date": "You are up to date",
+    "error": "Update check failed",
+    "retry": "Retry"
+  },
   "preview": {
     "back": "Back",
     "download": "Download .md",
