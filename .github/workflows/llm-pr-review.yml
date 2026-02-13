@@ -63,13 +63,18 @@ jobs:
               exit 1
             }
 
-          max_diff_chars=60000
-          pr_diff_trimmed=$(printf "%s" "$pr_diff" | head -c $max_diff_chars)
+          max_diff_chars=131072
+          pr_diff_trimmed=$(printf "%s" "$pr_diff" | head -c $max_diff_chars | sed '$d')
 
           system_prompt=$(cat <<'EOF'
           You are a senior software engineer performing a pull request code review.
           Focus on: Correctness, Security, Performance, Maintainability, Readability, Testing.
           Output must be in English.
+
+          The diff is in unified diff format. Each hunk starts with a header like:
+          @@ -old_start,old_count +new_start,new_count @@
+          Use the +new_start line numbers from these hunk headers to calculate the
+          actual file line numbers when referencing code in your review.
 
           Use this exact format and omit empty sections:
           # Summary
@@ -100,7 +105,7 @@ jobs:
               max_tokens: 8192,
               system: $system,
               messages: [
-                { role: "user", content: ("Review the following pull request.\n\n## Title\n" + $title + "\n\n## Description\n" + $body + "\n\n## Diff\n" + $diff) }
+                { role: "user", content: ("Review the following pull request.\n\n## Title\n" + $title + "\n\n## Description\n" + $body + "\n\n## Diff\n```diff\n" + $diff + "\n```") }
               ]
             }')
 
