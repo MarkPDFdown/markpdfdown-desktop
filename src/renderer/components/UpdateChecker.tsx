@@ -73,7 +73,7 @@ const UpdateChecker: React.FC = () => {
 
       case "downloading":
         return (
-          <Space direction="vertical" style={{ width: "100%" }}>
+          <Space direction="vertical" style={{ width: 300 }}>
             <Text>
               {t("update.downloading")}{" "}
               {statusData.progress !== undefined &&
@@ -127,7 +127,11 @@ const UpdateChecker: React.FC = () => {
     }
   };
 
-  return <div style={{ marginTop: 16 }}>{renderStatus()}</div>;
+  return (
+    <div style={{ marginTop: 16, minHeight: 70, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      {renderStatus()}
+    </div>
+  );
 };
 
 export default UpdateChecker;
