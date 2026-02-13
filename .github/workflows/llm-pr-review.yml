@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       pr_number:
-        description: 'Pull request number to review'
+        description: "Pull request number to review"
         required: true
         type: number
 
@@ -97,7 +97,7 @@ jobs:
             --arg diff "$pr_diff_trimmed" \
             '{
               model: $model,
-              max_tokens: 4096,
+              max_tokens: 8192,
               system: $system,
               messages: [
                 { role: "user", content: ("Review the following pull request.\n\n## Title\n" + $title + "\n\n## Description\n" + $body + "\n\n## Diff\n" + $diff) }
@@ -105,7 +105,7 @@ jobs:
             }')
 
           llm_response=$(curl -sf \
-            -H "Authorization: Bearer $API_KEY" \
+            -H "x-api-key: $API_KEY" \
             -H "Content-Type: application/json" \
             -H "anthropic-version: 2023-06-01" \
             "$API_BASE/v1/messages" \
