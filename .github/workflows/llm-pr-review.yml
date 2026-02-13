@@ -31,13 +31,13 @@ jobs:
           fetch-depth: 0
 
       # This step uses the Anthropic Messages API.
-      # Secrets required: APIBase (Anthropic API base URL), APIKey, ModelId
+      # Secrets required: APIKey; Variables required: APIBase, ModelId
       - name: Generate LLM review
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          API_BASE: ${{ secrets.ANTHROPIC_BASE_URL }}
+          API_BASE: ${{ vars.ANTHROPIC_BASE_URL }}
           API_KEY: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
-          MODEL_ID: ${{ secrets.ANTHROPIC_MODEL }}
+          MODEL_ID: ${{ vars.ANTHROPIC_MODEL }}
           PR_NUMBER: ${{ github.event.pull_request.number || github.event.inputs.pr_number }}
           REPO: ${{ github.repository }}
         run: |
