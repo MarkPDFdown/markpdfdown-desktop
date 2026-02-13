@@ -61,8 +61,18 @@ class UpdateService {
     });
 
     autoUpdater.on('error', (error) => {
-      console.error('[UpdateService] Error:', error.message);
-      this.sendStatus({ status: UpdateStatus.ERROR, error: error.message });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const safeMessage =
+        errorMessage.length > 200 ? `${errorMessage.slice(0, 200)}...` : errorMessage;
+      const errorDetails = {
+        message: safeMessage,
+        name: error instanceof Error ? error.name : undefined,
+        stack: error instanceof Error ? error.stack : undefined,
+        code: (error as { code?: string | number }).code,
+        statusCode: (error as { statusCode?: number }).statusCode,
+      };
+      console.error('[UpdateService] Error:', errorDetails);
+      this.sendStatus({ status: UpdateStatus.ERROR, error: safeMessage });
     });
   }
 
