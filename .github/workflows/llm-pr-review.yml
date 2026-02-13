@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       pr_number:
-        description: "Pull request number to review"
+        description: 'Pull request number to review'
         required: true
         type: number
 
@@ -28,16 +28,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
       # This step uses the Anthropic Messages API.
-      # Secrets required: APIKey; Variables required: APIBase, ModelId
+      # Secrets required: APIBase (Anthropic API base URL), APIKey, ModelId
       - name: Generate LLM review
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          API_BASE: ${{ vars.ANTHROPIC_BASE_URL }}
+          API_BASE: ${{ secrets.ANTHROPIC_BASE_URL }}
           API_KEY: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
-          MODEL_ID: ${{ vars.ANTHROPIC_MODEL }}
+          MODEL_ID: ${{ secrets.ANTHROPIC_MODEL }}
           PR_NUMBER: ${{ github.event.pull_request.number || github.event.inputs.pr_number }}
           REPO: ${{ github.repository }}
         run: |
@@ -63,18 +63,13 @@ jobs:
               exit 1
             }
 
-          max_diff_chars=131072
-          pr_diff_trimmed=$(printf "%s" "$pr_diff" | head -c $max_diff_chars | sed '$d')
+          max_diff_chars=60000
+          pr_diff_trimmed=$(printf "%s" "$pr_diff" | head -c $max_diff_chars)
 
           system_prompt=$(cat <<'EOF'
           You are a senior software engineer performing a pull request code review.
           Focus on: Correctness, Security, Performance, Maintainability, Readability, Testing.
           Output must be in English.
-
-          The diff is in unified diff format. Each hunk starts with a header like:
-          @@ -old_start,old_count +new_start,new_count @@
-          Use the +new_start line numbers from these hunk headers to calculate the
-          actual file line numbers when referencing code in your review.
 
           Use this exact format and omit empty sections:
           # Summary
@@ -102,15 +97,15 @@ jobs:
             --arg diff "$pr_diff_trimmed" \
             '{
               model: $model,
-              max_tokens: 8192,
+              max_tokens: 4096,
               system: $system,
               messages: [
-                { role: "user", content: ("Review the following pull request.\n\n## Title\n" + $title + "\n\n## Description\n" + $body + "\n\n## Diff\n```diff\n" + $diff + "\n```") }
+                { role: "user", content: ("Review the following pull request.\n\n## Title\n" + $title + "\n\n## Description\n" + $body + "\n\n## Diff\n" + $diff) }
               ]
             }')
 
           llm_response=$(curl -sf \
-            -H "x-api-key: $API_KEY" \
+            -H "Authorization: Bearer $API_KEY" \
             -H "Content-Type: application/json" \
             -H "anthropic-version: 2023-06-01" \
             "$API_BASE/v1/messages" \
@@ -119,7 +114,7 @@ jobs:
               exit 1
             }
 
-          review_text=$(printf "%s" "$llm_response" | jq -r '[.content[] | select(.type == "text")] | first? | .text // ""')
+          review_text=$(printf "%s" "$llm_response" | jq -r '.content[0].text // ""')
 
           if [ -z "$review_text" ]; then
             echo "::error::LLM response missing content. Raw response:"
