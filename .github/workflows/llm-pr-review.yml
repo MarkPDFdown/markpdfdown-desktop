@@ -28,7 +28,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       # This step uses the Anthropic Messages API.
       # Secrets required: APIKey; Variables required: APIBase, ModelId
@@ -114,7 +114,7 @@ jobs:
               exit 1
             }
 
-          review_text=$(printf "%s" "$llm_response" | jq -r '[.content[] | select(.type == "text")] | first | .text // ""')
+          review_text=$(printf "%s" "$llm_response" | jq -r '[.content[] | select(.type == "text")] | first? | .text // ""')
 
           if [ -z "$review_text" ]; then
             echo "::error::LLM response missing content. Raw response:"
