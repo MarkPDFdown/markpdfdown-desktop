@@ -124,12 +124,27 @@ jobs:
           echo "Downloaded manifests:"
           find manifests -type f -name "*.yml" | sort
 
-      - name: Filter out builder-debug.yml and keep only latest manifests
+      - name: Filter out builder-debug.yml
         run: |
           # Remove builder-debug.yml from manifests directory (exists in all platform artifacts)
           find manifests -name "builder-debug.yml" -delete
+
           echo "Remaining manifests:"
           find manifests -type f -name "*.yml" | sort
+
+      - name: Validate required manifests
+        run: |
+          REQUIRED=(
+            manifests/update-manifests-win/latest.yml
+            manifests/update-manifests-mac/latest-mac.yml
+            manifests/update-manifests-linux/latest-linux.yml
+          )
+          for file in "${REQUIRED[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "::error::Missing required update manifest: $file"
+              exit 1
+            fi
+          done
 
       - name: Upload update manifests to release
         uses: softprops/action-gh-release@v2
