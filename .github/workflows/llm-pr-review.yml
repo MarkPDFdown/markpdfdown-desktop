@@ -114,7 +114,7 @@ jobs:
               exit 1
             }
 
-          review_text=$(printf "%s" "$llm_response" | jq -r '.content[0].text // ""')
+          review_text=$(printf "%s" "$llm_response" | jq -r '[.content[] | select(.type == "text")] | first | .text // ""')
 
           if [ -z "$review_text" ]; then
             echo "::error::LLM response missing content. Raw response:"
