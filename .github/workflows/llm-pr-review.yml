@@ -103,7 +103,7 @@ jobs:
             '{
               model: $model,
               max_tokens: 8192,
-              system: $system,
+              system: [{ type: "text", text: $system }],
               messages: [
                 { role: "user", content: ("Review the following pull request.\n\n## Title\n" + $title + "\n\n## Description\n" + $body + "\n\n## Diff\n```diff\n" + $diff + "\n```") }
               ]
