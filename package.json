@@ -95,7 +95,8 @@
     "win": {
       "target": "nsis",
       "artifactName": "${productName}-${version}-${arch}.${ext}",
-      "icon": "public/icons/win/icon.ico"
+      "icon": "public/icons/win/icon.ico",
+      "verifyUpdateCodeSignature": false
     },
     "nsis": {
       "artifactName": "${productName}-${version}-${arch}.${ext}",
