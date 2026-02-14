@@ -110,10 +110,17 @@ const UpdateChecker: React.FC = () => {
 
       case "error":
         return (
-          <Space>
-            <CloseCircleOutlined style={{ color: "#ff4d4f" }} />
-            <Text type="danger">{t("update.error")}</Text>
-            <Button onClick={handleCheckForUpdates}>{t("update.retry")}</Button>
+          <Space direction="vertical">
+            <Space>
+              <CloseCircleOutlined style={{ color: "#ff4d4f" }} />
+              <Text type="danger">{t("update.error")}</Text>
+              <Button onClick={handleCheckForUpdates}>{t("update.retry")}</Button>
+            </Space>
+            {statusData.error && (
+              <Text type="secondary" style={{ maxWidth: 420, wordBreak: 'break-word' }}>
+                {statusData.error}
+              </Text>
+            )}
           </Space>
         );
 
