@@ -6,6 +6,7 @@ import { registerFileHandlers } from './file.handler.js';
 import { registerCompletionHandlers } from './completion.handler.js';
 import { registerAppHandlers } from './app.handler.js';
 import { registerCloudHandlers } from './cloud.handler.js';
+import { registerUpdaterHandlers } from './updater.handler.js';
 
 /**
  * Register all IPC handlers
@@ -19,6 +20,7 @@ import { registerCloudHandlers } from './cloud.handler.js';
  * - Completion: LLM API calls
  * - Cloud: Cloud API operations
  * - App: Application info (version)
+ * - Updater: Auto-update management
  */
 export function registerAllHandlers() {
   registerProviderHandlers();
@@ -29,6 +31,7 @@ export function registerAllHandlers() {
   registerCompletionHandlers();
   registerCloudHandlers();
   registerAppHandlers();
+  registerUpdaterHandlers();
 
   console.log("[IPC] All handlers registered successfully");
 }
@@ -43,4 +46,5 @@ export {
   registerCompletionHandlers,
   registerCloudHandlers,
   registerAppHandlers,
+  registerUpdaterHandlers,
 };

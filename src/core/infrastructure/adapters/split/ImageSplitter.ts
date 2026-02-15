@@ -3,6 +3,7 @@ import path from 'path';
 import { ISplitter, SplitResult, PageInfo } from '../../../domain/split/ISplitter.js';
 import { Task } from '../../../../shared/types/index.js';
 import { ImagePathUtil } from './ImagePathUtil.js';
+import { FileWaitUtil } from './FileWaitUtil.js';
 
 /**
  * Image splitter implementation for single-page image files.
@@ -41,10 +42,10 @@ export class ImageSplitter implements ISplitter {
     const filename = task.filename;
     const sourcePath = path.join(this.uploadsDir, taskId, filename);
 
-    try {
-      // Validate source file exists
-      await fs.access(sourcePath);
+    // Pre-check: wait for file to become available (handles antivirus scanning delays on Windows)
+    await FileWaitUtil.waitForFile(sourcePath, this.uploadsDir, taskId, filename, 'ImageSplitter');
 
+    try {
       // Get file extension (preserve original format)
       const ext = path.extname(filename).toLowerCase();
       if (!ext) {

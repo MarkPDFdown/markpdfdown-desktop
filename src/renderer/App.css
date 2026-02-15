@@ -55,6 +55,60 @@
   overflow: hidden !important;
 }
 
+/* Model Service Tabs 内容区域滚动 - 仅滚动时显示滚动条 */
+.model-service-tabs .ant-tabs-content-holder {
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.model-service-tabs .ant-tabs-content-holder::-webkit-scrollbar {
+  width: 6px;
+}
+
+.model-service-tabs .ant-tabs-content-holder::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 3px;
+}
+
+.model-service-tabs .ant-tabs-content-holder:hover::-webkit-scrollbar-thumb,
+.model-service-tabs .ant-tabs-content-holder:active::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.model-service-tabs .ant-tabs-content-holder::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Provider 状态呼吸灯 */
+.provider-status-light {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.provider-status-light--enabled {
+  background-color: #52c41a;
+  box-shadow: 0 0 6px rgba(82, 196, 26, 0.6);
+  animation: breathing-green 2s ease-in-out infinite;
+}
+
+.provider-status-light--disabled {
+  background-color: #bfbfbf;
+}
+
+@keyframes breathing-green {
+  0%, 100% {
+    box-shadow: 0 0 4px rgba(82, 196, 26, 0.4);
+    opacity: 1;
+  }
+  50% {
+    box-shadow: 0 0 10px rgba(82, 196, 26, 0.8);
+    opacity: 0.8;
+  }
+}
+
 /* Markdown 预览面板滚动 */
 .ant-splitter-panel:last-child {
   overflow: auto !important;

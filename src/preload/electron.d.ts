@@ -48,6 +48,8 @@ interface WindowAPI {
     update: (id: number, data: any) => Promise<any>;
     delete: (id: number) => Promise<any>;
     updateStatus: (id: number, status: number) => Promise<any>;
+    getPresets: () => Promise<any>;
+    fetchModelList: (providerId: number) => Promise<any>;
   };
   model: {
     getAll: () => Promise<any>;
@@ -72,7 +74,6 @@ interface WindowAPI {
   file: {
     selectDialog: () => Promise<any>;
     upload: (taskId: string, filePath: string) => Promise<any>;
-    uploadMultiple: (taskId: string, filePaths: string[]) => Promise<any>;
     uploadFileContent: (taskId: string, fileName: string, fileBuffer: ArrayBuffer) => Promise<any>;
     getImagePath: (taskId: string, page: number) => Promise<any>;
     downloadMarkdown: (taskId: string) => Promise<any>;
@@ -95,11 +96,16 @@ interface WindowAPI {
     maximize: () => void;
     close: () => void;
   };
+  updater: {
+    checkForUpdates: () => Promise<void>;
+    quitAndInstall: () => Promise<void>;
+  };
   // 事件监听 API
   events: {
     onTaskEvent: (callback: (event: TaskEventData) => void) => () => void;
     onTaskDetailEvent: (callback: (event: TaskDetailEventData) => void) => () => void;
     onOAuthCallback: (callback: (url: string) => void) => () => void;
+    onUpdaterStatus: (callback: (data: any) => void) => () => void;
   };
   platform: NodeJS.Platform;
   app: {

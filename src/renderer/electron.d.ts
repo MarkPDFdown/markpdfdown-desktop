@@ -151,7 +151,26 @@ interface FileDialogResult {
   canceled: boolean;
 }
 
+// 更新状态数据
+interface UpdateStatusData {
+  status: 'idle' | 'checking' | 'available' | 'not_available' | 'downloading' | 'downloaded' | 'error';
+  version?: string;
+  progress?: number;
+  error?: string;
+}
+
 // Electron API 接口定义
+// Provider Preset 类型
+interface ProviderPreset {
+  name: string;
+  type: string;
+  apiBase: string;
+  modelListApi: string;
+  modelNameField: string;
+  modelIdField: string;
+  defaultModels?: Array<{ id: string; name: string }>;
+}
+
 interface ElectronAPI {
   provider: {
     getAll: () => Promise<IpcResponse<Provider[]>>;
@@ -166,6 +185,8 @@ interface ElectronAPI {
       id: number,
       status: number,
     ) => Promise<IpcResponse<Provider>>;
+    getPresets: () => Promise<IpcResponse<ProviderPreset[]>>;
+    fetchModelList: (providerId: number) => Promise<IpcResponse<Array<{ id: string; name: string }>>>;
   };
 
   model: {
@@ -203,10 +224,6 @@ interface ElectronAPI {
       taskId: string,
       filePath: string,
     ) => Promise<IpcResponse<FileUploadResult>>;
-    uploadMultiple: (
-      taskId: string,
-      filePaths: string[],
-    ) => Promise<IpcResponse<{ message: string; files: FileUploadResult[] }>>;
     getImagePath: (
       taskId: string,
       page: number,
@@ -245,10 +262,16 @@ interface ElectronAPI {
     close: () => void;
   };
 
+  updater: {
+    checkForUpdates: () => Promise<void>;
+    quitAndInstall: () => Promise<void>;
+  };
+
   events: {
     onTaskEvent: (callback: (event: TaskEvent) => void) => () => void;
     onTaskDetailEvent: (callback: (event: TaskDetailEvent) => void) => () => void;
     onOAuthCallback: (callback: (url: string) => void) => () => void;
+    onUpdaterStatus: (callback: (data: UpdateStatusData) => void) => () => void;
   };
 
   platform: string;

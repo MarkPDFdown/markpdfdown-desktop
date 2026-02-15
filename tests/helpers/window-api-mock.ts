@@ -23,8 +23,7 @@ export const createMockWindowApi = () => ({
   },
   file: {
     selectDialog: vi.fn().mockResolvedValue({ success: true, data: ['/mock/file.pdf'] }),
-    upload: vi.fn().mockResolvedValue({ success: true, data: { path: '/mock/upload.pdf' } }),
-    uploadMultiple: vi.fn().mockResolvedValue({ success: true, data: [] })
+    upload: vi.fn().mockResolvedValue({ success: true, data: { path: '/mock/upload.pdf' } })
   },
   completion: {
     markImagedown: vi.fn().mockResolvedValue({ success: true }),

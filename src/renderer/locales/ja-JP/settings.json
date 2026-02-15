@@ -14,6 +14,17 @@
       "contact": "連絡先メールアドレス"
     }
   },
+  "update": {
+    "check_for_updates": "アップデートを確認",
+    "checking": "アップデートを確認中...",
+    "available": "アップデートが利用可能です",
+    "downloading": "アップデートをダウンロード中...",
+    "ready": "アップデートの準備完了",
+    "restart_to_update": "再起動してアップデート",
+    "up_to_date": "最新バージョンです",
+    "error": "アップデートの確認に失敗しました",
+    "retry": "再試行"
+  },
   "preview": {
     "back": "戻る",
     "download": ".md形式でダウンロード",

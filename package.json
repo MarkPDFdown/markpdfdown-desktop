@@ -79,6 +79,10 @@
     },
     "mac": {
       "category": "public.app-category.productivity",
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "artifactName": "${productName}-${version}-${arch}.${ext}",
       "icon": "public/icons/mac/icon.icns",
       "extendInfo": {
@@ -88,7 +92,13 @@
             "CFBundleURLName": "com.markpdfdown.desktop"
           }
         ]
-      }
+      },
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "forceCodeSigning": false,
+      "notarize": false
     },
     "win": {
       "target": "nsis",
@@ -97,7 +107,8 @@
       "protocols": {
         "name": "MarkPDFdown URL",
         "schemes": ["markpdfdown"]
-      }
+      },
+      "verifyUpdateCodeSignature": false
     },
     "nsis": {
       "artifactName": "${productName}-${version}-${arch}.${ext}",
@@ -115,6 +126,11 @@
     },
     "electronDownload": {
       "mirror": "https://github.com/electron/electron/releases/download/"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "MarkPDFdown",
+      "repo": "markpdfdown-desktop"
     },
     "asar": true
   },
@@ -138,6 +154,7 @@
     "@types/sharp": "^0.31.1",
     "antd": "^5.24.4",
     "electron-is-dev": "^3.0.1",
+    "electron-updater": "^6.7.3",
     "katex": "^0.16.21",
     "pdf-lib": "^1.17.1",
     "pdf-to-png-converter": "^3.11.0",

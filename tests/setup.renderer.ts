@@ -10,7 +10,9 @@ const mockWindowApi = {
     create: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
-    updateStatus: vi.fn()
+    updateStatus: vi.fn(),
+    getPresets: vi.fn(),
+    fetchModelList: vi.fn()
   },
   model: {
     getAll: vi.fn(),
@@ -28,12 +30,13 @@ const mockWindowApi = {
   },
   taskDetail: {
     getByPage: vi.fn(),
-    retry: vi.fn()
+    getAllByTask: vi.fn(),
+    retry: vi.fn(),
+    retryFailed: vi.fn()
   },
   file: {
     selectDialog: vi.fn(),
     upload: vi.fn(),
-    uploadMultiple: vi.fn(),
     downloadMarkdown: vi.fn()
   },
   completion: {
@@ -109,6 +112,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   // Reset mock implementations with default resolved values
   mockWindowApi.model.getAll.mockResolvedValue({ success: true, data: [] })
+  mockWindowApi.provider.getPresets.mockResolvedValue({ success: true, data: [] })
   mockWindowApi.file.selectDialog.mockResolvedValue({ success: true, data: { canceled: true, filePaths: [] } })
   mockWindowApi.task.create.mockResolvedValue({ success: true, data: [] })
 })

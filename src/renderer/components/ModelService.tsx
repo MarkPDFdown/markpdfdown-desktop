@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { ConfigProvider, Tabs } from "antd";
 import { useTranslation } from "react-i18next";
 import AddProvider from "./AddProvider";
-import { PlusSquareOutlined, CloudOutlined } from "@ant-design/icons";
+import { PlusSquareOutlined } from "@ant-design/icons";
 import Provider from "./Provider";
 
 interface ProviderData {
@@ -15,9 +15,14 @@ interface ProviderData {
   status: number;
 }
 
+interface ProviderPreset {
+  name: string;
+  type: string;
+}
+
 interface TabItem {
   key: string;
-  label: string;
+  label: React.ReactNode;
   icon?: React.ReactNode;
   children: React.ReactNode;
 }
@@ -40,31 +45,68 @@ const ModelService: React.FC = () => {
     setActiveKey(providerId);
   });
   const handleProviderDeletedRef = useRef<() => void>(() => {});
+  const handleStatusChangedRef = useRef<() => void>(() => {});
   const fetchProvidersRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
   // 定义获取服务商列表的函数
   const fetchProviders = useCallback(async () => {
     try {
-      const response = await window.api.provider.getAll();
+      const [response, presetsResponse] = await Promise.all([
+        window.api.provider.getAll(),
+        window.api.provider.getPresets(),
+      ]);
 
       if (!response.success) {
         throw new Error(response.error || t("messages.fetch_providers_failed"));
       }
 
       const providers: ProviderData[] = response.data;
+      const presets: ProviderPreset[] = presetsResponse.success ? presetsResponse.data : [];
+
+      // 按预设顺序排序：预设服务商在前（按 providerPresets 数组顺序），非预设服务商在后
+      const getPresetIndex = (provider: ProviderData): number => {
+        const index = presets.findIndex(
+          (preset) => preset.type === provider.type && preset.name === provider.name
+        );
+        return index === -1 ? presets.length : index;
+      };
+
+      const sortedProviders = [...providers].sort((a, b) => {
+        const indexA = getPresetIndex(a);
+        const indexB = getPresetIndex(b);
+        return indexA - indexB;
+      });
 
       // 构建选项卡数据
-      const providerTabs = providers.map((provider) => ({
-        key: provider.id.toString(),
-        label: provider.name,
-        icon: <CloudOutlined />,
-        children: (
-          <Provider
-            providerId={provider.id}
-            onProviderDeleted={handleProviderDeletedRef.current}
-          />
-        ),
-      }));
+      const providerTabs = sortedProviders.map((provider) => {
+        const isPreset = presets.some(
+          (preset) => preset.type === provider.type && preset.name === provider.name
+        );
+        const isEnabled = provider.status === 0;
+        return {
+          key: provider.id.toString(),
+          label: (
+            <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span
+                className={
+                  isEnabled
+                    ? "provider-status-light provider-status-light--enabled"
+                    : "provider-status-light provider-status-light--disabled"
+                }
+              />
+              {provider.name}
+            </span>
+          ),
+          children: (
+            <Provider
+              providerId={provider.id}
+              onProviderDeleted={handleProviderDeletedRef.current}
+              onStatusChanged={handleStatusChangedRef.current}
+              isPreset={isPreset}
+            />
+          ),
+        };
+      });
 
       // 更新添加服务商的选项卡
       const addProviderTab = {
@@ -96,6 +138,11 @@ const ModelService: React.FC = () => {
       // 切换到新添加的服务商标签
       setActiveKey(providerId);
     });
+  }, [fetchProviders]);
+
+  // 处理服务商状态变更的函数（启用/禁用切换）
+  const handleStatusChanged = useCallback(() => {
+    fetchProviders();
   }, [fetchProviders]);
 
   // 处理删除服务商成功的函数
@@ -137,6 +184,10 @@ const ModelService: React.FC = () => {
   }, [handleProviderDeleted]);
 
   useEffect(() => {
+    handleStatusChangedRef.current = handleStatusChanged;
+  }, [handleStatusChanged]);
+
+  useEffect(() => {
     fetchProvidersRef.current = fetchProviders;
   }, [fetchProviders]);
 
@@ -161,6 +212,7 @@ const ModelService: React.FC = () => {
         onChange={setActiveKey}
         tabPosition="left"
         items={items}
+        className="model-service-tabs"
       />
     </ConfigProvider>
   );

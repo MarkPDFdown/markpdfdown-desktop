@@ -6,6 +6,7 @@ import { ISplitter, SplitResult, PageInfo } from '../../../domain/split/ISplitte
 import { Task } from '../../../../shared/types/index.js';
 import { PageRangeParser } from '../../../domain/split/PageRangeParser.js';
 import { ImagePathUtil } from './ImagePathUtil.js';
+import { FileWaitUtil } from './FileWaitUtil.js';
 import { WORKER_CONFIG } from '../../config/worker.config.js';
 
 /**
@@ -42,6 +43,10 @@ export class PDFSplitter implements ISplitter {
     const taskId = task.id;
     const filename = task.filename;
     const sourcePath = path.join(this.uploadsDir, taskId, filename);
+
+    // Pre-check: verify source file exists before processing
+    // Retry with short delays to handle antivirus scanning or filesystem sync delays
+    await FileWaitUtil.waitForFile(sourcePath, this.uploadsDir, taskId, filename, 'PDFSplitter');
 
     try {
       // Step 1: Get total page count with retry

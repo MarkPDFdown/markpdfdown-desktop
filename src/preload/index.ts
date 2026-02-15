@@ -17,6 +17,9 @@ contextBridge.exposeInMainWorld("api", {
     delete: (id: number) => ipcRenderer.invoke("provider:delete", id),
     updateStatus: (id: number, status: number) =>
       ipcRenderer.invoke("provider:updateStatus", id, status),
+    getPresets: () => ipcRenderer.invoke("provider:getPresets"),
+    fetchModelList: (providerId: number) =>
+      ipcRenderer.invoke("provider:fetchModelList", providerId),
   },
 
   // ==================== Model APIs ====================
@@ -58,8 +61,6 @@ contextBridge.exposeInMainWorld("api", {
     selectDialog: () => ipcRenderer.invoke("file:selectDialog"),
     upload: (taskId: string, filePath: string) =>
       ipcRenderer.invoke("file:upload", taskId, filePath),
-    uploadMultiple: (taskId: string, filePaths: string[]) =>
-      ipcRenderer.invoke("file:uploadMultiple", taskId, filePaths),
     uploadFileContent: (taskId: string, fileName: string, fileBuffer: ArrayBuffer) =>
       ipcRenderer.invoke("file:uploadFileContent", taskId, fileName, fileBuffer),
     getImagePath: (taskId: string, page: number) =>
@@ -97,6 +98,12 @@ contextBridge.exposeInMainWorld("api", {
     minimize: () => ipcRenderer.send("window:minimize"),
     maximize: () => ipcRenderer.send("window:maximize"),
     close: () => ipcRenderer.send("window:close"),
+  },
+
+  // ==================== Updater APIs ====================
+  updater: {
+    checkForUpdates: () => ipcRenderer.invoke("updater:checkForUpdates"),
+    quitAndInstall: () => ipcRenderer.invoke("updater:quitAndInstall"),
   },
 
   // ==================== Event APIs ====================
@@ -143,6 +150,20 @@ contextBridge.exposeInMainWorld("api", {
       // 返回清理函数
       return () => {
         ipcRenderer.removeListener('auth:oauth-callback', handler);
+      };
+    },
+
+    /**
+     * 监听更新状态事件
+     * @param callback 事件回调函数
+     * @returns 清理函数
+     */
+    onUpdaterStatus: (callback: (data: any) => void) => {
+      const handler = (_event: any, data: any) => callback(data);
+      ipcRenderer.on('updater:status', handler);
+
+      return () => {
+        ipcRenderer.removeListener('updater:status', handler);
       };
     },
   },

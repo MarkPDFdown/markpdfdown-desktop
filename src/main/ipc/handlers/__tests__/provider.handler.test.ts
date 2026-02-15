@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // Mock dependencies
 const mockProviderRepository = {
   findAll: vi.fn(),
+  findAllIncludeDisabled: vi.fn(),
   findById: vi.fn(),
   create: vi.fn(),
   update: vi.fn(),
@@ -31,9 +32,52 @@ vi.mock('../../../../shared/ipc/channels.js', () => ({
       CREATE: 'provider:create',
       UPDATE: 'provider:update',
       DELETE: 'provider:delete',
-      UPDATE_STATUS: 'provider:updateStatus'
+      UPDATE_STATUS: 'provider:updateStatus',
+      GET_PRESETS: 'provider:getPresets',
+      FETCH_MODEL_LIST: 'provider:fetchModelList'
     }
   }
+}))
+
+vi.mock('../../../../core/infrastructure/config/providerPresets.js', () => ({
+  providerPresets: [
+    {
+      name: 'OpenAI',
+      type: 'openai-responses',
+      apiBase: 'https://api.openai.com/v1',
+      modelListApi: '/models',
+      modelNameField: 'id',
+      modelIdField: 'id',
+    },
+    {
+      name: 'Anthropic',
+      type: 'anthropic',
+      apiBase: 'https://api.anthropic.com/v1',
+      modelListApi: '/models',
+      modelNameField: 'display_name',
+      modelIdField: 'id',
+      capabilityField: 'input_modalities',
+      capabilityFilter: 'image',
+    },
+    {
+      name: 'OpenRouter',
+      type: 'openai',
+      apiBase: 'https://openrouter.ai/api/v1',
+      modelListApi: '/models',
+      modelNameField: 'name',
+      modelIdField: 'id',
+      capabilityField: 'architecture.input_modalities',
+      capabilityFilter: 'image',
+    },
+  ],
+  findProviderPreset: (type: string, name: string) => {
+    const presets = [
+      { name: 'OpenAI', type: 'openai-responses', apiBase: 'https://api.openai.com/v1', modelListApi: '/models', modelNameField: 'id', modelIdField: 'id' },
+      { name: 'Anthropic', type: 'anthropic', apiBase: 'https://api.anthropic.com/v1', modelListApi: '/models', modelNameField: 'display_name', modelIdField: 'id', capabilityField: 'input_modalities', capabilityFilter: 'image' },
+      { name: 'OpenRouter', type: 'openai', apiBase: 'https://openrouter.ai/api/v1', modelListApi: '/models', modelNameField: 'name', modelIdField: 'id', capabilityField: 'architecture.input_modalities', capabilityFilter: 'image' },
+    ]
+    return presets.find(p => p.type === type && p.name === name)
+  },
 }))
 
 describe('Provider Handler', () => {
@@ -57,7 +101,7 @@ describe('Provider Handler', () => {
         { id: 1, name: 'OpenAI', type: 'openai' },
         { id: 2, name: 'Anthropic', type: 'anthropic' }
       ]
-      mockProviderRepository.findAll.mockResolvedValue(mockProviders)
+      mockProviderRepository.findAllIncludeDisabled.mockResolvedValue(mockProviders)
 
       const handler = handlers.get('provider:getAll')
       const result = await handler!({})
@@ -66,11 +110,11 @@ describe('Provider Handler', () => {
         success: true,
         data: mockProviders
       })
-      expect(mockProviderRepository.findAll).toHaveBeenCalled()
+      expect(mockProviderRepository.findAllIncludeDisabled).toHaveBeenCalled()
     })
 
     it('should handle errors', async () => {
-      mockProviderRepository.findAll.mockRejectedValue(new Error('Database error'))
+      mockProviderRepository.findAllIncludeDisabled.mockRejectedValue(new Error('Database error'))
 
       const handler = handlers.get('provider:getAll')
       const result = await handler!({})
@@ -270,6 +314,313 @@ describe('Provider Handler', () => {
         success: false,
         error: 'Provider not found'
       })
+    })
+  })
+
+  describe('provider:getPresets', () => {
+    it('should return all provider presets', async () => {
+      const handler = handlers.get('provider:getPresets')
+      const result = await handler!({})
+
+      expect(result.success).toBe(true)
+      expect(result.data).toHaveLength(3)
+      expect(result.data[0].name).toBe('OpenAI')
+      expect(result.data[1].name).toBe('Anthropic')
+      expect(result.data[2].name).toBe('OpenRouter')
+    })
+  })
+
+  describe('provider:fetchModelList', () => {
+    it('should return error when provider not found', async () => {
+      mockProviderRepository.findById.mockResolvedValue(null)
+
+      const handler = handlers.get('provider:fetchModelList')
+      const result = await handler!({}, 999)
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Provider not found'
+      })
+    })
+
+    it('should return error when no base_url for custom provider', async () => {
+      mockProviderRepository.findById.mockResolvedValue({
+        id: 1, name: 'Custom', type: 'openai', api_key: '', base_url: ''
+      })
+
+      const handler = handlers.get('provider:fetchModelList')
+      const result = await handler!({}, 1)
+
+      expect(result).toEqual({
+        success: false,
+        error: 'No API base URL configured for this provider'
+      })
+    })
+
+    it('should use preset apiBase when provider has no base_url', async () => {
+      mockProviderRepository.findById.mockResolvedValue({
+        id: 1, name: 'OpenAI', type: 'openai-responses', api_key: 'sk-test', base_url: ''
+      })
+
+      const mockResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({ data: [{ id: 'gpt-4o' }] }),
+        text: vi.fn()
+      }
+      vi.mocked(global.fetch).mockResolvedValue(mockResponse as any)
+
+      const handler = handlers.get('provider:fetchModelList')
+      await handler!({}, 1)
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://api.openai.com/v1/models',
+        expect.any(Object)
+      )
+    })
+
+    it('should use provider base_url over preset apiBase', async () => {
+      mockProviderRepository.findById.mockResolvedValue({
+        id: 1, name: 'OpenAI', type: 'openai-responses', api_key: 'sk-test', base_url: 'https://custom.api.com'
+      })
+
+      const mockResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({ data: [] }),
+        text: vi.fn()
+      }
+      vi.mocked(global.fetch).mockResolvedValue(mockResponse as any)
+
+      const handler = handlers.get('provider:fetchModelList')
+      await handler!({}, 1)
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://custom.api.com/models',
+        expect.any(Object)
+      )
+    })
+
+    it('should use /models as default modelListApi for custom providers', async () => {
+      mockProviderRepository.findById.mockResolvedValue({
+        id: 1, name: 'MyCustom', type: 'openai', api_key: 'key', base_url: 'https://my-api.com/v1'
+      })
+
+      const mockResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({ data: [{ id: 'model-1' }] }),
+        text: vi.fn()
+      }
+      vi.mocked(global.fetch).mockResolvedValue(mockResponse as any)
+
+      const handler = handlers.get('provider:fetchModelList')
+      const result = await handler!({}, 1)
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://my-api.com/v1/models',
+        expect.any(Object)
+      )
+      expect(result.success).toBe(true)
+    })
+
+    it('should set Bearer auth for openai type', async () => {
+      mockProviderRepository.findById.mockResolvedValue({
+        id: 1, name: 'OpenAI', type: 'openai-responses', api_key: 'sk-test', base_url: 'https://api.openai.com/v1'
+      })
+
+      const mockResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({ data: [] }),
+        text: vi.fn()
+      }
+      vi.mocked(global.fetch).mockResolvedValue(mockResponse as any)
+
+      const handler = handlers.get('provider:fetchModelList')
+      await handler!({}, 1)
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'Authorization': 'Bearer sk-test'
+          })
+        })
+      )
+    })
+
+    it('should set x-api-key auth for anthropic type', async () => {
+      mockProviderRepository.findById.mockResolvedValue({
+        id: 1, name: 'Anthropic', type: 'anthropic', api_key: 'sk-ant-test', base_url: 'https://api.anthropic.com/v1'
+      })
+
+      const mockResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({ data: [] }),
+        text: vi.fn()
+      }
+      vi.mocked(global.fetch).mockResolvedValue(mockResponse as any)
+
+      const handler = handlers.get('provider:fetchModelList')
+      await handler!({}, 1)
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'x-api-key': 'sk-ant-test',
+            'anthropic-version': '2023-06-01'
+          })
+        })
+      )
+    })
+
+    it('should handle HTTP error responses', async () => {
+      mockProviderRepository.findById.mockResolvedValue({
+        id: 1, name: 'OpenAI', type: 'openai-responses', api_key: 'sk-test', base_url: 'https://api.openai.com/v1'
+      })
+
+      const mockResponse = {
+        ok: false,
+        status: 401,
+        text: vi.fn().mockResolvedValue('Unauthorized')
+      }
+      vi.mocked(global.fetch).mockResolvedValue(mockResponse as any)
+
+      const handler = handlers.get('provider:fetchModelList')
+      const result = await handler!({}, 1)
+
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('HTTP 401')
+    })
+
+    it('should parse openai format response', async () => {
+      mockProviderRepository.findById.mockResolvedValue({
+        id: 1, name: 'OpenAI', type: 'openai-responses', api_key: 'sk-test', base_url: 'https://api.openai.com/v1'
+      })
+
+      const mockResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          data: [
+            { id: 'gpt-4o', object: 'model' },
+            { id: 'gpt-4o-mini', object: 'model' }
+          ]
+        }),
+        text: vi.fn()
+      }
+      vi.mocked(global.fetch).mockResolvedValue(mockResponse as any)
+
+      const handler = handlers.get('provider:fetchModelList')
+      const result = await handler!({}, 1)
+
+      expect(result.success).toBe(true)
+      expect(result.data).toEqual([
+        { id: 'gpt-4o', name: 'gpt-4o' },
+        { id: 'gpt-4o-mini', name: 'gpt-4o-mini' }
+      ])
+    })
+
+    it('should filter models by capabilityField for anthropic preset', async () => {
+      mockProviderRepository.findById.mockResolvedValue({
+        id: 1, name: 'Anthropic', type: 'anthropic', api_key: 'key', base_url: 'https://api.anthropic.com/v1'
+      })
+
+      const mockResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          data: [
+            { id: 'claude-3-5-sonnet', display_name: 'Claude 3.5 Sonnet', input_modalities: ['text', 'image'] },
+            { id: 'claude-3-haiku', display_name: 'Claude 3 Haiku', input_modalities: ['text'] },
+            { id: 'claude-unknown', display_name: 'Claude Unknown' }
+          ]
+        }),
+        text: vi.fn()
+      }
+      vi.mocked(global.fetch).mockResolvedValue(mockResponse as any)
+
+      const handler = handlers.get('provider:fetchModelList')
+      const result = await handler!({}, 1)
+
+      expect(result.success).toBe(true)
+      // claude-3-5-sonnet has image -> included
+      // claude-3-haiku has only text -> excluded
+      // claude-unknown has no input_modalities -> included (no array = skip filter)
+      expect(result.data).toHaveLength(2)
+      expect(result.data[0].id).toBe('claude-3-5-sonnet')
+      expect(result.data[1].id).toBe('claude-unknown')
+    })
+
+    it('should filter models by nested capabilityField for openrouter preset', async () => {
+      mockProviderRepository.findById.mockResolvedValue({
+        id: 1, name: 'OpenRouter', type: 'openai', api_key: 'key', base_url: 'https://openrouter.ai/api/v1'
+      })
+
+      const mockResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          data: [
+            { id: 'model-vision', name: 'Vision Model', architecture: { input_modalities: ['text', 'image'] } },
+            { id: 'model-text', name: 'Text Model', architecture: { input_modalities: ['text'] } },
+            { id: 'model-no-arch', name: 'No Arch Model' }
+          ]
+        }),
+        text: vi.fn()
+      }
+      vi.mocked(global.fetch).mockResolvedValue(mockResponse as any)
+
+      const handler = handlers.get('provider:fetchModelList')
+      const result = await handler!({}, 1)
+
+      expect(result.success).toBe(true)
+      expect(result.data).toHaveLength(2)
+      expect(result.data[0].id).toBe('model-vision')
+      expect(result.data[1].id).toBe('model-no-arch')
+    })
+
+    it('should not filter when preset has no capabilityField', async () => {
+      mockProviderRepository.findById.mockResolvedValue({
+        id: 1, name: 'OpenAI', type: 'openai-responses', api_key: 'key', base_url: 'https://api.openai.com/v1'
+      })
+
+      const mockResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          data: [
+            { id: 'gpt-4o', input_modalities: ['text', 'image'] },
+            { id: 'gpt-3.5', input_modalities: ['text'] }
+          ]
+        }),
+        text: vi.fn()
+      }
+      vi.mocked(global.fetch).mockResolvedValue(mockResponse as any)
+
+      const handler = handlers.get('provider:fetchModelList')
+      const result = await handler!({}, 1)
+
+      expect(result.success).toBe(true)
+      expect(result.data).toHaveLength(2)
+    })
+
+    it('should not filter for custom providers without preset', async () => {
+      mockProviderRepository.findById.mockResolvedValue({
+        id: 1, name: 'MyCustom', type: 'openai', api_key: 'key', base_url: 'https://my-api.com/v1'
+      })
+
+      const mockResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          data: [
+            { id: 'model-a' },
+            { id: 'model-b' }
+          ]
+        }),
+        text: vi.fn()
+      }
+      vi.mocked(global.fetch).mockResolvedValue(mockResponse as any)
+
+      const handler = handlers.get('provider:fetchModelList')
+      const result = await handler!({}, 1)
+
+      expect(result.success).toBe(true)
+      expect(result.data).toHaveLength(2)
     })
   })
 })

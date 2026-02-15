@@ -4,7 +4,8 @@
     "api_key_label": "کلید API:",
     "api_key_placeholder": "کلید API را وارد کنید",
     "api_url_label": "API URL:",
-    "api_url_placeholder": "API URL را وارد کنید"
+    "api_url_placeholder": "API URL را وارد کنید",
+    "no_suffix": "بدون پسوند"
   },
   "model_config": {
     "title": "پیکربندی مدل",
@@ -43,7 +44,9 @@
     "test_failed": "تست اتصال ناموفق بود",
     "delete_provider_success": "ارائه‌دهنده با موفقیت حذف شد",
     "delete_provider_failed": "حذف ارائه‌دهنده ناموفق بود",
-    "update_status_failed": "به‌روزرسانی وضعیت ارائه‌دهنده ناموفق بود"
+    "update_status_failed": "به‌روزرسانی وضعیت ارائه‌دهنده ناموفق بود",
+    "fetch_model_list_failed": "دریافت لیست مدل‌های ریموت ناموفق بود",
+    "model_already_exists": "این مدل قبلاً در لیست وجود دارد"
   },
   "add_provider": {
     "tab_label": "افزودن ارائه‌دهنده",
@@ -56,5 +59,13 @@
     "submit_button": "افزودن ارائه‌دهنده",
     "success": "ارائه‌دهنده با موفقیت اضافه شد",
     "failed": "افزودن ارائه‌دهنده ناموفق بود"
+  },
+  "model_list": {
+    "button": "لیست مدل‌ها",
+    "modal_title": "دریافت مدل‌ها از ریموت",
+    "search_placeholder": "جستجوی نام یا شناسه مدل",
+    "empty_text": "مدلی یافت نشد",
+    "add_button": "افزودن",
+    "already_added": "اضافه شده"
   }
 }

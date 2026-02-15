@@ -80,7 +80,6 @@ Handle file operations (upload, download, dialog).
 |--------|-------------|
 | `window.api.file.selectDialog()` | Open file selection dialog |
 | `window.api.file.upload(taskId, filePath)` | Upload file |
-| `window.api.file.uploadMultiple(taskId, filePaths[])` | Upload multiple files |
 | `window.api.file.uploadFileContent(taskId, fileName, fileBuffer)` | Upload file content as ArrayBuffer |
 | `window.api.file.getImagePath(taskId, page)` | Get image path for a page |
 | `window.api.file.downloadMarkdown(taskId)` | Download merged markdown file |

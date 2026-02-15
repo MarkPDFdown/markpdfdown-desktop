@@ -74,11 +74,15 @@ function getIconPath(): string {
   return possiblePaths[0];
 }
 import isDev from "electron-is-dev";
-import { workerOrchestrator } from "../core/application/services/index.js";
+import {
+  workerOrchestrator,
+  presetProviderService,
+} from "../core/application/services/index.js";
 import { initDatabase, disconnect } from "../core/infrastructure/db/index.js";
 import { registerIpcHandlers } from "./ipc/handlers.js";
 import { windowManager } from './WindowManager.js';
 import { eventBridge } from './ipc/eventBridge.js';
+import { updateService } from './services/UpdateService.js';
 import fileLogic from "../core/infrastructure/services/FileService.js";
 
 // 自定义协议名称（用于 OAuth 回调）
@@ -362,6 +366,12 @@ async function initializeBackgroundServices() {
     await initDatabase();
     console.log(`[Main] Database initialized in ${Date.now() - startTime}ms`);
 
+    // 注入预设供应商
+    console.log("[Main] Injecting preset providers...");
+    const presetStartTime = Date.now();
+    await presetProviderService.initialize();
+    console.log(`[Main] Preset providers injected in ${Date.now() - presetStartTime}ms`);
+
     // 启动任务逻辑
     console.log("[Main] Starting task logic in background...");
     const taskStartTime = Date.now();
@@ -375,6 +385,13 @@ async function initializeBackgroundServices() {
     // 通知渲染进程初始化完成
     if (mainWindow) {
       mainWindow.webContents.send('app:ready');
+    }
+
+    // 启动时检测更新（fire-and-forget，不阻塞 UI）
+    if (app.isPackaged) {
+      updateService.checkForUpdates().catch(err =>
+        console.error('[Main] Auto-update check failed:', err)
+      );
     }
   } catch (error) {
     console.error("[Main] Background services initialization error:", error);

@@ -159,27 +159,39 @@ export class ConverterWorker extends WorkerBase {
   /**
    * Claim a PENDING page for processing using optimistic locking.
    *
-   * Query conditions:
-   * - task.status = PROCESSING
-   * - task.status != CANCELLED
-   * - page.status = PENDING
-   * - page.worker_id = null
+   * Strategy: First find tasks in valid states (PROCESSING/COMPLETED),
+   * then find PENDING pages only within those tasks. This avoids the problem
+   * where orphaned PENDING pages from terminal tasks exhaust claim attempts.
    *
    * Order: retry_count ASC, page ASC (prioritize fresh pages)
    */
   private async claimPage(): Promise<PageWithTask | null> {
     const maxAttempts = 5;
-    const checkedTaskIds: string[] = []; // Track tasks we've already checked and skipped
+
+    // Pre-filter: find tasks in valid states for conversion.
+    // Done once before the retry loop since task states rarely change
+    // within the milliseconds between optimistic lock retries.
+    const activeTasks = await prisma.task.findMany({
+      where: {
+        status: { in: [TaskStatus.PROCESSING, TaskStatus.COMPLETED] },
+      },
+      select: { id: true },
+    });
+
+    if (activeTasks.length === 0) {
+      return null;
+    }
+
+    const activeTaskIds = activeTasks.map((t) => t.id);
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
-        // Step 1: Find a candidate page, excluding tasks we've already checked
+        // Step 1: Find a candidate page within active tasks only
         const candidate = await prisma.taskDetail.findFirst({
           where: {
             status: PageStatus.PENDING,
             worker_id: null,
-            // Exclude pages from tasks we've already checked and found not in PROCESSING state
-            ...(checkedTaskIds.length > 0 && { task: { notIn: checkedTaskIds } }),
+            task: { in: activeTaskIds },
           },
           orderBy: [
             { retry_count: 'asc' },
@@ -189,19 +201,6 @@ export class ConverterWorker extends WorkerBase {
 
         if (!candidate) {
           return null;
-        }
-
-        // Step 2: Verify the parent task is in a valid state for processing
-        // Allow PROCESSING (normal flow) and COMPLETED (single page retry)
-        const task = await prisma.task.findUnique({
-          where: { id: candidate.task },
-          select: { status: true },
-        });
-
-        if (!task || (task.status !== TaskStatus.PROCESSING && task.status !== TaskStatus.COMPLETED)) {
-          // Task not in correct state, remember it and try next
-          checkedTaskIds.push(candidate.task);
-          continue;
         }
 
         // Step 3: Try to claim using optimistic locking

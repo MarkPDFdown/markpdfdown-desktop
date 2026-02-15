@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // Mock all dependencies before imports
 const mockProviderDal = {
   findAll: vi.fn(),
+  findAllIncludeDisabled: vi.fn(),
   findById: vi.fn(),
   create: vi.fn(),
   update: vi.fn(),
@@ -45,7 +46,27 @@ const mockIpcMain = {
 // Mock modules
 vi.mock('electron', () => ({
   ipcMain: mockIpcMain,
-  dialog: mockDialog
+  dialog: mockDialog,
+  app: { isPackaged: false },
+}))
+
+vi.mock('electron-updater', () => ({
+  default: {
+    autoUpdater: {
+      autoDownload: false,
+      allowPrerelease: false,
+      autoInstallOnAppQuit: false,
+      on: vi.fn(),
+      checkForUpdates: vi.fn(),
+      quitAndInstall: vi.fn(),
+    },
+  },
+}))
+
+vi.mock('../../WindowManager.js', () => ({
+  windowManager: {
+    sendToRenderer: vi.fn(),
+  },
 }))
 
 vi.mock('../../../core/domain/repositories/ProviderRepository.js', () => ({
@@ -133,12 +154,21 @@ vi.mock('../../../shared/ipc/channels.js', () => ({
       DOWNLOAD_MARKDOWN: 'file:downloadMarkdown',
       SELECT_DIALOG: 'file:selectDialog',
       UPLOAD: 'file:upload',
-      UPLOAD_MULTIPLE: 'file:uploadMultiple',
       UPLOAD_FILE_CONTENT: 'file:uploadFileContent',
     },
     COMPLETION: {
       MARK_IMAGEDOWN: 'completion:markImagedown',
       TEST_CONNECTION: 'completion:testConnection',
+    },
+    UPDATER: {
+      CHECK_FOR_UPDATES: 'updater:checkForUpdates',
+      QUIT_AND_INSTALL: 'updater:quitAndInstall',
+    },
+    EVENTS: {
+      TASK: 'task:event',
+      TASK_DETAIL: 'taskDetail:event',
+      APP_READY: 'app:ready',
+      UPDATER_STATUS: 'updater:status',
     },
   },
 }))
@@ -152,7 +182,10 @@ vi.mock('fs', () => ({
     existsSync: vi.fn(() => true),
     mkdirSync: vi.fn(),
     copyFileSync: vi.fn(),
-    statSync: vi.fn(() => ({ size: 1024 }))
+    statSync: vi.fn(() => ({ size: 1024 })),
+    writeFileSync: vi.fn(),
+    accessSync: vi.fn(),
+    constants: { W_OK: 2 }
   }
 }))
 
@@ -191,7 +224,7 @@ describe('IPC Handlers', () => {
           { id: 1, name: 'OpenAI', type: 'openai' },
           { id: 2, name: 'Anthropic', type: 'anthropic' }
         ]
-        mockProviderDal.findAll.mockResolvedValue(mockProviders)
+        mockProviderDal.findAllIncludeDisabled.mockResolvedValue(mockProviders)
 
         const handler = handlers.get('provider:getAll')
         const result = await handler!({}, {})
@@ -200,11 +233,11 @@ describe('IPC Handlers', () => {
           success: true,
           data: mockProviders
         })
-        expect(mockProviderDal.findAll).toHaveBeenCalled()
+        expect(mockProviderDal.findAllIncludeDisabled).toHaveBeenCalled()
       })
 
       it('should handle errors', async () => {
-        mockProviderDal.findAll.mockRejectedValue(new Error('Database error'))
+        mockProviderDal.findAllIncludeDisabled.mockRejectedValue(new Error('Database error'))
 
         const handler = handlers.get('provider:getAll')
         const result = await handler!({}, {})

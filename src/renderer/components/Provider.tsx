@@ -2,6 +2,7 @@ import {
   DeleteOutlined,
   PlusOutlined,
   ThunderboltOutlined,
+  UnorderedListOutlined,
 } from "@ant-design/icons";
 import {
   Flex,
@@ -14,13 +15,16 @@ import {
   Select,
   List,
   App,
+  Modal,
 } from "antd";
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 interface ProviderProps {
   providerId?: number;
   onProviderDeleted?: () => void;
+  onStatusChanged?: () => void;
+  isPreset?: boolean;
 }
 
 interface ModelType {
@@ -32,6 +36,8 @@ interface ModelType {
 const Provider: React.FC<ProviderProps> = ({
   providerId,
   onProviderDeleted,
+  onStatusChanged,
+  isPreset = false,
 }) => {
   const [providerData, setProviderData] = useState<any>(null);
   const { modal, message } = App.useApp();
@@ -48,11 +54,16 @@ const Provider: React.FC<ProviderProps> = ({
   const [newModelName, setNewModelName] = useState<string>("");
   const [newModelId, setNewModelId] = useState<string>("");
 
+  // Model List Modal 相关状态
+  const [isModelListModalOpen, setIsModelListModalOpen] = useState<boolean>(false);
+  const [modelListLoading, setModelListLoading] = useState<boolean>(false);
+  const [modelList, setModelList] = useState<Array<{ id: string; name: string }>>([]);
+  const [filteredModelList, setFilteredModelList] = useState<Array<{ id: string; name: string }>>([]);
+  const [modelListSearchQuery, setModelListSearchQuery] = useState<string>("");
+  const [addingModelIds, setAddingModelIds] = useState<Set<string>>(new Set());
+
   // 添加测试状态
   const [testingModelId, setTestingModelId] = useState<string>("");
-
-  // 使用 ref 存储 fetchModels 函数，避免初始化顺序问题
-  const fetchModelsRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
   useEffect(() => {
     // 如果有providerId，则获取该服务商的详细信息
@@ -113,13 +124,10 @@ const Provider: React.FC<ProviderProps> = ({
       };
 
       fetchProviderDetails();
-
-      // 获取该服务商下的所有模型
-      fetchModelsRef.current();
     }
   }, [providerId, t]);
 
-  // 获取服务商下的模型列表
+  // 获取该服务商下的所有模型
   const fetchModels = useCallback(async () => {
     if (!providerId) return;
 
@@ -140,10 +148,12 @@ const Provider: React.FC<ProviderProps> = ({
     }
   }, [providerId, message, t]);
 
-  // 更新 ref
+  // 初始加载时获取模型列表
   useEffect(() => {
-    fetchModelsRef.current = fetchModels;
-  }, [fetchModels]);
+    if (providerId) {
+      fetchModels();
+    }
+  }, [providerId, fetchModels]);
 
   // 删除模型
   const deleteModel = async (modelId: string) => {
@@ -158,7 +168,7 @@ const Provider: React.FC<ProviderProps> = ({
 
       message.success(t('messages.delete_model_success'));
       // 刷新模型列表
-      fetchModelsRef.current();
+      fetchModels();
     } catch (error) {
       console.error("Failed to delete model:", error);
       message.error(
@@ -191,7 +201,7 @@ const Provider: React.FC<ProviderProps> = ({
       setNewModelId("");
       message.success(t('messages.add_model_success'));
       // 刷新模型列表
-      fetchModelsRef.current();
+      fetchModels();
     } catch (error) {
       console.error("Failed to add model:", error);
       message.error(
@@ -255,6 +265,106 @@ const Provider: React.FC<ProviderProps> = ({
     }
   };
 
+  // 打开 Model List Modal 并获取模型列表
+  const openModelListModal = async () => {
+    if (!providerId) return;
+
+    setIsModelListModalOpen(true);
+    setModelListLoading(true);
+    setModelListSearchQuery("");
+
+    try {
+      const result = await window.api.provider.fetchModelList(providerId);
+
+      if (!result.success) {
+        throw new Error(result.error || t('messages.fetch_model_list_failed'));
+      }
+
+      setModelList(result.data);
+      setFilteredModelList(result.data);
+    } catch (error) {
+      console.error("Failed to fetch model list:", error);
+      message.error(
+        t('messages.fetch_model_list_failed') + ": " +
+          (error instanceof Error ? error.message : String(error)),
+      );
+      setModelList([]);
+      setFilteredModelList([]);
+    } finally {
+      setModelListLoading(false);
+    }
+  };
+
+  // 关闭 Model List Modal
+  const closeModelListModal = () => {
+    setIsModelListModalOpen(false);
+    setModelList([]);
+    setFilteredModelList([]);
+    setModelListSearchQuery("");
+    setAddingModelIds(new Set());
+  };
+
+  // 搜索过滤模型列表
+  const handleModelListSearch = (value: string) => {
+    setModelListSearchQuery(value);
+    if (!value.trim()) {
+      setFilteredModelList(modelList);
+      return;
+    }
+
+    const filtered = modelList.filter(
+      (model) =>
+        model.name.toLowerCase().includes(value.toLowerCase()) ||
+        model.id.toLowerCase().includes(value.toLowerCase())
+    );
+    setFilteredModelList(filtered);
+  };
+
+  // 检查模型是否已存在
+  const isModelExists = (modelId: string): boolean => {
+    return models.some((model) => model.id === modelId);
+  };
+
+  // 从 Model List 添加模型
+  const addModelFromList = async (model: { id: string; name: string }) => {
+    if (!providerId) return;
+
+    if (isModelExists(model.id)) {
+      message.warning(t('messages.model_already_exists'));
+      return;
+    }
+
+    setAddingModelIds((prev) => new Set(prev).add(model.id));
+
+    try {
+      const result = await window.api.model.create({
+        id: model.id,
+        name: model.name,
+        provider: providerId,
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || t('messages.add_model_failed'));
+      }
+
+      message.success(t('messages.add_model_success'));
+      // 刷新模型列表
+      fetchModels();
+    } catch (error) {
+      console.error("Failed to add model:", error);
+      message.error(
+        t('messages.add_model_failed') + ": " +
+          (error instanceof Error ? error.message : String(error)),
+      );
+    } finally {
+      setAddingModelIds((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(model.id);
+        return newSet;
+      });
+    }
+  };
+
   return (
     <Flex vertical gap={16} style={{ padding: "16px" }}>
       <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -284,6 +394,7 @@ const Provider: React.FC<ProviderProps> = ({
               }
 
               setProviderData(result.data);
+              onStatusChanged?.();
             } catch (error) {
               console.error("Failed to update provider status:", error);
             }
@@ -311,10 +422,11 @@ const Provider: React.FC<ProviderProps> = ({
           {baseUrl}
           {suffix}
         </Typography.Text>
-        <Space.Compact style={{ width: "100%" }}>
+        <Flex gap={8}>
           <Input
             placeholder={t('details.api_url_placeholder')}
             value={baseUrl}
+            style={{ flex: 1 }}
             onChange={(e) => {
               setBaseUrl(e.target.value);
             }}
@@ -333,52 +445,49 @@ const Provider: React.FC<ProviderProps> = ({
                 }}
                 options={(() => {
                   const type = providerData?.type;
+                  const noSuffix = { label: t('details.no_suffix'), value: "" };
                   switch (type) {
                     case "openai":
                       return [
-                        {
-                          label: "/chat/completions",
-                          value: "/chat/completions",
-                        },
-                        {
-                          label: "/v1/chat/completions",
-                          value: "/v1/chat/completions",
-                        },
+                        { label: "/chat/completions", value: "/chat/completions" },
+                        noSuffix,
                       ];
                     case "openai-responses":
                       return [
-                        {
-                          label: "/responses",
-                          value: "/responses",
-                        },
-                        {
-                          label: "/v1/responses",
-                          value: "/v1/responses",
-                        },
+                        { label: "/responses", value: "/responses" },
+                        noSuffix,
                       ];
                     case "gemini":
                       return [
                         { label: "/models", value: "/models" },
-                        { label: "/v1beta/models", value: "/v1beta/models" },
+                        noSuffix,
                       ];
                     case "anthropic":
                       return [
                         { label: "/messages", value: "/messages" },
-                        { label: "/v1/messages", value: "/v1/messages" },
+                        noSuffix,
                       ];
                     case "ollama":
                       return [
                         { label: "/generate", value: "/generate" },
-                        { label: "/api/generate", value: "/api/generate" },
+                        noSuffix,
                       ];
                     default:
-                      return [];
+                      return [noSuffix];
                   }
                 })()}
               />
             }
           />
-        </Space.Compact>
+          <Button
+            icon={<UnorderedListOutlined />}
+            onClick={openModelListModal}
+            loading={modelListLoading}
+            style={{ flexShrink: 0 }}
+          >
+            {t('model_list.button')}
+          </Button>
+        </Flex>
       </div>
 
       <Divider variant="dashed" dashed plain={true}>
@@ -425,71 +534,124 @@ const Provider: React.FC<ProviderProps> = ({
         )}
       />
 
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <Space>
-          <Typography.Text>{t('model_config.name_label')}</Typography.Text>
-          <Input
-            placeholder={t('model_config.name_placeholder')}
-            style={{ width: "290px" }}
-            value={newModelName}
-            onChange={(e) => setNewModelName(e.target.value)}
-          />
-          <Typography.Text>{t('model_config.id_label')}</Typography.Text>
-          <Input
-            placeholder={t('model_config.id_placeholder')}
-            style={{ width: "290px" }}
-            value={newModelId}
-            onChange={(e) => setNewModelId(e.target.value)}
-          />
-        </Space>
-        <Button type="primary" icon={<PlusOutlined />} onClick={addModel}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <Typography.Text style={{ whiteSpace: "nowrap", flexShrink: 0 }}>{t('model_config.name_label')}</Typography.Text>
+        <Input
+          placeholder={t('model_config.name_placeholder')}
+          style={{ flex: 1, minWidth: 0 }}
+          value={newModelName}
+          onChange={(e) => setNewModelName(e.target.value)}
+        />
+        <Typography.Text style={{ whiteSpace: "nowrap", flexShrink: 0 }}>{t('model_config.id_label')}</Typography.Text>
+        <Input
+          placeholder={t('model_config.id_placeholder')}
+          style={{ flex: 1, minWidth: 0 }}
+          value={newModelId}
+          onChange={(e) => setNewModelId(e.target.value)}
+        />
+        <Button type="primary" icon={<PlusOutlined />} onClick={addModel} style={{ whiteSpace: "nowrap", flexShrink: 0 }}>
           {t('model_config.add_button')}
         </Button>
       </div>
       <Typography.Text type="secondary">
         {t('model_config.warning')}
       </Typography.Text>
-      <Button
-        title={t('actions.delete_provider')}
-        icon={<DeleteOutlined />}
-        danger
-        onClick={() => {
-          if (!providerId) return;
+      {!isPreset && (
+        <Button
+          title={t('actions.delete_provider')}
+          icon={<DeleteOutlined />}
+          danger
+          onClick={() => {
+            if (!providerId) return;
 
-          modal.confirm({
-            title: t('confirmations.delete_provider_title'),
-            content: t('confirmations.delete_provider_content'),
-            okText: t('confirmations.ok'),
-            okType: "danger",
-            cancelText: t('confirmations.cancel'),
-            onOk: async () => {
-              try {
-                const result = await window.api.provider.delete(providerId);
+            modal.confirm({
+              title: t('confirmations.delete_provider_title'),
+              content: t('confirmations.delete_provider_content'),
+              okText: t('confirmations.ok'),
+              okType: "danger",
+              cancelText: t('confirmations.cancel'),
+              onOk: async () => {
+                try {
+                  const result = await window.api.provider.delete(providerId);
 
-                if (!result.success) {
-                  throw new Error(result.error || t('messages.delete_provider_failed'));
+                  if (!result.success) {
+                    throw new Error(result.error || t('messages.delete_provider_failed'));
+                  }
+
+                  // 删除成功后，提示用户
+                  message.success(t('messages.delete_provider_success'));
+
+                  // 调用回调函数通知父组件刷新列表并选中第一个服务商
+                  if (onProviderDeleted) {
+                    onProviderDeleted();
+                  }
+                } catch (error) {
+                  console.error("Failed to delete provider:", error);
+                  message.error(
+                    t('messages.delete_provider_failed') + ": " +
+                      (error instanceof Error ? error.message : String(error)),
+                  );
                 }
+              },
+            });
+          }}
+        >
+          {t('actions.delete_provider')}
+        </Button>
+      )}
 
-                // 删除成功后，提示用户
-                message.success(t('messages.delete_provider_success'));
-
-                // 调用回调函数通知父组件刷新列表并选中第一个服务商
-                if (onProviderDeleted) {
-                  onProviderDeleted();
-                }
-              } catch (error) {
-                console.error("Failed to delete provider:", error);
-                message.error(
-                  t('messages.delete_provider_failed') + ": " +
-                    (error instanceof Error ? error.message : String(error)),
-                );
-              }
-            },
-          });
-        }}
+      {/* Model List Modal */}
+      <Modal
+        title={t('model_list.modal_title')}
+        open={isModelListModalOpen}
+        onCancel={closeModelListModal}
+        footer={null}
+        width={600}
       >
-        {t('actions.delete_provider')}
-      </Button>
+        <Flex vertical gap={16} style={{ marginTop: 16 }}>
+          <Input.Search
+            placeholder={t('model_list.search_placeholder')}
+            value={modelListSearchQuery}
+            onChange={(e) => handleModelListSearch(e.target.value)}
+            allowClear
+          />
+          <List
+            bordered
+            size="small"
+            loading={modelListLoading}
+            dataSource={filteredModelList}
+            locale={{ emptyText: t('model_list.empty_text') }}
+            style={{ maxHeight: 400, overflow: 'auto' }}
+            renderItem={(item) => {
+              const exists = isModelExists(item.id);
+              const isAdding = addingModelIds.has(item.id);
+              return (
+                <List.Item
+                  actions={[
+                    <Button
+                      key="add"
+                      type="default"
+                      size="small"
+                      disabled={exists}
+                      loading={isAdding}
+                      onClick={() => addModelFromList(item)}
+                    >
+                      {exists ? t('model_list.already_added') : t('model_list.add_button')}
+                    </Button>,
+                  ]}
+                >
+                  <Space direction="vertical" size={0}>
+                    <Typography.Text strong>{item.name}</Typography.Text>
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      {item.id}
+                    </Typography.Text>
+                  </Space>
+                </List.Item>
+              );
+            }}
+          />
+        </Flex>
+      </Modal>
     </Flex>
   );
 };

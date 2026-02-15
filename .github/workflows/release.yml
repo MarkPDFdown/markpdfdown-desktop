@@ -47,8 +47,27 @@ jobs:
         run: npm run build:${{ matrix.platform }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_LINK: ${{ secrets.APPLE_CERTIFICATE }}
+          CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
-      - name: Upload release assets
+      - name: Submit notarization (async)
+        if: matrix.platform == 'mac'
+        continue-on-error: true
+        run: |
+          for dmg in release/*.dmg; do
+            echo "Submitting $dmg for notarization..."
+            xcrun notarytool submit "$dmg" \
+              --apple-id "$APPLE_ID" \
+              --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+              --team-id "$APPLE_TEAM_ID"
+          done
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Upload release assets (installers only)
         uses: softprops/action-gh-release@v2
         with:
           files: |
@@ -58,6 +77,79 @@ jobs:
             release/*.AppImage
             release/*.deb
             release/*.rpm
+            release/*.blockmap
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Save update manifests as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: update-manifests-${{ matrix.platform }}
+          path: release/*.yml
+          retention-days: 30
+
+  # Upload auto-update manifests only when release is promoted to stable
+  upload-manifests:
+    if: github.event.action == 'released'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download manifests from prereleased workflow run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          echo "Looking for prereleased workflow run for tag: $TAG"
+
+          # Find the successful workflow run that built assets for this release tag
+          RUN_ID=$(gh run list \
+            --repo "${{ github.repository }}" \
+            --workflow "release.yml" \
+            --json databaseId,conclusion,headBranch \
+            --jq ".[] | select(.headBranch == \"$TAG\" and .conclusion == \"success\") | .databaseId" \
+            | head -n 1)
+
+          if [ -z "$RUN_ID" ]; then
+            echo "::error::No successful prereleased workflow run found for tag $TAG"
+            exit 1
+          fi
+
+          echo "Found workflow run: $RUN_ID"
+
+          # Download all update-manifests artifacts from that run
+          gh run download "$RUN_ID" \
+            --repo "${{ github.repository }}" \
+            --pattern "update-manifests-*" \
+            --dir manifests
+
+          echo "Downloaded manifests:"
+          find manifests -type f -name "*.yml" | sort
+
+      - name: Filter out builder-debug.yml
+        run: |
+          # Remove builder-debug.yml from manifests directory (exists in all platform artifacts)
+          find manifests -name "builder-debug.yml" -delete
+
+          echo "Remaining manifests:"
+          find manifests -type f -name "*.yml" | sort
+
+      - name: Validate required manifests
+        run: |
+          REQUIRED=(
+            manifests/update-manifests-win/latest.yml
+            manifests/update-manifests-mac/latest-mac.yml
+            manifests/update-manifests-linux/latest-linux.yml
+          )
+          for file in "${REQUIRED[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "::error::Missing required update manifest: $file"
+              exit 1
+            fi
+          done
+
+      - name: Upload update manifests to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: manifests/**/*.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -100,6 +192,6 @@ jobs:
           echo "Updated package.json for npm publish"
 
       - name: Publish to npm
-        run: npm publish --access public
+        run: npm publish --access public --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
