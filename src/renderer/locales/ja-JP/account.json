@@ -14,6 +14,14 @@
     "description": "1ドル = 1,500クレジット",
     "recharge": "チャージ"
   },
+  "device_flow": {
+    "browser_opened": "認証のためにブラウザウィンドウが開きました",
+    "enter_code_hint": "ブラウザで以下のコードを入力してサインインを完了してください",
+    "cancel": "キャンセル",
+    "try_again": "再試行",
+    "expired": "認証コードの有効期限が切れました。もう一度お試しください。",
+    "waiting": "ブラウザでの認証を待っています..."
+  },
   "history": {
     "title": "クレジット履歴",
     "columns": {

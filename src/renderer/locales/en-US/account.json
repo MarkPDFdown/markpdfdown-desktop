@@ -14,6 +14,14 @@
     "description": "$1 USD = 1,500 credits",
     "recharge": "Recharge"
   },
+  "device_flow": {
+    "browser_opened": "A browser window has been opened for authorization",
+    "enter_code_hint": "Enter the code below in your browser to complete sign in",
+    "cancel": "Cancel",
+    "try_again": "Try Again",
+    "expired": "The authorization code has expired. Please try again.",
+    "waiting": "Waiting for browser authorization..."
+  },
   "history": {
     "title": "Credit History",
     "columns": {

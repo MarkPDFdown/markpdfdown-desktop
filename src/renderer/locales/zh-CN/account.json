@@ -14,6 +14,14 @@
     "description": "1美元可兑换1500积分",
     "recharge": "充值"
   },
+  "device_flow": {
+    "browser_opened": "已打开浏览器窗口进行授权",
+    "enter_code_hint": "请在浏览器中输入以下代码以完成登录",
+    "cancel": "取消",
+    "try_again": "重试",
+    "expired": "授权码已过期，请重试。",
+    "waiting": "等待浏览器授权..."
+  },
   "history": {
     "title": "积分记录",
     "columns": {

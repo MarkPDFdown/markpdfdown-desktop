@@ -77,9 +77,16 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("completion:testConnection", providerId, modelId),
   },
 
+  // ==================== Auth APIs ====================
+  auth: {
+    login: () => ipcRenderer.invoke("auth:login"),
+    cancelLogin: () => ipcRenderer.invoke("auth:cancelLogin"),
+    logout: () => ipcRenderer.invoke("auth:logout"),
+    getAuthState: () => ipcRenderer.invoke("auth:getAuthState"),
+  },
+
   // ==================== Cloud APIs ====================
   cloud: {
-    setToken: (token: string | null) => ipcRenderer.invoke("cloud:setToken", token),
     convert: (fileData: { path?: string; content?: ArrayBuffer; name: string }) =>
       ipcRenderer.invoke("cloud:convert", fileData),
     getTasks: (params: { page: number; pageSize: number }) =>
@@ -139,17 +146,17 @@ contextBridge.exposeInMainWorld("api", {
     },
 
     /**
-     * 监听 OAuth 回调事件
-     * @param callback 事件回调函数，接收回调 URL
+     * 监听认证状态变化事件
+     * @param callback 事件回调函数，接收认证状态
      * @returns 清理函数
      */
-    onOAuthCallback: (callback: (url: string) => void) => {
-      const handler = (_event: any, url: string) => callback(url);
-      ipcRenderer.on('auth:oauth-callback', handler);
+    onAuthStateChanged: (callback: (state: any) => void) => {
+      const handler = (_event: any, state: any) => callback(state);
+      ipcRenderer.on('auth:stateChanged', handler);
 
       // 返回清理函数
       return () => {
-        ipcRenderer.removeListener('auth:oauth-callback', handler);
+        ipcRenderer.removeListener('auth:stateChanged', handler);
       };
     },
 

@@ -82,8 +82,13 @@ interface WindowAPI {
     markImagedown: (providerId: number, modelId: string, url: string) => Promise<any>;
     testConnection: (providerId: number, modelId: string) => Promise<any>;
   };
+  auth: {
+    login: () => Promise<any>;
+    cancelLogin: () => Promise<any>;
+    logout: () => Promise<any>;
+    getAuthState: () => Promise<any>;
+  };
   cloud: {
-    setToken: (token: string | null) => Promise<any>;
     convert: (fileData: { path?: string; content?: ArrayBuffer; name: string }) => Promise<any>;
     getTasks: (params: { page: number; pageSize: number }) => Promise<any>;
     getCreditHistory: (params: { page: number; pageSize: number }) => Promise<any>;
@@ -104,7 +109,7 @@ interface WindowAPI {
   events: {
     onTaskEvent: (callback: (event: TaskEventData) => void) => () => void;
     onTaskDetailEvent: (callback: (event: TaskDetailEventData) => void) => () => void;
-    onOAuthCallback: (callback: (url: string) => void) => () => void;
+    onAuthStateChanged: (callback: (state: any) => void) => () => void;
     onUpdaterStatus: (callback: (data: any) => void) => () => void;
   };
   platform: NodeJS.Platform;

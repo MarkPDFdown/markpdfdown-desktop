@@ -1,9 +1,10 @@
+import { authManager } from './AuthManager.js';
+
 /**
  * CloudService handles interaction with the MarkPDFDown Cloud API
  */
 class CloudService {
   private static instance: CloudService;
-  private token: string | null = null;
 
   private constructor() {}
 
@@ -15,28 +16,15 @@ class CloudService {
   }
 
   /**
-   * Set the authentication token
-   */
-  public setToken(token: string | null): void {
-    this.token = token;
-    console.log('[CloudService] Token updated:', token ? 'Token set' : 'Token cleared');
-  }
-
-  /**
    * Convert a file using the cloud API
    */
   public async convert(fileData: { path?: string; content?: ArrayBuffer; name: string }): Promise<any> {
-    if (!this.token) {
+    const token = await authManager.getAccessToken();
+    if (!token) {
       throw new Error('Authentication required');
     }
 
     console.log('[CloudService] Starting cloud conversion for:', fileData.name);
-
-    // This is a placeholder for the actual implementation
-    // In a real implementation, we would:
-    // 1. Create a FormData object
-    // 2. Append the file (either from path or buffer)
-    // 3. Send a POST request to the API
 
     // Simulating API call delay
     await new Promise(resolve => setTimeout(resolve, 1500));
@@ -54,7 +42,8 @@ class CloudService {
    * Get tasks from the cloud API
    */
   public async getTasks(page: number = 1, pageSize: number = 10): Promise<any> {
-    if (!this.token) {
+    const token = await authManager.getAccessToken();
+    if (!token) {
       throw new Error('Authentication required');
     }
 
@@ -92,7 +81,8 @@ class CloudService {
    * Get credit history from the cloud API
    */
   public async getCreditHistory(page: number = 1, pageSize: number = 10): Promise<any> {
-    if (!this.token) {
+    const token = await authManager.getAccessToken();
+    if (!token) {
       throw new Error('Authentication required');
     }
 

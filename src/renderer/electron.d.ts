@@ -245,8 +245,14 @@ interface ElectronAPI {
     ) => Promise<IpcResponse<string>>;
   };
 
+  auth: {
+    login: () => Promise<IpcResponse<void>>;
+    cancelLogin: () => Promise<IpcResponse<void>>;
+    logout: () => Promise<IpcResponse<void>>;
+    getAuthState: () => Promise<IpcResponse<import('../shared/types/cloud-api').AuthState>>;
+  };
+
   cloud: {
-    setToken: (token: string | null) => Promise<IpcResponse<void>>;
     convert: (fileData: { path?: string; content?: ArrayBuffer; name: string }) => Promise<IpcResponse<any>>;
     getTasks: (params: { page: number; pageSize: number }) => Promise<IpcResponse<any>>;
     getCreditHistory: (params: { page: number; pageSize: number }) => Promise<IpcResponse<any>>;
@@ -270,7 +276,7 @@ interface ElectronAPI {
   events: {
     onTaskEvent: (callback: (event: TaskEvent) => void) => () => void;
     onTaskDetailEvent: (callback: (event: TaskDetailEvent) => void) => () => void;
-    onOAuthCallback: (callback: (url: string) => void) => () => void;
+    onAuthStateChanged: (callback: (state: import('../shared/types/cloud-api').AuthState) => void) => () => void;
     onUpdaterStatus: (callback: (data: UpdateStatusData) => void) => () => void;
   };
 

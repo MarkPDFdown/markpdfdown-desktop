@@ -1,8 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Card, Button, Avatar, Typography, Divider, Row, Col, Statistic, Table, Tag, Tooltip, Space, Modal } from 'antd';
-import { UserOutlined, LogoutOutlined, CrownOutlined, SafetyCertificateOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { Card, Button, Avatar, Typography, Divider, Row, Col, Statistic, Table, Tag, Tooltip, Space, Alert } from 'antd';
+import { UserOutlined, LogoutOutlined, CrownOutlined, SafetyCertificateOutlined, InfoCircleOutlined, LoadingOutlined, CopyOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { SignIn } from '@clerk/clerk-react';
 import { CloudContext, CreditHistoryItem } from '../contexts/CloudContextDefinition';
 
 const { Title, Text } = Typography;
@@ -13,6 +12,7 @@ const AccountCenter: React.FC = () => {
   const [history, setHistory] = useState<CreditHistoryItem[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 5, total: 0 });
+  const [codeCopied, setCodeCopied] = useState(false);
 
   const fetchHistory = async (page: number = 1) => {
     if (!context || !context.isAuthenticated) return;
@@ -34,17 +34,102 @@ const AccountCenter: React.FC = () => {
     if (context?.isAuthenticated) {
       fetchHistory();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [context?.isAuthenticated]);
 
   if (!context) return null;
 
-  const { user, credits, isAuthenticated, login, logout, isLoading, showSignIn, closeSignIn } = context;
+  const { user, credits, isAuthenticated, login, logout, isLoading, deviceFlowStatus, userCode, authError, cancelLogin } = context;
 
   if (isLoading) {
     return <Card loading bordered={false} />;
   }
 
+  // Handle copy user code
+  const handleCopyCode = () => {
+    if (userCode) {
+      navigator.clipboard.writeText(userCode).then(() => {
+        setCodeCopied(true);
+        setTimeout(() => setCodeCopied(false), 2000);
+      });
+    }
+  };
+
   if (!isAuthenticated) {
+    // Device flow: pending_browser or polling
+    if (deviceFlowStatus === 'pending_browser' || deviceFlowStatus === 'polling') {
+      return (
+        <div style={{ padding: '24px', textAlign: 'center' }}>
+          <Title level={3}>{t('title')}</Title>
+          <div style={{ marginBottom: '24px' }}>
+            <LoadingOutlined style={{ fontSize: '24px', marginBottom: '16px' }} />
+            <div style={{ marginBottom: '16px' }}>
+              <Text type="secondary">{t('device_flow.enter_code_hint')}</Text>
+            </div>
+            {userCode && (
+              <div style={{ marginBottom: '16px' }}>
+                <Space>
+                  <Text
+                    strong
+                    style={{ fontSize: '32px', letterSpacing: '4px', fontFamily: 'monospace' }}
+                  >
+                    {userCode}
+                  </Text>
+                  <Button
+                    type="text"
+                    icon={<CopyOutlined />}
+                    onClick={handleCopyCode}
+                    size="small"
+                  >
+                    {codeCopied ? '✓' : ''}
+                  </Button>
+                </Space>
+              </div>
+            )}
+            <Text type="secondary">{t('device_flow.waiting')}</Text>
+          </div>
+          <Button onClick={cancelLogin}>{t('device_flow.cancel')}</Button>
+        </div>
+      );
+    }
+
+    // Device flow: expired
+    if (deviceFlowStatus === 'expired') {
+      return (
+        <div style={{ padding: '24px', textAlign: 'center' }}>
+          <Title level={3}>{t('title')}</Title>
+          <Alert
+            message={t('device_flow.expired')}
+            type="warning"
+            showIcon
+            style={{ marginBottom: '24px', textAlign: 'left' }}
+          />
+          <Button type="primary" size="large" onClick={login} icon={<UserOutlined />}>
+            {t('device_flow.try_again')}
+          </Button>
+        </div>
+      );
+    }
+
+    // Device flow: error
+    if (deviceFlowStatus === 'error') {
+      return (
+        <div style={{ padding: '24px', textAlign: 'center' }}>
+          <Title level={3}>{t('title')}</Title>
+          <Alert
+            message={authError || 'Login failed'}
+            type="error"
+            showIcon
+            style={{ marginBottom: '24px', textAlign: 'left' }}
+          />
+          <Button type="primary" size="large" onClick={login} icon={<UserOutlined />}>
+            {t('device_flow.try_again')}
+          </Button>
+        </div>
+      );
+    }
+
+    // Default: idle - show login button
     return (
       <div style={{ padding: '24px', textAlign: 'center' }}>
         <Title level={3}>{t('title')}</Title>
@@ -54,19 +139,6 @@ const AccountCenter: React.FC = () => {
         <Button type="primary" size="large" onClick={login} icon={<UserOutlined />}>
           {t('sign_in_button')}
         </Button>
-        <Modal
-          open={showSignIn}
-          onCancel={closeSignIn}
-          footer={null}
-          centered
-          width="auto"
-          styles={{ body: { padding: 0 } }}
-          destroyOnClose
-        >
-          <SignIn
-            forceRedirectUrl="markpdfdown://auth/callback"
-          />
-        </Modal>
       </div>
     );
   }
@@ -126,9 +198,9 @@ const AccountCenter: React.FC = () => {
   return (
     <div style={{ padding: '0 24px 24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
-        <Avatar size={80} src={user.imageUrl} icon={<UserOutlined />} />
+        <Avatar size={80} src={user.avatarUrl} icon={<UserOutlined />} />
         <div style={{ marginLeft: '24px', flex: 1 }}>
-          <Title level={3} style={{ marginBottom: 4 }}>{user.fullName || 'User'}</Title>
+          <Title level={3} style={{ marginBottom: 4 }}>{user.name || 'User'}</Title>
           <Text type="secondary">{user.email}</Text>
         </div>
         <Button danger icon={<LogoutOutlined />} onClick={logout}>

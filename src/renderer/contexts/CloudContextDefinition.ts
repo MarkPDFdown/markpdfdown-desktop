@@ -1,10 +1,11 @@
 import { createContext } from 'react';
+import type { DeviceFlowStatus } from '../../shared/types/cloud-api';
 
 export interface UserProfile {
-  id: string;
+  id: number;
   email: string;
-  fullName: string | null;
-  imageUrl: string;
+  name: string | null;
+  avatarUrl: string | null;
   isLoaded: boolean;
   isSignedIn: boolean;
 }
@@ -38,15 +39,18 @@ export interface CloudContextType {
   credits: Credits;
   isAuthenticated: boolean;
   isLoading: boolean;
-  token: string | null;
-  showSignIn: boolean;
+
+  // Device flow state
+  deviceFlowStatus: DeviceFlowStatus;
+  userCode: string | null;
+  verificationUrl: string | null;
+  authError: string | null;
 
   // Actions
   login: () => void;
   logout: () => void;
-  closeSignIn: () => void;
+  cancelLogin: () => void;
   refreshCredits: () => Promise<void>;
-  getToken: () => Promise<string | null>;
   convertFile: (file: CloudFileInput) => Promise<{ success: boolean; taskId?: string; error?: string }>;
   getTasks: (page?: number, pageSize?: number) => Promise<{ success: boolean; data?: any[]; total?: number; error?: string }>;
   getCreditHistory: (page?: number, pageSize?: number) => Promise<{ success: boolean; data?: CreditHistoryItem[]; total?: number; error?: string }>;

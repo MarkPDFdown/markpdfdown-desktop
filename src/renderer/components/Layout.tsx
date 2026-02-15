@@ -127,9 +127,9 @@ const UserProfileIcon: React.FC<{ navigate: (path: string) => void; notSignedInT
       onClick={() => navigate('/settings')}
       style={{ cursor: 'pointer', marginBottom: '16px' }}
     >
-      <Tooltip placement="right" title={isAuthenticated ? user.fullName || user.email : notSignedInText}>
+      <Tooltip placement="right" title={isAuthenticated ? user.name || user.email : notSignedInText}>
         <Avatar
-          src={user.imageUrl}
+          src={user.avatarUrl}
           icon={<UserOutlined />}
           style={{ backgroundColor: isAuthenticated ? '#1890ff' : '#ccc' }}
         />

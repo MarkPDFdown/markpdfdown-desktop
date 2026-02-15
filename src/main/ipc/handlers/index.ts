@@ -6,6 +6,7 @@ import { registerFileHandlers } from './file.handler.js';
 import { registerCompletionHandlers } from './completion.handler.js';
 import { registerAppHandlers } from './app.handler.js';
 import { registerCloudHandlers } from './cloud.handler.js';
+import { registerAuthHandlers } from './auth.handler.js';
 import { registerUpdaterHandlers } from './updater.handler.js';
 
 /**
@@ -18,6 +19,7 @@ import { registerUpdaterHandlers } from './updater.handler.js';
  * - TaskDetail: Page-level operations and retry
  * - File: File operations (upload, download, select)
  * - Completion: LLM API calls
+ * - Auth: Authentication (device flow login, logout, state)
  * - Cloud: Cloud API operations
  * - App: Application info (version)
  * - Updater: Auto-update management
@@ -29,6 +31,7 @@ export function registerAllHandlers() {
   registerTaskDetailHandlers();
   registerFileHandlers();
   registerCompletionHandlers();
+  registerAuthHandlers();
   registerCloudHandlers();
   registerAppHandlers();
   registerUpdaterHandlers();
@@ -44,6 +47,7 @@ export {
   registerTaskDetailHandlers,
   registerFileHandlers,
   registerCompletionHandlers,
+  registerAuthHandlers,
   registerCloudHandlers,
   registerAppHandlers,
   registerUpdaterHandlers,

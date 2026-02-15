@@ -83,6 +83,7 @@ import { registerIpcHandlers } from "./ipc/handlers.js";
 import { windowManager } from './WindowManager.js';
 import { eventBridge } from './ipc/eventBridge.js';
 import { updateService } from './services/UpdateService.js';
+import { authManager } from '../core/infrastructure/services/AuthManager.js';
 import fileLogic from "../core/infrastructure/services/FileService.js";
 
 // 自定义协议名称（用于 OAuth 回调）
@@ -115,18 +116,13 @@ if (process.defaultApp) {
 // 处理自定义协议 URL（用于 OAuth 回调）
 function handleProtocolUrl(url: string) {
   console.log('[Main] Received protocol URL:', url);
-
-  // 解析 URL：markpdfdown://auth/callback?...
   if (url.startsWith(`${PROTOCOL_NAME}://`)) {
-    // 聚焦主窗口
+    // 聚焦主窗口即可，token 获取由 AuthManager 轮询处理
     if (mainWindow) {
       if (mainWindow.isMinimized()) {
         mainWindow.restore();
       }
       mainWindow.focus();
-
-      // 将 OAuth 回调信息发送给渲染进程
-      mainWindow.webContents.send('auth:oauth-callback', url);
     }
   }
 }
@@ -365,6 +361,12 @@ async function initializeBackgroundServices() {
     console.log("[Main] Initializing database in background...");
     await initDatabase();
     console.log(`[Main] Database initialized in ${Date.now() - startTime}ms`);
+
+    // 恢复认证会话
+    console.log("[Main] Restoring auth session...");
+    const authStartTime = Date.now();
+    await authManager.initialize();
+    console.log(`[Main] Auth session restored in ${Date.now() - authStartTime}ms`);
 
     // 注入预设供应商
     console.log("[Main] Injecting preset providers...");

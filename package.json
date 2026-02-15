@@ -88,7 +88,9 @@
       "extendInfo": {
         "CFBundleURLTypes": [
           {
-            "CFBundleURLSchemes": ["markpdfdown"],
+            "CFBundleURLSchemes": [
+              "markpdfdown"
+            ],
             "CFBundleURLName": "com.markpdfdown.desktop"
           }
         ]
@@ -106,7 +108,9 @@
       "icon": "public/icons/win/icon.ico",
       "protocols": {
         "name": "MarkPDFdown URL",
-        "schemes": ["markpdfdown"]
+        "schemes": [
+          "markpdfdown"
+        ]
       },
       "verifyUpdateCodeSignature": false
     },
@@ -122,7 +126,9 @@
       "target": "AppImage",
       "artifactName": "${productName}-${version}-${arch}.${ext}",
       "icon": "public/icons/png",
-      "mimeTypes": ["x-scheme-handler/markpdfdown"]
+      "mimeTypes": [
+        "x-scheme-handler/markpdfdown"
+      ]
     },
     "electronDownload": {
       "mirror": "https://github.com/electron/electron/releases/download/"
@@ -149,7 +155,6 @@
   },
   "dependencies": {
     "@ant-design/icons": "^5.6.1",
-    "@clerk/clerk-react": "^5.60.0",
     "@prisma/client": "^6.5.0",
     "@types/sharp": "^0.31.1",
     "antd": "^5.24.4",

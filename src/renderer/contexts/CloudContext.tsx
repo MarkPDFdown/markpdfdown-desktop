@@ -1,75 +1,117 @@
 import React, { useState, useEffect, ReactNode, useCallback } from 'react';
-import { useUser, useAuth } from '@clerk/clerk-react';
 import { CloudContext, UserProfile, Credits, CloudFileInput } from './CloudContextDefinition';
+import type { AuthState, DeviceFlowStatus } from '../../shared/types/cloud-api';
 
 interface CloudProviderProps {
   children: ReactNode;
 }
 
-export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
-  const { user: clerkUser, isLoaded: isUserLoaded, isSignedIn } = useUser();
-  const { getToken, signOut } = useAuth();
+const defaultUser: UserProfile = {
+  id: 0,
+  email: '',
+  name: null,
+  avatarUrl: null,
+  isLoaded: false,
+  isSignedIn: false,
+};
 
-  const [showSignIn, setShowSignIn] = useState(false);
+export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
+  const [user, setUser] = useState<UserProfile>(defaultUser);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [deviceFlowStatus, setDeviceFlowStatus] = useState<DeviceFlowStatus>('idle');
+  const [userCode, setUserCode] = useState<string | null>(null);
+  const [verificationUrl, setVerificationUrl] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [credits, setCredits] = useState<Credits>({
     total: 0,
     free: 0,
     paid: 0,
-    dailyLimit: 20, // Default limit
+    dailyLimit: 20,
     usedToday: 0
   });
 
-  // Transform Clerk user to our domain UserProfile
-  const userProfile: UserProfile = {
-    id: clerkUser?.id || '',
-    email: clerkUser?.primaryEmailAddress?.emailAddress || '',
-    fullName: clerkUser?.fullName || '',
-    imageUrl: clerkUser?.imageUrl || '',
-    isLoaded: isUserLoaded,
-    isSignedIn: !!isSignedIn
-  };
+  // Apply auth state from main process
+  const applyAuthState = useCallback((state: AuthState) => {
+    setIsAuthenticated(state.isAuthenticated);
+    setIsLoading(state.isLoading);
+    setDeviceFlowStatus(state.deviceFlowStatus);
+    setUserCode(state.userCode);
+    setVerificationUrl(state.verificationUrl);
+    setAuthError(state.error);
 
-  // Login action - shows inline SignIn component
-  const login = useCallback(() => {
-    setShowSignIn(true);
+    if (state.user) {
+      setUser({
+        id: state.user.id,
+        email: state.user.email,
+        name: state.user.name,
+        avatarUrl: state.user.avatar_url,
+        isLoaded: true,
+        isSignedIn: true,
+      });
+    } else {
+      setUser({ ...defaultUser, isLoaded: !state.isLoading });
+    }
   }, []);
 
-  // Close SignIn modal
-  const closeSignIn = useCallback(() => {
-    setShowSignIn(false);
+  // Fetch initial auth state and listen for changes
+  useEffect(() => {
+    // Get initial state
+    window.api?.auth?.getAuthState().then((result) => {
+      if (result.success && result.data) {
+        applyAuthState(result.data);
+      } else {
+        setIsLoading(false);
+        setUser({ ...defaultUser, isLoaded: true });
+      }
+    }).catch(() => {
+      setIsLoading(false);
+      setUser({ ...defaultUser, isLoaded: true });
+    });
+
+    // Listen for state changes
+    if (!window.api?.events?.onAuthStateChanged) return;
+
+    const cleanup = window.api.events.onAuthStateChanged((state: AuthState) => {
+      applyAuthState(state);
+    });
+
+    return cleanup;
+  }, [applyAuthState]);
+
+  // Login action - trigger device flow via IPC
+  const login = useCallback(() => {
+    window.api?.auth?.login().catch((err: Error) => {
+      console.error('Login failed:', err);
+    });
+  }, []);
+
+  // Cancel login
+  const cancelLogin = useCallback(() => {
+    window.api?.auth?.cancelLogin().catch((err: Error) => {
+      console.error('Cancel login failed:', err);
+    });
   }, []);
 
   // Logout action
   const logout = useCallback(() => {
-    signOut();
-  }, [signOut]);
-
-  // Get current auth token
-  const getAuthToken = useCallback(async () => {
-    try {
-      return await getToken();
-    } catch (error) {
-      console.error('Failed to get token:', error);
-      return null;
-    }
-  }, [getToken]);
+    window.api?.auth?.logout().then(() => {
+      // Reset credits on logout
+      setCredits({
+        total: 0,
+        free: 0,
+        paid: 0,
+        dailyLimit: 20,
+        usedToday: 0,
+      });
+    }).catch((err: Error) => {
+      console.error('Logout failed:', err);
+    });
+  }, []);
 
   // Refresh credits from backend (mock for now)
   const refreshCredits = useCallback(async () => {
-    if (!isSignedIn) return;
-
-    // TODO: Replace with actual API call
-    console.log('Fetching credits for user:', clerkUser?.id);
-
-    // Sync token to main process
-    try {
-      const token = await getToken();
-      if (window.api && window.api.cloud) {
-        await window.api.cloud.setToken(token);
-      }
-    } catch (e) {
-      console.error('Failed to sync token:', e);
-    }
+    if (!isAuthenticated) return;
 
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -81,11 +123,11 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
       free: 5,
       paid: 10
     }));
-  }, [isSignedIn, clerkUser?.id, getToken]);
+  }, [isAuthenticated]);
 
   // Cloud conversion function
   const convertFile = useCallback(async (file: CloudFileInput) => {
-    if (!isSignedIn) {
+    if (!isAuthenticated) {
       return { success: false, error: 'User not signed in' };
     }
 
@@ -95,17 +137,14 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
       };
 
       if (file.url) {
-        // File selected via dialog (has path)
         fileData.path = file.url;
       } else if (file.originFileObj) {
-        // File dropped (read content)
         fileData.content = await file.originFileObj.arrayBuffer();
       } else {
         return { success: false, error: 'Invalid file data' };
       }
 
-      // Call IPC
-      if (window.api && window.api.cloud) {
+      if (window.api?.cloud) {
         const result = await window.api.cloud.convert(fileData);
         return result;
       } else {
@@ -118,16 +157,16 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
         error: error instanceof Error ? error.message : String(error)
       };
     }
-  }, [isSignedIn]);
+  }, [isAuthenticated]);
 
   // Fetch cloud tasks
   const getTasks = useCallback(async (page: number = 1, pageSize: number = 10) => {
-    if (!isSignedIn) {
+    if (!isAuthenticated) {
       return { success: false, error: 'User not signed in' };
     }
 
     try {
-      if (window.api && window.api.cloud) {
+      if (window.api?.cloud) {
         return await window.api.cloud.getTasks({ page, pageSize });
       } else {
         return { success: false, error: 'Cloud API not available' };
@@ -139,16 +178,16 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
         error: error instanceof Error ? error.message : String(error)
       };
     }
-  }, [isSignedIn]);
+  }, [isAuthenticated]);
 
   // Fetch credit history
   const getCreditHistory = useCallback(async (page: number = 1, pageSize: number = 10) => {
-    if (!isSignedIn) {
+    if (!isAuthenticated) {
       return { success: false, error: 'User not signed in' };
     }
 
     try {
-      if (window.api && window.api.cloud) {
+      if (window.api?.cloud) {
         return await window.api.cloud.getCreditHistory({ page, pageSize });
       } else {
         return { success: false, error: 'Cloud API not available' };
@@ -160,64 +199,30 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
         error: error instanceof Error ? error.message : String(error)
       };
     }
-  }, [isSignedIn]);
+  }, [isAuthenticated]);
 
-  // Initial data fetch when user signs in
+  // Refresh credits when authenticated
   useEffect(() => {
-    if (isSignedIn) {
+    if (isAuthenticated) {
       refreshCredits();
-    } else {
-      // Clear token in main process on logout
-      if (window.api && window.api.cloud) {
-        window.api.cloud.setToken(null).catch(console.error);
-      }
-
-      // Reset state on logout
-      setCredits({
-        total: 0,
-        free: 0,
-        paid: 0,
-        dailyLimit: 20,
-        usedToday: 0
-      });
     }
-  }, [isSignedIn, refreshCredits]);
-
-  // Auto close SignIn modal when user signs in
-  useEffect(() => {
-    if (isSignedIn && showSignIn) {
-      setShowSignIn(false);
-    }
-  }, [isSignedIn, showSignIn]);
-
-  // Listen for OAuth callback from main process (when user completes OAuth in browser)
-  useEffect(() => {
-    if (!window.api?.events?.onOAuthCallback) return;
-
-    const cleanup = window.api.events.onOAuthCallback((url) => {
-      console.log('[CloudContext] OAuth callback received:', url);
-      // Clerk will automatically detect the session change
-      // We just need to close the SignIn modal if it's open
-      setShowSignIn(false);
-    });
-
-    return cleanup;
-  }, []);
+  }, [isAuthenticated, refreshCredits]);
 
   return (
     <CloudContext.Provider
       value={{
-        user: userProfile,
+        user,
         credits,
-        isAuthenticated: !!isSignedIn,
-        isLoading: !isUserLoaded,
-        token: null, // Token is retrieved async via getToken()
-        showSignIn,
+        isAuthenticated,
+        isLoading,
+        deviceFlowStatus,
+        userCode,
+        verificationUrl,
+        authError,
         login,
         logout,
-        closeSignIn,
+        cancelLogin,
         refreshCredits,
-        getToken: getAuthToken,
         convertFile,
         getTasks,
         getCreditHistory

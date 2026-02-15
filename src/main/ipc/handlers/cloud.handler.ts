@@ -6,22 +6,6 @@ import cloudService from '../../../core/infrastructure/services/CloudService.js'
  */
 export function registerCloudHandlers() {
   /**
-   * Set authentication token
-   */
-  ipcMain.handle('cloud:setToken', async (_, token: string | null) => {
-    try {
-      cloudService.setToken(token);
-      return { success: true };
-    } catch (error) {
-      console.error('[IPC] cloud:setToken error:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  });
-
-  /**
    * Convert file via cloud
    */
   ipcMain.handle('cloud:convert', async (_, fileData: { path?: string; content?: ArrayBuffer; name: string }) => {
