@@ -339,7 +339,11 @@ class AuthManager {
       throw new Error(`Fetch user profile failed: ${res.status}`);
     }
 
-    this.userProfile = await res.json();
+    const responseJson: { success: boolean; data: CloudUserProfile } = await res.json();
+    if (!responseJson.success || !responseJson.data) {
+      throw new Error('Fetch user profile failed: invalid response');
+    }
+    this.userProfile = responseJson.data;
   }
 
   private persistRefreshToken(token: string): void {
