@@ -14,6 +14,7 @@ vi.mock('electron', () => ({
       }
       return paths[name] || '/mock/default'
     }),
+    getVersion: vi.fn(() => '0.0.0-test'),
     isPackaged: false
   },
   ipcMain: {

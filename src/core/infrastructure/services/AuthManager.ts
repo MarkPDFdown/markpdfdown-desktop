@@ -16,6 +16,15 @@ const REFRESH_TOKEN_FILE = 'refresh_token.enc';
 const TOKEN_REFRESH_MARGIN_MS = 60 * 1000; // Refresh 1 minute before expiry
 const DEVICE_POLL_INTERVAL_MS = 5000;
 
+function buildUserAgent(): string {
+  const appVersion = app.getVersion();
+  const electronVersion = process.versions.electron;
+  const chromeVersion = process.versions.chrome;
+  const nodeVersion = process.versions.node;
+  const platform = `${process.platform}; ${process.arch}`;
+  return `MarkPDFdown/${appVersion} Electron/${electronVersion} Chrome/${chromeVersion} Node/${nodeVersion} (${platform})`;
+}
+
 class AuthManager {
   private static instance: AuthManager;
 
@@ -34,6 +43,8 @@ class AuthManager {
   private deviceCode: string | null = null;
   private pollExpiresAt: number = 0;
 
+  private userAgent: string = '';
+
   private constructor() {}
 
   public static getInstance(): AuthManager {
@@ -48,6 +59,8 @@ class AuthManager {
    */
   public async initialize(): Promise<void> {
     console.log('[AuthManager] Initializing...');
+    this.userAgent = buildUserAgent();
+    console.log(`[AuthManager] User-Agent: ${this.userAgent}`);
     this.isLoading = true;
     this.broadcastState();
 
@@ -88,7 +101,7 @@ class AuthManager {
     try {
       const res = await fetch(`${API_BASE_URL}/api/v1/auth/device/code`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: this.getDefaultHeaders({ 'Content-Type': 'application/json' }),
       });
 
       if (!res.ok) {
@@ -145,10 +158,7 @@ class AuthManager {
     // Try to call logout API (fire-and-forget)
     if (this.accessToken) {
       try {
-        await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${this.accessToken}` },
-        });
+        await this.fetchWithAuth(`${API_BASE_URL}/api/v1/auth/logout`, { method: 'POST' });
       } catch (err) {
         console.warn('[AuthManager] Logout API call failed:', err);
       }
@@ -204,7 +214,62 @@ class AuthManager {
     return this.userProfile;
   }
 
+  /**
+   * Make an authenticated API request. Automatically retries once on 401 by refreshing the token.
+   */
+  public async fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
+    const token = await this.getAccessToken();
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
+    const res = await fetch(url, {
+      ...options,
+      headers: {
+        ...this.getDefaultHeaders(),
+        Authorization: `Bearer ${token}`,
+        ...options.headers,
+      },
+    });
+
+    if (res.status !== 401) {
+      return res;
+    }
+
+    // 401: attempt refresh
+    if (!this.refreshToken) {
+      this.clearTokens();
+      this.broadcastState();
+      throw new Error('Authentication required');
+    }
+
+    try {
+      await this.refreshAccessToken();
+    } catch {
+      this.clearTokens();
+      this.broadcastState();
+      throw new Error('Authentication required');
+    }
+
+    // Retry with new token
+    return fetch(url, {
+      ...options,
+      headers: {
+        ...this.getDefaultHeaders(),
+        Authorization: `Bearer ${this.accessToken}`,
+        ...options.headers,
+      },
+    });
+  }
+
   // ─── Private Methods ─────────────────────────────────────────────
+
+  private getDefaultHeaders(extra: Record<string, string> = {}): Record<string, string> {
+    return {
+      'User-Agent': this.userAgent,
+      ...extra,
+    };
+  }
 
   private startPolling(intervalSeconds: number): void {
     const intervalMs = Math.max(intervalSeconds * 1000, DEVICE_POLL_INTERVAL_MS);
@@ -221,6 +286,7 @@ class AuthManager {
       try {
         const res = await fetch(
           `${API_BASE_URL}/api/v1/auth/device/token?device_code=${encodeURIComponent(this.deviceCode!)}`,
+          { headers: this.getDefaultHeaders() },
         );
 
         if (res.status === 200) {
@@ -313,7 +379,7 @@ class AuthManager {
 
     const res = await fetch(`${API_BASE_URL}/api/v1/auth/token/refresh`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: this.getDefaultHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ refresh_token: this.refreshToken }),
     });
 
@@ -331,9 +397,7 @@ class AuthManager {
   private async fetchUserProfile(): Promise<void> {
     if (!this.accessToken) return;
 
-    const res = await fetch(`${API_BASE_URL}/api/v1/user/profile`, {
-      headers: { Authorization: `Bearer ${this.accessToken}` },
-    });
+    const res = await this.fetchWithAuth(`${API_BASE_URL}/api/v1/user/profile`);
 
     if (!res.ok) {
       throw new Error(`Fetch user profile failed: ${res.status}`);
