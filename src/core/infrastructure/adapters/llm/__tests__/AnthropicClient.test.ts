@@ -67,7 +67,13 @@ describe('AnthropicClient', () => {
       const callArgs = (global.fetch as any).mock.calls[0][1]
       const body = JSON.parse(callArgs.body)
 
-      expect(body.system).toBe('You are a helpful assistant')
+      expect(body.system).toEqual([
+        {
+          type: 'text',
+          text: 'You are a helpful assistant',
+          cache_control: { type: 'ephemeral' }
+        }
+      ])
       expect(body.messages).toHaveLength(1)
       expect(body.messages[0].role).toBe('user')
     })
@@ -148,7 +154,13 @@ describe('AnthropicClient', () => {
       const callArgs = (global.fetch as any).mock.calls[0][1]
       const body = JSON.parse(callArgs.body)
 
-      expect(body.system).toContain('JSON')
+      expect(body.system).toEqual([
+        {
+          type: 'text',
+          text: '请以有效的JSON格式提供响应。',
+          cache_control: { type: 'ephemeral' }
+        }
+      ])
     })
 
     it('should append JSON instruction to existing system prompt', async () => {
@@ -173,8 +185,13 @@ describe('AnthropicClient', () => {
       const callArgs = (global.fetch as any).mock.calls[0][1]
       const body = JSON.parse(callArgs.body)
 
-      expect(body.system).toContain('You are helpful')
-      expect(body.system).toContain('JSON')
+      expect(body.system).toEqual([
+        {
+          type: 'text',
+          text: 'You are helpful\n\n请以有效的JSON格式提供响应。',
+          cache_control: { type: 'ephemeral' }
+        }
+      ])
     })
   })
 
