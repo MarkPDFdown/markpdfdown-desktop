@@ -6,6 +6,8 @@
   "credit_balance": "رصيد الاعتمادات",
   "monthly_free": {
     "title": "الاعتمادات المجانية",
+    "monthly_label": "الشهري",
+    "daily_label": "اليوم",
     "description": "٣٬٠٠٠ اعتماد مجاني شهرياً، يُعاد تعيينه في الأول من كل شهر الساعة ٠٠:٠٠ (UTC+0)",
     "daily_limit_tooltip": "الحد اليومي للاستخدام: {{limit}}"
   },
@@ -31,9 +33,13 @@
       "credits": "الاعتمادات"
     },
     "types": {
-      "consumption": "استهلاك",
-      "recharge": "شحن",
-      "bonus": "مكافأة"
+      "consume": "استهلاك",
+      "consume_settle": "تسوية",
+      "topup": "شحن",
+      "refund": "استرداد",
+      "bonus_grant": "مكافأة",
+      "bonus_expire": "منتهي الصلاحية",
+      "page_retry": "إعادة محاولة الصفحة"
     }
   }
 }

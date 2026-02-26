@@ -6,6 +6,8 @@
   "credit_balance": "Credit Balance",
   "monthly_free": {
     "title": "Free Credits",
+    "monthly_label": "Monthly",
+    "daily_label": "Today",
     "description": "3,000 free credits per month, resets on the 1st at 00:00 (UTC+0)",
     "daily_limit_tooltip": "Daily usage limit: {{limit}}"
   },
@@ -31,9 +33,13 @@
       "credits": "Credits"
     },
     "types": {
-      "consumption": "CONSUMPTION",
-      "recharge": "RECHARGE",
-      "bonus": "BONUS"
+      "consume": "Consumption",
+      "consume_settle": "Settlement",
+      "topup": "Top Up",
+      "refund": "Refund",
+      "bonus_grant": "Bonus",
+      "bonus_expire": "Expired",
+      "page_retry": "Page Retry"
     }
   }
 }

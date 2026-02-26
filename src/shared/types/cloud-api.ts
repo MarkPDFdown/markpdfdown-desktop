@@ -33,3 +33,44 @@ export interface TokenResponse {
   expires_in: number;
   token_type: string;
 }
+
+// ============ Credits API Types ============
+
+export interface CreditsApiResponse {
+  bonus: {
+    balance: number;
+    daily_used: number;
+    daily_limit: number;
+    daily_remaining: number;
+    daily_reset_at: string;
+    monthly_reset_at: string;
+  };
+  paid: {
+    balance: number;
+  };
+  total_available: number;
+}
+
+export type CreditTransactionType =
+  | 'topup'
+  | 'consume'
+  | 'consume_settle'
+  | 'refund'
+  | 'bonus_grant'
+  | 'bonus_expire'
+  | 'page_retry';
+
+export interface CreditTransactionApiItem {
+  id: number;
+  type: CreditTransactionType;
+  type_name: string;
+  amount: number;
+  balance_after: number;
+  bonus_amount: number;
+  paid_amount: number;
+  task_id?: string;
+  file_name?: string;
+  page_number?: number;
+  description?: string;
+  created_at: string;
+}

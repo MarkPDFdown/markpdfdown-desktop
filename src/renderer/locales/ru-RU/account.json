@@ -6,6 +6,8 @@
   "credit_balance": "Баланс кредитов",
   "monthly_free": {
     "title": "Бесплатные кредиты",
+    "monthly_label": "За месяц",
+    "daily_label": "Сегодня",
     "description": "3 000 бесплатных кредитов в месяц, обновляется 1-го числа в 00:00 (UTC+0)",
     "daily_limit_tooltip": "Дневной лимит: {{limit}}"
   },
@@ -31,9 +33,13 @@
       "credits": "Кредиты"
     },
     "types": {
-      "consumption": "РАСХОД",
-      "recharge": "ПОПОЛНЕНИЕ",
-      "bonus": "БОНУС"
+      "consume": "Расход",
+      "consume_settle": "Расчёт",
+      "topup": "Пополнение",
+      "refund": "Возврат",
+      "bonus_grant": "Бонус",
+      "bonus_expire": "Истёк",
+      "page_retry": "Повтор страницы"
     }
   }
 }

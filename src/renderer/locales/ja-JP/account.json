@@ -6,6 +6,8 @@
   "credit_balance": "クレジット残高",
   "monthly_free": {
     "title": "無料クレジット",
+    "monthly_label": "月間残高",
+    "daily_label": "本日利用可能",
     "description": "毎月3,000クレジットが無料、1日0時にリセット（UTC+0）",
     "daily_limit_tooltip": "1日の使用上限: {{limit}}"
   },
@@ -31,9 +33,13 @@
       "credits": "クレジット"
     },
     "types": {
-      "consumption": "消費",
-      "recharge": "チャージ",
-      "bonus": "ボーナス"
+      "consume": "消費",
+      "consume_settle": "精算",
+      "topup": "チャージ",
+      "refund": "返金",
+      "bonus_grant": "ボーナス",
+      "bonus_expire": "期限切れ",
+      "page_retry": "ページ再試行"
     }
   }
 }

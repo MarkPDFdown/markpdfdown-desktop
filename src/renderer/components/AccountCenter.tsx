@@ -21,7 +21,7 @@ const AccountCenter: React.FC = () => {
       const result = await context.getCreditHistory(page, pagination.pageSize);
       if (result.success && result.data) {
         setHistory(result.data);
-        setPagination(prev => ({ ...prev, current: page, total: result.total || 0 }));
+        setPagination(prev => ({ ...prev, current: page, total: result.pagination?.total || 0 }));
       }
     } catch (error) {
       console.error('Failed to fetch history:', error);
@@ -143,17 +143,24 @@ const AccountCenter: React.FC = () => {
     );
   }
 
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'consumption':
-        return t('history.types.consumption');
-      case 'recharge':
-        return t('history.types.recharge');
-      case 'bonus':
-        return t('history.types.bonus');
-      default:
-        return type.toUpperCase();
+  const typeColorMap: Record<string, string> = {
+    consume: 'blue',
+    consume_settle: 'blue',
+    topup: 'green',
+    refund: 'orange',
+    bonus_grant: 'cyan',
+    bonus_expire: 'red',
+    page_retry: 'purple',
+  };
+
+  const getTypeLabel = (type: string, typeName?: string) => {
+    const i18nKey = `history.types.${type}`;
+    const translated = t(i18nKey);
+    // If i18next returns the key itself (no translation found), fall back to server-provided typeName
+    if (translated === i18nKey && typeName) {
+      return typeName;
     }
+    return translated !== i18nKey ? translated : type;
   };
 
   const columns = [
@@ -161,25 +168,29 @@ const AccountCenter: React.FC = () => {
       title: t('history.columns.time'),
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (text: string) => new Date(text).toLocaleString(),
+      render: (text: string) => {
+        if (!text) return '-';
+        const date = new Date(text);
+        return isNaN(date.getTime()) ? text : date.toLocaleString();
+      },
     },
     {
       title: t('history.columns.type'),
       dataIndex: 'type',
       key: 'type',
-      render: (type: string) => {
-        let color = 'default';
-        if (type === 'consumption') color = 'blue';
-        if (type === 'recharge') color = 'green';
-        if (type === 'bonus') color = 'orange';
-        return <Tag color={color}>{getTypeLabel(type)}</Tag>;
+      render: (type: string, record: CreditHistoryItem) => {
+        const color = typeColorMap[type] || 'default';
+        return <Tag color={color}>{getTypeLabel(type, record.typeName)}</Tag>;
       },
-      width: 100,
+      width: 120,
     },
     {
       title: t('history.columns.description'),
       dataIndex: 'description',
       key: 'description',
+      render: (text: string, record: CreditHistoryItem) => {
+        return record.fileName || text || '-';
+      },
     },
     {
       title: t('history.columns.credits'),
@@ -214,20 +225,30 @@ const AccountCenter: React.FC = () => {
       <Row gutter={24}>
         <Col span={12}>
           <Card variant="borderless" style={{ background: '#e6f7ff', height: '100%' }}>
-            <Statistic
-              title={
-                <Space>
-                  {t('monthly_free.title')}
-                  <Tooltip title={t('monthly_free.daily_limit_tooltip', { limit: credits.dailyLimit })}>
-                    <InfoCircleOutlined style={{ fontSize: '14px', color: 'rgba(0,0,0,0.45)' }} />
-                  </Tooltip>
-                </Space>
-              }
-              value={credits.free}
-              suffix={`/ ${credits.dailyLimit}`}
-              prefix={<SafetyCertificateOutlined style={{ color: '#1890ff' }} />}
-              valueStyle={{ color: '#1890ff' }}
-            />
+            <Space>
+              {t('monthly_free.title')}
+              <Tooltip title={t('monthly_free.daily_limit_tooltip', { limit: credits.dailyLimit })}>
+                <InfoCircleOutlined style={{ fontSize: '14px', color: 'rgba(0,0,0,0.45)' }} />
+              </Tooltip>
+            </Space>
+            <Row gutter={16} style={{ marginTop: 8 }}>
+              <Col span={12}>
+                <Statistic
+                  title={<Text type="secondary" style={{ fontSize: '12px' }}>{t('monthly_free.monthly_label')}</Text>}
+                  value={credits.bonusBalance}
+                  prefix={<SafetyCertificateOutlined style={{ color: '#1890ff' }} />}
+                  valueStyle={{ color: '#1890ff' }}
+                />
+              </Col>
+              <Col span={12}>
+                <Statistic
+                  title={<Text type="secondary" style={{ fontSize: '12px' }}>{t('monthly_free.daily_label')}</Text>}
+                  value={credits.free}
+                  suffix={`/ ${credits.dailyLimit}`}
+                  valueStyle={{ color: '#1890ff', fontSize: '20px' }}
+                />
+              </Col>
+            </Row>
             <div style={{ marginTop: 4 }}>
               <Text type="secondary" style={{ fontSize: '12px' }}>{t('monthly_free.description')}</Text>
             </div>

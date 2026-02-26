@@ -38,11 +38,27 @@ export function registerCloudHandlers() {
   });
 
   /**
+   * Get credits info
+   */
+  ipcMain.handle('cloud:getCredits', async () => {
+    try {
+      const result = await cloudService.getCredits();
+      return result;
+    } catch (error) {
+      console.error('[IPC] cloud:getCredits error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
    * Get credit history
    */
-  ipcMain.handle('cloud:getCreditHistory', async (_, params: { page: number; pageSize: number }) => {
+  ipcMain.handle('cloud:getCreditHistory', async (_, params: { page: number; pageSize: number; type?: string }) => {
     try {
-      const result = await cloudService.getCreditHistory(params.page, params.pageSize);
+      const result = await cloudService.getCreditHistory(params.page, params.pageSize, params.type);
       return result;
     } catch (error) {
       console.error('[IPC] cloud:getCreditHistory error:', error);

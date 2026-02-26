@@ -6,6 +6,8 @@
   "credit_balance": "积分余额",
   "monthly_free": {
     "title": "免费积分",
+    "monthly_label": "本月剩余",
+    "daily_label": "今日可用",
     "description": "每月可享3000免费积分，每月1号0点刷新额度（UTC+0）",
     "daily_limit_tooltip": "每日使用上限: {{limit}}"
   },
@@ -31,9 +33,13 @@
       "credits": "积分"
     },
     "types": {
-      "consumption": "消费",
-      "recharge": "充值",
-      "bonus": "赠送"
+      "consume": "消费",
+      "consume_settle": "结算",
+      "topup": "充值",
+      "refund": "退款",
+      "bonus_grant": "赠送",
+      "bonus_expire": "过期",
+      "page_retry": "页面重试"
     }
   }
 }

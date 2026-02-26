@@ -91,7 +91,9 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("cloud:convert", fileData),
     getTasks: (params: { page: number; pageSize: number }) =>
       ipcRenderer.invoke("cloud:getTasks", params),
-    getCreditHistory: (params: { page: number; pageSize: number }) =>
+    getCredits: () =>
+      ipcRenderer.invoke("cloud:getCredits"),
+    getCreditHistory: (params: { page: number; pageSize: number; type?: string }) =>
       ipcRenderer.invoke("cloud:getCreditHistory", params),
   },
 

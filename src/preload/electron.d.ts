@@ -91,7 +91,8 @@ interface WindowAPI {
   cloud: {
     convert: (fileData: { path?: string; content?: ArrayBuffer; name: string }) => Promise<any>;
     getTasks: (params: { page: number; pageSize: number }) => Promise<any>;
-    getCreditHistory: (params: { page: number; pageSize: number }) => Promise<any>;
+    getCredits: () => Promise<any>;
+    getCreditHistory: (params: { page: number; pageSize: number; type?: string }) => Promise<any>;
   };
   shell: {
     openExternal: (url: string) => void;

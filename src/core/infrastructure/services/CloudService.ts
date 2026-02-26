@@ -1,4 +1,6 @@
 import { authManager } from './AuthManager.js';
+import { API_BASE_URL } from '../config.js';
+import type { CreditsApiResponse, CreditTransactionApiItem } from '../../../shared/types/cloud-api.js';
 
 /**
  * CloudService handles interaction with the MarkPDFDown Cloud API
@@ -78,42 +80,90 @@ class CloudService {
   }
 
   /**
-   * Get credit history from the cloud API
+   * Get credits info from the cloud API
    */
-  public async getCreditHistory(page: number = 1, pageSize: number = 10): Promise<any> {
-    const token = await authManager.getAccessToken();
-    if (!token) {
-      throw new Error('Authentication required');
+  public async getCredits(): Promise<{
+    success: boolean;
+    data?: CreditsApiResponse;
+    error?: string;
+  }> {
+    try {
+      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/credits`);
+
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => null);
+        return {
+          success: false,
+          error: errorBody?.error?.message || `Failed to fetch credits: ${res.status}`,
+        };
+      }
+
+      const responseJson: { success: boolean; data: CreditsApiResponse } = await res.json();
+      if (!responseJson.success || !responseJson.data) {
+        return { success: false, error: 'Invalid credits response' };
+      }
+
+      return { success: true, data: responseJson.data };
+    } catch (error) {
+      console.error('[CloudService] getCredits error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
+  }
 
-    console.log(`[CloudService] Fetching credit history page ${page}`);
+  /**
+   * Get credit history (transactions) from the cloud API
+   */
+  public async getCreditHistory(
+    page: number = 1,
+    pageSize: number = 20,
+    type?: string,
+  ): Promise<{
+    success: boolean;
+    data?: CreditTransactionApiItem[];
+    pagination?: { page: number; page_size: number; total: number; total_pages: number };
+    error?: string;
+  }> {
+    try {
+      const params = new URLSearchParams({
+        page: String(page),
+        page_size: String(pageSize),
+      });
+      if (type) {
+        params.set('type', type);
+      }
 
-    // Simulating API call delay
-    await new Promise(resolve => setTimeout(resolve, 800));
+      const res = await authManager.fetchWithAuth(
+        `${API_BASE_URL}/api/v1/credits/transactions?${params.toString()}`,
+      );
 
-    // Mock response
-    return {
-      success: true,
-      data: [
-        {
-          id: 'credit-1',
-          type: 'usage',
-          amount: -5,
-          description: 'Document conversion',
-          createdAt: new Date(Date.now() - 3600000).toISOString()
-        },
-        {
-          id: 'credit-2',
-          type: 'purchase',
-          amount: 100,
-          description: 'Credit purchase',
-          createdAt: new Date(Date.now() - 86400000).toISOString()
-        }
-      ],
-      total: 2,
-      page,
-      pageSize
-    };
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => null);
+        return {
+          success: false,
+          error: errorBody?.error?.message || `Failed to fetch credit history: ${res.status}`,
+        };
+      }
+
+      const responseJson = await res.json();
+      if (!responseJson.success) {
+        return { success: false, error: responseJson.error?.message || 'Invalid credit history response' };
+      }
+
+      return {
+        success: true,
+        data: responseJson.data,
+        pagination: responseJson.pagination,
+      };
+    } catch (error) {
+      console.error('[CloudService] getCreditHistory error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
   }
 }
 

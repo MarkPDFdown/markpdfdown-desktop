@@ -6,6 +6,8 @@
   "credit_balance": "موجودی اعتبار",
   "monthly_free": {
     "title": "اعتبار رایگان",
+    "monthly_label": "ماهانه",
+    "daily_label": "امروز",
     "description": "۳٬۰۰۰ اعتبار رایگان در ماه، اول هر ماه ساعت ۰۰:۰۰ بازنشانی می‌شود (UTC+0)",
     "daily_limit_tooltip": "سقف استفاده روزانه: {{limit}}"
   },
@@ -31,9 +33,13 @@
       "credits": "اعتبار"
     },
     "types": {
-      "consumption": "مصرف",
-      "recharge": "شارژ",
-      "bonus": "جایزه"
+      "consume": "مصرف",
+      "consume_settle": "تسویه",
+      "topup": "شارژ",
+      "refund": "بازپرداخت",
+      "bonus_grant": "جایزه",
+      "bonus_expire": "منقضی شده",
+      "page_retry": "تلاش مجدد صفحه"
     }
   }
 }

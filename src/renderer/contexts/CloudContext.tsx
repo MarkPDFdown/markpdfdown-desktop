@@ -1,5 +1,5 @@
 import React, { useState, useEffect, ReactNode, useCallback } from 'react';
-import { CloudContext, UserProfile, Credits, CloudFileInput } from './CloudContextDefinition';
+import { CloudContext, UserProfile, Credits, CreditHistoryItem, CloudFileInput } from './CloudContextDefinition';
 import type { AuthState, DeviceFlowStatus } from '../../shared/types/cloud-api';
 
 interface CloudProviderProps {
@@ -15,6 +15,17 @@ const defaultUser: UserProfile = {
   isSignedIn: false,
 };
 
+const defaultCredits: Credits = {
+  total: 0,
+  free: 0,
+  paid: 0,
+  dailyLimit: 200,
+  usedToday: 0,
+  bonusBalance: 0,
+  dailyResetAt: '',
+  monthlyResetAt: '',
+};
+
 export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
   const [user, setUser] = useState<UserProfile>(defaultUser);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -23,13 +34,7 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
   const [userCode, setUserCode] = useState<string | null>(null);
   const [verificationUrl, setVerificationUrl] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [credits, setCredits] = useState<Credits>({
-    total: 0,
-    free: 0,
-    paid: 0,
-    dailyLimit: 20,
-    usedToday: 0
-  });
+  const [credits, setCredits] = useState<Credits>({ ...defaultCredits });
 
   // Apply auth state from main process
   const applyAuthState = useCallback((state: AuthState) => {
@@ -96,33 +101,36 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
   // Logout action
   const logout = useCallback(() => {
     window.api?.auth?.logout().then(() => {
-      // Reset credits on logout
-      setCredits({
-        total: 0,
-        free: 0,
-        paid: 0,
-        dailyLimit: 20,
-        usedToday: 0,
-      });
+      setCredits({ ...defaultCredits });
     }).catch((err: Error) => {
       console.error('Logout failed:', err);
     });
   }, []);
 
-  // Refresh credits from backend (mock for now)
+  // Refresh credits from cloud API
   const refreshCredits = useCallback(async () => {
     if (!isAuthenticated) return;
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Mock data update
-    setCredits(prev => ({
-      ...prev,
-      total: 15,
-      free: 5,
-      paid: 10
-    }));
+    try {
+      if (window.api?.cloud?.getCredits) {
+        const result = await window.api.cloud.getCredits();
+        if (result.success && result.data) {
+          const d = result.data;
+          setCredits({
+            total: d.total_available,
+            free: d.bonus.daily_remaining,
+            paid: d.paid.balance,
+            dailyLimit: d.bonus.daily_limit,
+            usedToday: d.bonus.daily_used,
+            bonusBalance: d.bonus.balance,
+            dailyResetAt: d.bonus.daily_reset_at,
+            monthlyResetAt: d.bonus.monthly_reset_at,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to refresh credits:', error);
+    }
   }, [isAuthenticated]);
 
   // Cloud conversion function
@@ -181,14 +189,40 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
   }, [isAuthenticated]);
 
   // Fetch credit history
-  const getCreditHistory = useCallback(async (page: number = 1, pageSize: number = 10) => {
+  const getCreditHistory = useCallback(async (page: number = 1, pageSize: number = 10, type?: string) => {
     if (!isAuthenticated) {
       return { success: false, error: 'User not signed in' };
     }
 
     try {
       if (window.api?.cloud) {
-        return await window.api.cloud.getCreditHistory({ page, pageSize });
+        const result = await window.api.cloud.getCreditHistory({ page, pageSize, type });
+        if (result.success) {
+          // Transform API response (snake_case) to renderer types (camelCase)
+          const transformedData: CreditHistoryItem[] = (result.data || []).map((item: any) => ({
+            id: item.id,
+            amount: item.amount,
+            type: item.type,
+            typeName: item.type_name,
+            description: item.file_name || item.description || '',
+            createdAt: item.created_at,
+            taskId: item.task_id,
+            balanceAfter: item.balance_after,
+            bonusAmount: item.bonus_amount,
+            paidAmount: item.paid_amount,
+            fileName: item.file_name,
+          }));
+
+          const pagination = result.pagination ? {
+            page: result.pagination.page,
+            pageSize: result.pagination.page_size,
+            total: result.pagination.total,
+            totalPages: result.pagination.total_pages,
+          } : undefined;
+
+          return { success: true, data: transformedData, pagination };
+        }
+        return { success: false, error: result.error };
       } else {
         return { success: false, error: 'Cloud API not available' };
       }
