@@ -27,9 +27,10 @@
   },
   "cloud": {
     "provider_name": "سحابة Markdown.Fit",
-    "model_name": "Fit Lite",
     "sign_in_required": "يرجى تسجيل الدخول لاستخدام التحويل السحابي",
-    "credits_apply": "(تُطبق الاعتمادات)",
+    "tier_lite": "~10 نقاط/صفحة",
+    "tier_pro": "~20 نقاط/صفحة",
+    "tier_ultra": "~60 نقاط/صفحة",
     "upload_failed": "فشل تحميل {{filename}}: {{error}}",
     "upload_success": "تم تحميل {{count}} ملفات إلى السحابة بنجاح"
   }

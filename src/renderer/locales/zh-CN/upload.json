@@ -27,9 +27,10 @@
   },
   "cloud": {
     "provider_name": "Markdown.Fit",
-    "model_name": "Fit Lite",
     "sign_in_required": "请登录后使用云端转换",
-    "credits_apply": "(使用积分)",
+    "tier_lite": "约10积分/页",
+    "tier_pro": "约20积分/页",
+    "tier_ultra": "约60积分/页",
     "upload_failed": "上传 {{filename}} 失败: {{error}}",
     "upload_success": "已成功上传 {{count}} 个文件到云端"
   }

@@ -27,9 +27,10 @@
   },
   "cloud": {
     "provider_name": "Markdown.Fit Cloud",
-    "model_name": "Fit Lite",
     "sign_in_required": "Please sign in to use cloud conversion",
-    "credits_apply": "(Credits apply)",
+    "tier_lite": "~10 credits/page",
+    "tier_pro": "~20 credits/page",
+    "tier_ultra": "~60 credits/page",
     "upload_failed": "Failed to upload {{filename}}: {{error}}",
     "upload_success": "Successfully uploaded {{count}} files to cloud"
   }

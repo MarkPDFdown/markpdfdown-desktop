@@ -253,7 +253,7 @@ interface ElectronAPI {
   };
 
   cloud: {
-    convert: (fileData: { path?: string; content?: ArrayBuffer; name: string }) => Promise<IpcResponse<any>>;
+    convert: (fileData: { path?: string; content?: ArrayBuffer; name: string; model?: string }) => Promise<IpcResponse<any>>;
     getTasks: (params: { page: number; pageSize: number }) => Promise<IpcResponse<any>>;
     getCredits: () => Promise<IpcResponse<import('../shared/types/cloud-api').CreditsApiResponse>>;
     getCreditHistory: (params: { page: number; pageSize: number; type?: string }) => Promise<IpcResponse<any>>;

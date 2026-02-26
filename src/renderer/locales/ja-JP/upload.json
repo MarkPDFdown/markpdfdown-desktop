@@ -27,9 +27,10 @@
   },
   "cloud": {
     "provider_name": "Markdown.Fit クラウド",
-    "model_name": "Fit Lite",
     "sign_in_required": "クラウド変換を使用するにはログインしてください",
-    "credits_apply": "(クレジット消費)",
+    "tier_lite": "約10クレジット/ページ",
+    "tier_pro": "約20クレジット/ページ",
+    "tier_ultra": "約60クレジット/ページ",
     "upload_failed": "{{filename}} のアップロードに失敗: {{error}}",
     "upload_success": "{{count}} 件のファイルをクラウドにアップロードしました"
   }

@@ -22,7 +22,16 @@ const { Text } = Typography;
 
 // Cloud Constants
 const CLOUD_PROVIDER_ID = -1;
-const CLOUD_MODEL_ID = "markpdfdown-cloud";
+
+// Cloud model tiers matching server API: lite, pro, ultra
+// Format: "Fit Lite (约10积分/页)"
+const CLOUD_MODEL_TIERS = [
+  { id: 'lite', name: 'Fit Lite', creditsPerPage: 10 },
+  { id: 'pro', name: 'Fit Pro', creditsPerPage: 20 },
+  { id: 'ultra', name: 'Fit Ultra', creditsPerPage: 60 },
+] as const;
+
+type CloudModelTier = typeof CLOUD_MODEL_TIERS[number]['id'];
 
 // 定义模型数据接口
 interface ModelType {
@@ -67,15 +76,17 @@ const UploadPanel: React.FC = () => {
           message.error(result.error || t('messages.fetch_models_failed'));
         }
 
-        // Inject Cloud Model
+        // Inject Cloud Models (lite, pro, ultra tiers)
+        // Inject Cloud Models (lite, pro, ultra tiers)
+        // Format: "Fit Lite (~10 credits/page)" with i18n
         const cloudGroup: ModelGroupType = {
           provider: CLOUD_PROVIDER_ID,
           providerName: t('cloud.provider_name'),
-          models: [{
-            id: CLOUD_MODEL_ID,
-            name: t('cloud.model_name'),
+          models: CLOUD_MODEL_TIERS.map(tier => ({
+            id: tier.id,
+            name: `${tier.name} (${t(`cloud.tier_${tier.id}`)})`,
             provider: CLOUD_PROVIDER_ID
-          }]
+          }))
         };
 
         // Add cloud group to the beginning
@@ -134,7 +145,7 @@ const UploadPanel: React.FC = () => {
           label: (
             <Tooltip title={isDisabled ? t('cloud.sign_in_required') : ""}>
               <span style={isDisabled ? { color: '#d9d9d9', cursor: 'not-allowed' } : {}}>
-                 {model.name} {isCloud && t('cloud.credits_apply')}
+                 {model.name}
               </span>
             </Tooltip>
           ),
@@ -259,12 +270,13 @@ const UploadPanel: React.FC = () => {
         }
 
         let successCount = 0;
+        const modelTier = modelId as CloudModelTier;
         for (const file of fileList) {
           const result = await cloudContext.convertFile({
             name: file.name,
             url: file.url,
             originFileObj: file.originFileObj as File | undefined
-          });
+          }, modelTier);
           if (result.success) {
             successCount++;
           } else {

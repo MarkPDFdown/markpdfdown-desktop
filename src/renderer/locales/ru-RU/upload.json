@@ -27,9 +27,10 @@
   },
   "cloud": {
     "provider_name": "Markdown.Fit Облако",
-    "model_name": "Fit Lite",
     "sign_in_required": "Войдите для использования облачной конвертации",
-    "credits_apply": "(Расход кредитов)",
+    "tier_lite": "~10 кредитов/стр",
+    "tier_pro": "~20 кредитов/стр",
+    "tier_ultra": "~60 кредитов/стр",
     "upload_failed": "Не удалось загрузить {{filename}}: {{error}}",
     "upload_success": "Успешно загружено {{count}} файлов в облако"
   }

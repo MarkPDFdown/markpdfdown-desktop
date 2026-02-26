@@ -20,13 +20,14 @@ class CloudService {
   /**
    * Convert a file using the cloud API
    */
-  public async convert(fileData: { path?: string; content?: ArrayBuffer; name: string }): Promise<any> {
+  public async convert(fileData: { path?: string; content?: ArrayBuffer; name: string; model?: string }): Promise<any> {
     const token = await authManager.getAccessToken();
     if (!token) {
       throw new Error('Authentication required');
     }
 
-    console.log('[CloudService] Starting cloud conversion for:', fileData.name);
+    const model = fileData.model || 'lite';
+    console.log('[CloudService] Starting cloud conversion for:', fileData.name, 'model:', model);
 
     // Simulating API call delay
     await new Promise(resolve => setTimeout(resolve, 1500));

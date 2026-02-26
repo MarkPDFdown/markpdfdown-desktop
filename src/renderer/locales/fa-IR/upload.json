@@ -27,9 +27,10 @@
   },
   "cloud": {
     "provider_name": "ابر Markdown.Fit",
-    "model_name": "Fit Lite",
     "sign_in_required": "برای استفاده از تبدیل ابری وارد شوید",
-    "credits_apply": "(مصرف اعتبار)",
+    "tier_lite": "~10 اعتبار/صفحه",
+    "tier_pro": "~20 اعتبار/صفحه",
+    "tier_ultra": "~60 اعتبار/صفحه",
     "upload_failed": "بارگذاری {{filename}} ناموفق بود: {{error}}",
     "upload_success": "{{count}} فایل با موفقیت به ابر بارگذاری شد"
   }
