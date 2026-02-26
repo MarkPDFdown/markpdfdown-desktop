@@ -38,8 +38,8 @@ export class OpenAIResponsesClient extends LLMClient {
         stream: normalizedOptions.stream || false
       };
 
-      // 只在提供了 maxTokens 时才添加到请求体
-      if (normalizedOptions.maxTokens !== undefined) {
+      // 只在提供了有效的 maxTokens 时才添加到请求体
+      if (normalizedOptions.maxTokens && normalizedOptions.maxTokens > 0) {
         requestBody.max_tokens = normalizedOptions.maxTokens;
       }
 

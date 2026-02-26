@@ -40,28 +40,40 @@ export class AnthropicClient extends LLMClient {
         stream: normalizedOptions.stream || false
       };
 
-      // 只在提供了 maxTokens 时才添加到请求体
-      if (normalizedOptions.maxTokens !== undefined) {
+      // 只在提供了有效的 maxTokens 时才添加到请求体
+      if (normalizedOptions.maxTokens && normalizedOptions.maxTokens > 0) {
         requestBody.max_tokens = normalizedOptions.maxTokens;
       }
 
-      // Anthropic支持System指令，而不是作为一个普通消息
+      // Anthropic支持System指令，使用对象数组格式支持 cache_control
       const systemMessage = normalizedOptions.messages.find(msg => msg.role === 'system');
+      let systemText = '';
       if (systemMessage) {
-        const systemContent = Array.isArray(systemMessage.content)
+        systemText = Array.isArray(systemMessage.content)
           ? systemMessage.content.filter(c => c.type === 'text').map(c => (c as TextContent).text).join('\n')
           : systemMessage.content.type === 'text' ? (systemMessage.content as TextContent).text : '';
-
-        if (systemContent) {
-          requestBody.system = systemContent;
-        }
       }
 
       // Claude没有直接的JSON响应格式，但可以通过系统指令引导
-      if (normalizedOptions.response_format?.type === 'json_object' && !requestBody.system) {
-        requestBody.system = "请以有效的JSON格式提供响应。";
-      } else if (normalizedOptions.response_format?.type === 'json_object' && requestBody.system) {
-        requestBody.system += "\n\n请以有效的JSON格式提供响应。";
+      if (normalizedOptions.response_format?.type === 'json_object') {
+        if (!systemText) {
+          systemText = "请以有效的JSON格式提供响应。";
+        } else {
+          systemText += "\n\n请以有效的JSON格式提供响应。";
+        }
+      }
+
+      // 使用对象数组格式，支持 cache_control
+      if (systemText) {
+        requestBody.system = [
+          {
+            type: 'text',
+            text: systemText,
+            cache_control: {
+              type: 'ephemeral'
+            }
+          }
+        ];
       }
 
       const response = await fetch(endpoint, {
