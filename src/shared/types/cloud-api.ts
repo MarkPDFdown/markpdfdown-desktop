@@ -74,3 +74,22 @@ export interface CreditTransactionApiItem {
   description?: string;
   created_at: string;
 }
+
+// ============ Convert API Types ============
+
+export type CloudModelTier = 'lite' | 'pro' | 'ultra';
+
+export interface CreateTaskResponse {
+  task_id: string;
+  file_type: 'office' | 'pdf' | 'image';
+  file_name: string;
+  status: number;
+  credits_estimated?: number;
+  credits_consumed?: number;
+  events_url: string;
+}
+
+export interface ConvertApiError {
+  code: string;
+  message: string;
+}

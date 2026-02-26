@@ -1,6 +1,11 @@
+import fs from 'fs';
 import { authManager } from './AuthManager.js';
 import { API_BASE_URL } from '../config.js';
-import type { CreditsApiResponse, CreditTransactionApiItem } from '../../../shared/types/cloud-api.js';
+import type {
+  CreditsApiResponse,
+  CreditTransactionApiItem,
+  CreateTaskResponse,
+} from '../../../shared/types/cloud-api.js';
 
 /**
  * CloudService handles interaction with the MarkPDFDown Cloud API
@@ -19,26 +24,76 @@ class CloudService {
 
   /**
    * Convert a file using the cloud API
+   * @param fileData - File data with either path (local file) or content (ArrayBuffer)
+   * @returns Task creation response with task_id and events_url
    */
-  public async convert(fileData: { path?: string; content?: ArrayBuffer; name: string; model?: string }): Promise<any> {
-    const token = await authManager.getAccessToken();
-    if (!token) {
-      throw new Error('Authentication required');
+  public async convert(fileData: {
+    path?: string;
+    content?: ArrayBuffer;
+    name: string;
+    model?: string;
+  }): Promise<{
+    success: boolean;
+    data?: CreateTaskResponse;
+    error?: string;
+  }> {
+    try {
+      const token = await authManager.getAccessToken();
+      if (!token) {
+        return { success: false, error: 'Authentication required' };
+      }
+
+      const model = fileData.model || 'lite';
+      console.log('[CloudService] Starting cloud conversion for:', fileData.name, 'model:', model);
+
+      // Build FormData for file upload
+      const formData = new FormData();
+
+      // Add file to form data
+      let fileBuffer: ArrayBuffer;
+      if (fileData.content) {
+        fileBuffer = fileData.content;
+      } else if (fileData.path) {
+        const buffer = fs.readFileSync(fileData.path);
+        fileBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+      } else {
+        return { success: false, error: 'No file content or path provided' };
+      }
+
+      const blob = new Blob([fileBuffer]);
+      formData.append('file', blob, fileData.name);
+
+      // Add model and language parameters
+      formData.append('model', model);
+      formData.append('language', 'auto');
+
+      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/convert`, {
+        method: 'POST',
+        body: formData,
+        // Note: Do NOT set Content-Type manually - let the browser/fetch set it with proper boundary
+      });
+
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => null);
+        const errorMessage = errorBody?.error?.message || `Upload failed: ${res.status}`;
+        console.error('[CloudService] Convert API error:', errorMessage);
+        return { success: false, error: errorMessage };
+      }
+
+      const responseJson: { success: boolean; data: CreateTaskResponse } = await res.json();
+      if (!responseJson.success || !responseJson.data) {
+        return { success: false, error: 'Invalid response from server' };
+      }
+
+      console.log('[CloudService] Task created:', responseJson.data.task_id);
+      return { success: true, data: responseJson.data };
+    } catch (error) {
+      console.error('[CloudService] convert error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
-
-    const model = fileData.model || 'lite';
-    console.log('[CloudService] Starting cloud conversion for:', fileData.name, 'model:', model);
-
-    // Simulating API call delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // For now, return a mock response
-    return {
-      success: true,
-      taskId: 'cloud-' + Date.now(),
-      status: 'processing',
-      message: 'File uploaded successfully'
-    };
   }
 
   /**
