@@ -34,9 +34,13 @@ export class OpenAIClient extends LLMClient {
         model: normalizedOptions.model || 'gpt-3.5-turbo',
         messages: openaiMessages,
         temperature: normalizedOptions.temperature ?? 0.7,
-        max_tokens: normalizedOptions.maxTokens,
         stream: normalizedOptions.stream || false
       };
+
+      // 只在提供了 maxTokens 时才添加到请求体
+      if (normalizedOptions.maxTokens !== undefined) {
+        requestBody.max_tokens = normalizedOptions.maxTokens;
+      }
 
       // 添加工具配置（如果有）
       if (normalizedOptions.tools && normalizedOptions.tools.length > 0) {
