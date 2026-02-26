@@ -35,9 +35,13 @@ export class OpenAIResponsesClient extends LLMClient {
         model: normalizedOptions.model || 'gpt-4o',
         input: input,
         temperature: normalizedOptions.temperature ?? 0.7,
-        max_tokens: normalizedOptions.maxTokens,
         stream: normalizedOptions.stream || false
       };
+
+      // 只在提供了有效的 maxTokens 时才添加到请求体
+      if (typeof normalizedOptions.maxTokens === 'number' && normalizedOptions.maxTokens > 0) {
+        requestBody.max_tokens = normalizedOptions.maxTokens;
+      }
 
       // 添加系统指令（如果有）
       if (instructions) {

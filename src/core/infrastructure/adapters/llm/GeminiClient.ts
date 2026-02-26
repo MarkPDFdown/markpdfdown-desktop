@@ -35,10 +35,14 @@ export class GeminiClient extends LLMClient {
         contents: geminiContents,
         generationConfig: {
           temperature: normalizedOptions.temperature ?? 0.7,
-          maxOutputTokens: normalizedOptions.maxTokens,
           topP: 0.95
         }
       };
+
+      // 只在提供了有效的 maxTokens 时才添加到请求体
+      if (typeof normalizedOptions.maxTokens === 'number' && normalizedOptions.maxTokens > 0) {
+        requestBody.generationConfig.maxOutputTokens = normalizedOptions.maxTokens;
+      }
 
       // 添加响应格式（如果指定）
       if (normalizedOptions.response_format?.type === 'json_object') {

@@ -41,7 +41,8 @@ export class OllamaClient extends LLMClient {
         requestBody.options.temperature = normalizedOptions.temperature;
       }
 
-      if (normalizedOptions.maxTokens !== undefined) {
+      // 只在提供了有效的 maxTokens 时才添加到请求体
+      if (typeof normalizedOptions.maxTokens === 'number' && normalizedOptions.maxTokens > 0) {
         requestBody.options.num_predict = normalizedOptions.maxTokens;
       }
 

@@ -425,6 +425,22 @@ describe('OpenAIClient', () => {
       expect(body.temperature).toBe(0.7)
     })
 
+    it('should not include max_tokens when not provided', async () => {
+      const mockResponse = createMockOpenAIResponse('Response')
+      mockFetchSuccess(mockResponse)
+
+      await client.completion({
+        messages: [
+          { role: 'user', content: { type: 'text', text: 'Test' } }
+        ],
+        model: 'gpt-4o'
+      })
+
+      const callArgs = (global.fetch as any).mock.calls[0][1]
+      const body = JSON.parse(callArgs.body)
+      expect(body.max_tokens).toBeUndefined()
+    })
+
     it('should include response_format when specified', async () => {
       const mockResponse = createMockOpenAIResponse('{"key": "value"}')
       mockFetchSuccess(mockResponse)
