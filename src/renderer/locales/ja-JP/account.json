@@ -4,6 +4,7 @@
   "sign_in_button": "ログイン / 登録",
   "sign_out_button": "ログアウト",
   "credit_balance": "クレジット残高",
+  "credit_usage_hint": "Lite: 1ページ約10クレジット（A4）、Pro・UltraはLiteの2倍・6倍",
   "monthly_free": {
     "title": "無料クレジット",
     "monthly_label": "月間残高",

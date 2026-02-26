@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Card, Button, Avatar, Typography, Divider, Row, Col, Statistic, Table, Tag, Tooltip, Space, Alert } from 'antd';
+import { Card, Button, Avatar, Typography, Divider, Row, Col, Statistic, Table, Tag, Tooltip, Space, Alert, Flex } from 'antd';
 import { UserOutlined, LogoutOutlined, CrownOutlined, SafetyCertificateOutlined, InfoCircleOutlined, LoadingOutlined, CopyOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { CloudContext, CreditHistoryItem } from '../contexts/CloudContextDefinition';
@@ -221,7 +221,12 @@ const AccountCenter: React.FC = () => {
 
       <Divider />
 
-      <Title level={4}>{t('credit_balance')}</Title>
+      <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
+        <Title level={4} style={{ margin: 0 }}>{t('credit_balance')}</Title>
+        <Text type="secondary" style={{ fontSize: 12 }}>
+          {t('credit_usage_hint')}
+        </Text>
+      </Flex>
       <Row gutter={24}>
         <Col span={12}>
           <Card variant="borderless" style={{ background: '#e6f7ff', height: '100%' }}>

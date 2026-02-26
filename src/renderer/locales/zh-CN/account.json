@@ -4,6 +4,7 @@
   "sign_in_button": "登录 / 注册",
   "sign_out_button": "退出登录",
   "credit_balance": "积分余额",
+  "credit_usage_hint": "Lite模型每页约消耗10积分，Pro、Ultra分别为Lite的2倍和6倍",
   "monthly_free": {
     "title": "免费积分",
     "monthly_label": "本月剩余",

@@ -4,6 +4,7 @@
   "sign_in_button": "تسجيل الدخول / إنشاء حساب",
   "sign_out_button": "تسجيل الخروج",
   "credit_balance": "رصيد الاعتمادات",
+  "credit_usage_hint": "Lite: ١٠ اعتمادات/صفحة تقريباً (A4); Pro و Ultra: ضعف و 6 أضعاف",
   "monthly_free": {
     "title": "الاعتمادات المجانية",
     "monthly_label": "الشهري",

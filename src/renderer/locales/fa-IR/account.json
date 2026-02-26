@@ -4,6 +4,7 @@
   "sign_in_button": "ورود / ثبت‌نام",
   "sign_out_button": "خروج",
   "credit_balance": "موجودی اعتبار",
+  "credit_usage_hint": "Lite: حدود ۱۰ اعتبار/صفحه (A4); Pro و Ultra: ۲ برابر و ۶ برابر",
   "monthly_free": {
     "title": "اعتبار رایگان",
     "monthly_label": "ماهانه",

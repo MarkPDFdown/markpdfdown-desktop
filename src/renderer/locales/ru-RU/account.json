@@ -4,6 +4,7 @@
   "sign_in_button": "Вход / Регистрация",
   "sign_out_button": "Выйти",
   "credit_balance": "Баланс кредитов",
+  "credit_usage_hint": "Lite: ~10 кредитов/страница (A4); Pro и Ultra: в 2 и 6 раз",
   "monthly_free": {
     "title": "Бесплатные кредиты",
     "monthly_label": "За месяц",

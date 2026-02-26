@@ -4,6 +4,7 @@
   "sign_in_button": "Sign In / Sign Up",
   "sign_out_button": "Sign Out",
   "credit_balance": "Credit Balance",
+  "credit_usage_hint": "Lite: ~10 credits/page (A4); Pro & Ultra: 2x & 6x",
   "monthly_free": {
     "title": "Free Credits",
     "monthly_label": "Monthly",
