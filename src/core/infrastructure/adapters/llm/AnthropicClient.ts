@@ -37,9 +37,13 @@ export class AnthropicClient extends LLMClient {
         model: modelName,
         messages: anthropicMessages,
         temperature: normalizedOptions.temperature ?? 0.7,
-        max_tokens: normalizedOptions.maxTokens,
         stream: normalizedOptions.stream || false
       };
+
+      // 只在提供了 maxTokens 时才添加到请求体
+      if (normalizedOptions.maxTokens !== undefined) {
+        requestBody.max_tokens = normalizedOptions.maxTokens;
+      }
 
       // Anthropic支持System指令，而不是作为一个普通消息
       const systemMessage = normalizedOptions.messages.find(msg => msg.role === 'system');
