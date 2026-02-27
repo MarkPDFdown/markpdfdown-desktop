@@ -25,11 +25,11 @@ export function mapCloudTaskToTask(ct: CloudTaskResponse): Task & { isCloud: boo
     type = ext || 'pdf';
   }
 
-  // Map model tier to display name
+  // Map model tier to display name (matching UploadPanel)
   const modelTierMap: Record<string, string> = {
-    lite: 'Cloud Lite',
-    pro: 'Cloud Pro',
-    ultra: 'Cloud Ultra',
+    lite: 'Fit Lite',
+    pro: 'Fit Pro',
+    ultra: 'Fit Ultra',
   };
 
   return {
