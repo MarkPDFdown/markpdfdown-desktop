@@ -32,6 +32,7 @@ const AccountCenter: React.FC = () => {
 
   useEffect(() => {
     if (context?.isAuthenticated) {
+      context.refreshCredits();
       fetchHistory();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
