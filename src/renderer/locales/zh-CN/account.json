@@ -35,12 +35,13 @@
     },
     "types": {
       "consume": "消费",
-      "consume_settle": "结算",
+      "pre_auth": "预授权冻结",
+      "settle": "逐页结算",
+      "pre_auth_release": "释放冻结",
       "topup": "充值",
       "refund": "退款",
       "bonus_grant": "赠送",
-      "bonus_expire": "过期",
-      "page_retry": "页面重试"
+      "bonus_expire": "过期"
     }
   }
 }

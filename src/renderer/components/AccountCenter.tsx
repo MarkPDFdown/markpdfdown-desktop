@@ -146,12 +146,13 @@ const AccountCenter: React.FC = () => {
 
   const typeColorMap: Record<string, string> = {
     consume: 'blue',
-    consume_settle: 'blue',
+    pre_auth: 'geekblue',
+    settle: 'blue',
+    pre_auth_release: 'cyan',
     topup: 'green',
     refund: 'orange',
     bonus_grant: 'cyan',
     bonus_expire: 'red',
-    page_retry: 'purple',
   };
 
   const getTypeLabel = (type: string, typeName?: string) => {
@@ -186,24 +187,27 @@ const AccountCenter: React.FC = () => {
       width: 120,
     },
     {
-      title: t('history.columns.description'),
-      dataIndex: 'description',
-      key: 'description',
-      render: (text: string, record: CreditHistoryItem) => {
-        return record.fileName || text || '-';
-      },
-    },
-    {
       title: t('history.columns.credits'),
       dataIndex: 'amount',
       key: 'amount',
-      render: (amount: number) => (
-        <Text type={amount > 0 ? 'success' : 'danger'} strong>
-          {amount > 0 ? `+${amount}` : amount}
-        </Text>
-      ),
+      render: (amount: number, record: CreditHistoryItem) => {
+        const isSettle = record.type === 'pre_auth' || record.type === 'pre_auth_release';
+        return (
+          <Text type={isSettle ? 'secondary' : amount > 0 ? 'success' : 'danger'} strong={!isSettle}>
+            {amount > 0 ? `+${amount}` : amount}
+          </Text>
+        );
+      },
       align: 'right' as const,
       width: 100,
+    },
+    {
+      title: t('history.columns.description'),
+      dataIndex: 'description',
+      key: 'description',
+      render: (text: string) => {
+        return text || '-';
+      },
     },
   ];
 

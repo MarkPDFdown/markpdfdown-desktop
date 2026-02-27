@@ -35,12 +35,13 @@
     },
     "types": {
       "consume": "Расход",
-      "consume_settle": "Расчёт",
+      "pre_auth": "Предавторизация",
+      "settle": "Постраничный расчёт",
+      "pre_auth_release": "Разморозка",
       "topup": "Пополнение",
       "refund": "Возврат",
       "bonus_grant": "Бонус",
-      "bonus_expire": "Истёк",
-      "page_retry": "Повтор страницы"
+      "bonus_expire": "Истёк"
     }
   }
 }

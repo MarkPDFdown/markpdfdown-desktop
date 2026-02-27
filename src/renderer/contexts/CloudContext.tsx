@@ -280,7 +280,7 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
             amount: item.amount,
             type: item.type,
             typeName: item.type_name,
-            description: item.file_name || item.description || '',
+            description: item.description || '',
             createdAt: item.created_at,
             taskId: item.task_id,
             balanceAfter: item.balance_after,

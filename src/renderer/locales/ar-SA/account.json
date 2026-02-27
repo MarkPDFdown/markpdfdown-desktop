@@ -35,12 +35,13 @@
     },
     "types": {
       "consume": "استهلاك",
-      "consume_settle": "تسوية",
+      "pre_auth": "تفويض مسبق",
+      "settle": "تسوية صفحة",
+      "pre_auth_release": "إلغاء التجميد",
       "topup": "شحن",
       "refund": "استرداد",
       "bonus_grant": "مكافأة",
-      "bonus_expire": "منتهي الصلاحية",
-      "page_retry": "إعادة محاولة الصفحة"
+      "bonus_expire": "منتهي الصلاحية"
     }
   }
 }

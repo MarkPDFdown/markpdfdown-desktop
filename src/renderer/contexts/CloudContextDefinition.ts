@@ -24,11 +24,12 @@ export interface Credits {
 export type CreditTransactionType =
   | 'topup'
   | 'consume'
-  | 'consume_settle'
+  | 'pre_auth'
+  | 'settle'
+  | 'pre_auth_release'
   | 'refund'
   | 'bonus_grant'
-  | 'bonus_expire'
-  | 'page_retry';
+  | 'bonus_expire';
 
 export interface CreditHistoryItem {
   id: number;

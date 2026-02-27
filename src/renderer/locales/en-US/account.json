@@ -35,12 +35,13 @@
     },
     "types": {
       "consume": "Consumption",
-      "consume_settle": "Settlement",
+      "pre_auth": "Pre-authorization",
+      "settle": "Settlement",
+      "pre_auth_release": "Release Frozen",
       "topup": "Top Up",
       "refund": "Refund",
       "bonus_grant": "Bonus",
-      "bonus_expire": "Expired",
-      "page_retry": "Page Retry"
+      "bonus_expire": "Expired"
     }
   }
 }

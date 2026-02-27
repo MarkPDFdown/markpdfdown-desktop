@@ -35,12 +35,13 @@
     },
     "types": {
       "consume": "مصرف",
-      "consume_settle": "تسویه",
+      "pre_auth": "پیش‌مجوز",
+      "settle": "تسویه صفحه",
+      "pre_auth_release": "آزادسازی مسدودی",
       "topup": "شارژ",
       "refund": "بازپرداخت",
       "bonus_grant": "جایزه",
-      "bonus_expire": "منقضی شده",
-      "page_retry": "تلاش مجدد صفحه"
+      "bonus_expire": "منقضی شده"
     }
   }
 }

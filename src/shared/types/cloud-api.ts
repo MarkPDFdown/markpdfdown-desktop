@@ -39,6 +39,7 @@ export interface TokenResponse {
 export interface CreditsApiResponse {
   bonus: {
     balance: number;
+    frozen: number;
     daily_used: number;
     daily_limit: number;
     daily_remaining: number;
@@ -47,6 +48,7 @@ export interface CreditsApiResponse {
   };
   paid: {
     balance: number;
+    frozen: number;
   };
   total_available: number;
 }
@@ -54,11 +56,12 @@ export interface CreditsApiResponse {
 export type CreditTransactionType =
   | 'topup'
   | 'consume'
-  | 'consume_settle'
+  | 'pre_auth'
+  | 'settle'
+  | 'pre_auth_release'
   | 'refund'
   | 'bonus_grant'
-  | 'bonus_expire'
-  | 'page_retry';
+  | 'bonus_expire';
 
 export interface CreditTransactionApiItem {
   id: number;

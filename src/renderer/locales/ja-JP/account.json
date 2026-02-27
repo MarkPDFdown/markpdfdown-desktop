@@ -35,12 +35,13 @@
     },
     "types": {
       "consume": "消費",
-      "consume_settle": "精算",
+      "pre_auth": "事前承認",
+      "settle": "ページ精算",
+      "pre_auth_release": "凍結解除",
       "topup": "チャージ",
       "refund": "返金",
       "bonus_grant": "ボーナス",
-      "bonus_expire": "期限切れ",
-      "page_retry": "ページ再試行"
+      "bonus_expire": "期限切れ"
     }
   }
 }
