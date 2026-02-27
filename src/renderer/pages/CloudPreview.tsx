@@ -50,6 +50,9 @@ const CloudPreview: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
 
   const currentPageData = pages.find(p => p.page === currentPage);
 
@@ -88,10 +91,54 @@ const CloudPreview: React.FC = () => {
     }
   }, [id, cloudContext]);
 
+  // Load image for current page
+  const loadPageImage = useCallback(async () => {
+    if (!id || !currentPageData) {
+      setImageUrl(null);
+      return;
+    }
+
+    const rawUrl = currentPageData.image_url;
+    if (!rawUrl) {
+      setImageUrl(null);
+      return;
+    }
+
+    setImageError(false);
+
+    // Presigned URL (full https URL) — use directly
+    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+      setImageUrl(rawUrl);
+      return;
+    }
+
+    // Relative API path — proxy through main process
+    setImageLoading(true);
+    try {
+      const result = await window.api.cloud.getPageImage({ taskId: id, pageNumber: currentPageData.page });
+      if (result.success && result.data) {
+        setImageUrl(result.data.dataUrl);
+      } else {
+        setImageUrl(null);
+        setImageError(true);
+      }
+    } catch {
+      setImageUrl(null);
+      setImageError(true);
+    } finally {
+      setImageLoading(false);
+    }
+  }, [id, currentPageData]);
+
   useEffect(() => {
     fetchTask();
     fetchPages();
   }, [fetchTask, fetchPages]);
+
+  // Load image when current page changes
+  useEffect(() => {
+    loadPageImage();
+  }, [loadPageImage]);
 
   // SSE event listener for real-time updates
   useEffect(() => {
@@ -463,21 +510,31 @@ const CloudPreview: React.FC = () => {
                 display: "flex",
                 justifyContent: "center",
                 alignItems: "center",
-                overflow: "auto",
+                overflow: "hidden",
               }}
             >
-              {loading ? (
+              {loading || imageLoading ? (
                 <Spin size="large" />
               ) : !currentPageData ? (
                 <div style={{ textAlign: 'center', color: '#999' }}>
                   <Text type="secondary">{t('no_page_data')}</Text>
                 </div>
-              ) : (
-                <div style={{ width: '100%', padding: '0 12px', textAlign: 'center' }}>
-                  <Text type="secondary" style={{ fontSize: 16 }}>
-                    {t('page_label', { page: currentPage, total: totalPages })}
-                  </Text>
+              ) : imageError || !imageUrl ? (
+                <div style={{ textAlign: 'center', color: '#999' }}>
+                  <Text type="secondary">{t('page_label', { page: currentPage, total: totalPages })}</Text>
                 </div>
+              ) : (
+                <img
+                  src={imageUrl}
+                  alt={`Page ${currentPage}`}
+                  draggable={false}
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "100%",
+                    objectFit: "contain",
+                  }}
+                  onError={() => setImageError(true)}
+                />
               )}
             </div>
 

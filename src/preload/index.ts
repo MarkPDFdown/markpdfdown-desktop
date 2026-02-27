@@ -105,6 +105,8 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("cloud:getTaskResult", id),
     downloadPdf: (id: string) =>
       ipcRenderer.invoke("cloud:downloadPdf", id),
+    getPageImage: (params: { taskId: string; pageNumber: number }) =>
+      ipcRenderer.invoke("cloud:getPageImage", params),
     getCredits: () =>
       ipcRenderer.invoke("cloud:getCredits"),
     getCreditHistory: (params: { page: number; pageSize: number; type?: string }) =>

@@ -163,6 +163,21 @@ export function registerCloudHandlers() {
   });
 
   /**
+   * Get page image (proxy for API paths that need auth)
+   */
+  ipcMain.handle('cloud:getPageImage', async (_, params: { taskId: string; pageNumber: number }) => {
+    try {
+      return await cloudService.getPageImage(params.taskId, params.pageNumber);
+    } catch (error) {
+      console.error('[IPC] cloud:getPageImage error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
    * Get credits info
    */
   ipcMain.handle('cloud:getCredits', async () => {

@@ -80,6 +80,7 @@ export const IPC_CHANNELS = {
     DOWNLOAD_PDF: 'cloud:downloadPdf',
     GET_CREDITS: 'cloud:getCredits',
     GET_CREDIT_HISTORY: 'cloud:getCreditHistory',
+    GET_PAGE_IMAGE: 'cloud:getPageImage',
     SSE_CONNECT: 'cloud:sseConnect',
     SSE_DISCONNECT: 'cloud:sseDisconnect',
   },

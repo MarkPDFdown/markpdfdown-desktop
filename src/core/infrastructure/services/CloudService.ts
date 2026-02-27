@@ -406,6 +406,41 @@ class CloudService {
   }
 
   /**
+   * Get page image via proxy (for relative API paths that need auth)
+   */
+  public async getPageImage(taskId: string, pageNumber: number): Promise<{
+    success: boolean;
+    data?: { dataUrl: string };
+    error?: string;
+  }> {
+    try {
+      const res = await authManager.fetchWithAuth(
+        `${API_BASE_URL}/api/v1/tasks/${taskId}/pages/${pageNumber}/image`,
+      );
+
+      if (!res.ok) {
+        return {
+          success: false,
+          error: `Failed to fetch page image: ${res.status}`,
+        };
+      }
+
+      const contentType = res.headers.get('Content-Type') || 'image/png';
+      const buffer = await res.arrayBuffer();
+      const base64 = Buffer.from(buffer).toString('base64');
+      const dataUrl = `data:${contentType};base64,${base64}`;
+
+      return { success: true, data: { dataUrl } };
+    } catch (error) {
+      console.error('[CloudService] getPageImage error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
    * Get credits info from the cloud API
    */
   public async getCredits(): Promise<{

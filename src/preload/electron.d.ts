@@ -98,6 +98,7 @@ interface WindowAPI {
     retryPage: (params: { taskId: string; pageNumber: number }) => Promise<any>;
     getTaskResult: (id: string) => Promise<any>;
     downloadPdf: (id: string) => Promise<any>;
+    getPageImage: (params: { taskId: string; pageNumber: number }) => Promise<any>;
     getCredits: () => Promise<any>;
     getCreditHistory: (params: { page: number; pageSize: number; type?: string }) => Promise<any>;
     sseConnect: () => Promise<any>;

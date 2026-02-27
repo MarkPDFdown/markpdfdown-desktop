@@ -137,6 +137,7 @@ export interface CloudTaskPageResponse {
   markdown: string;
   width_mm: number;
   height_mm: number;
+  image_url?: string;
 }
 
 export interface CloudTaskResult {
