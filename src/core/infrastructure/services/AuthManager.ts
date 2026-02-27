@@ -152,6 +152,55 @@ class AuthManager {
   }
 
   /**
+   * Check device token status immediately (for OAuth callback)
+   * Call this when receiving protocol URL callback to speed up token acquisition
+   */
+  public async checkDeviceTokenStatus(): Promise<void> {
+    if (!this.deviceCode || this.deviceFlowStatus !== 'polling') {
+      return;
+    }
+
+    console.log('[AuthManager] Checking device token status immediately...');
+
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/api/v1/auth/device/token?device_code=${encodeURIComponent(this.deviceCode)}`,
+        { headers: this.getDefaultHeaders() },
+      );
+
+      if (res.status === 200) {
+        const responseJson: { success: boolean; data: TokenResponse } = await res.json();
+        if (!responseJson.success || !responseJson.data) {
+          throw new Error('Token check failed: invalid response');
+        }
+        this.handleTokenResponse(responseJson.data);
+        this.stopPolling();
+        this.deviceFlowStatus = 'idle';
+        this.userCode = null;
+        this.verificationUrl = null;
+        this.deviceCode = null;
+
+        await this.fetchUserProfile();
+        this.broadcastState();
+        console.log('[AuthManager] Token obtained via immediate check');
+        return;
+      }
+
+      if (res.status === 428) {
+        // Still pending, let polling continue
+        console.log('[AuthManager] Still waiting, polling will continue...');
+        return;
+      }
+
+      const body = await res.text();
+      console.warn('[AuthManager] Token check error:', res.status, body);
+    } catch (err) {
+      console.warn('[AuthManager] Token check failed:', err);
+      // Let polling continue on error
+    }
+  }
+
+  /**
    * Log out: call API, clear local tokens
    */
   public async logout(): Promise<void> {

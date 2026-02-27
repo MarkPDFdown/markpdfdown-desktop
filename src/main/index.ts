@@ -118,13 +118,16 @@ if (process.defaultApp) {
 function handleProtocolUrl(url: string) {
   console.log('[Main] Received protocol URL:', url);
   if (url.startsWith(`${PROTOCOL_NAME}://`)) {
-    // 聚焦主窗口即可，token 获取由 AuthManager 轮询处理
+    // 聚焦主窗口
     if (mainWindow) {
       if (mainWindow.isMinimized()) {
         mainWindow.restore();
       }
       mainWindow.focus();
     }
+
+    // 立即检查 token 状态，加速获取 token
+    authManager.checkDeviceTokenStatus();
   }
 }
 
