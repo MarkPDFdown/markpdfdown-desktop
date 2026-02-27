@@ -1,0 +1,31 @@
+{
+  "back": "返回",
+  "fetch_task_failed": "获取任务失败",
+  "download_md": "下载 MD",
+  "download_pdf": "下载 PDF",
+  "download_success": "下载成功",
+  "download_failed": "下载失败",
+  "confirm_cancel": "取消任务",
+  "confirm_cancel_content": "确定要取消此任务吗？",
+  "cancel_success": "任务已取消",
+  "cancel_failed": "取消任务失败",
+  "cancel_task": "取消",
+  "confirm_retry": "重试任务",
+  "confirm_retry_content": "这将创建一个新任务，确定继续吗？",
+  "retry_success": "重试已开始",
+  "retry_failed": "重试失败",
+  "retry_all": "全部重试",
+  "page_retry_success": "页面重试已开始",
+  "page_retry_failed": "页面重试失败",
+  "more_actions": "更多",
+  "no_page_data": "暂无页面数据",
+  "page_label": "第 {{page}} 页 / 共 {{total}} 页",
+  "regenerate": "重新生成",
+  "regenerate_tooltip": "重试此页面的转换",
+  "page_status": {
+    "pending": "待处理",
+    "processing": "处理中",
+    "completed": "已完成",
+    "failed": "失败"
+  }
+}

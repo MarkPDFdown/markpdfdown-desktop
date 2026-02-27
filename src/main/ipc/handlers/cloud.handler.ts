@@ -1,5 +1,8 @@
-import { ipcMain } from 'electron';
+import { ipcMain, dialog, app } from 'electron';
+import path from 'path';
+import fs from 'fs';
 import cloudService from '../../../core/infrastructure/services/CloudService.js';
+import { cloudSSEManager } from '../../../core/infrastructure/services/CloudSSEManager.js';
 
 /**
  * Register Cloud IPC handlers
@@ -26,10 +29,132 @@ export function registerCloudHandlers() {
    */
   ipcMain.handle('cloud:getTasks', async (_, params: { page: number; pageSize: number }) => {
     try {
-      const result = await cloudService.getTasks(params.page, params.pageSize);
-      return result;
+      return await cloudService.getTasks(params.page, params.pageSize);
     } catch (error) {
       console.error('[IPC] cloud:getTasks error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Get task by ID
+   */
+  ipcMain.handle('cloud:getTaskById', async (_, id: string) => {
+    try {
+      return await cloudService.getTaskById(id);
+    } catch (error) {
+      console.error('[IPC] cloud:getTaskById error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Get task pages
+   */
+  ipcMain.handle('cloud:getTaskPages', async (_, params: { taskId: string; page?: number; pageSize?: number }) => {
+    try {
+      return await cloudService.getTaskPages(params.taskId, params.page, params.pageSize);
+    } catch (error) {
+      console.error('[IPC] cloud:getTaskPages error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Cancel task
+   */
+  ipcMain.handle('cloud:cancelTask', async (_, id: string) => {
+    try {
+      return await cloudService.cancelTask(id);
+    } catch (error) {
+      console.error('[IPC] cloud:cancelTask error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Retry task
+   */
+  ipcMain.handle('cloud:retryTask', async (_, id: string) => {
+    try {
+      return await cloudService.retryTask(id);
+    } catch (error) {
+      console.error('[IPC] cloud:retryTask error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Retry single page
+   */
+  ipcMain.handle('cloud:retryPage', async (_, params: { taskId: string; pageNumber: number }) => {
+    try {
+      return await cloudService.retryPage(params.taskId, params.pageNumber);
+    } catch (error) {
+      console.error('[IPC] cloud:retryPage error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Get task result
+   */
+  ipcMain.handle('cloud:getTaskResult', async (_, id: string) => {
+    try {
+      return await cloudService.getTaskResult(id);
+    } catch (error) {
+      console.error('[IPC] cloud:getTaskResult error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Download PDF — shows save dialog, writes to disk
+   */
+  ipcMain.handle('cloud:downloadPdf', async (_, id: string) => {
+    try {
+      const result = await cloudService.downloadPdf(id);
+      if (!result.success || !result.data) {
+        return { success: false, error: result.error || 'Download failed' };
+      }
+
+      const { buffer, fileName } = result.data;
+      const downloadsPath = app.getPath('downloads');
+
+      const saveResult = await dialog.showSaveDialog({
+        defaultPath: path.join(downloadsPath, fileName),
+        filters: [{ name: 'PDF', extensions: ['pdf'] }],
+      });
+
+      if (saveResult.canceled || !saveResult.filePath) {
+        return { success: false, error: 'Cancelled' };
+      }
+
+      fs.writeFileSync(saveResult.filePath, Buffer.from(buffer));
+      return { success: true, data: { filePath: saveResult.filePath } };
+    } catch (error) {
+      console.error('[IPC] cloud:downloadPdf error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error)
@@ -42,8 +167,7 @@ export function registerCloudHandlers() {
    */
   ipcMain.handle('cloud:getCredits', async () => {
     try {
-      const result = await cloudService.getCredits();
-      return result;
+      return await cloudService.getCredits();
     } catch (error) {
       console.error('[IPC] cloud:getCredits error:', error);
       return {
@@ -58,10 +182,41 @@ export function registerCloudHandlers() {
    */
   ipcMain.handle('cloud:getCreditHistory', async (_, params: { page: number; pageSize: number; type?: string }) => {
     try {
-      const result = await cloudService.getCreditHistory(params.page, params.pageSize, params.type);
-      return result;
+      return await cloudService.getCreditHistory(params.page, params.pageSize, params.type);
     } catch (error) {
       console.error('[IPC] cloud:getCreditHistory error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * SSE connect
+   */
+  ipcMain.handle('cloud:sseConnect', async () => {
+    try {
+      await cloudSSEManager.connect();
+      return { success: true };
+    } catch (error) {
+      console.error('[IPC] cloud:sseConnect error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * SSE disconnect
+   */
+  ipcMain.handle('cloud:sseDisconnect', async () => {
+    try {
+      cloudSSEManager.disconnect();
+      return { success: true };
+    } catch (error) {
+      console.error('[IPC] cloud:sseDisconnect error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error)

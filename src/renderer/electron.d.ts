@@ -255,8 +255,17 @@ interface ElectronAPI {
   cloud: {
     convert: (fileData: { path?: string; content?: ArrayBuffer; name: string; model?: string }) => Promise<IpcResponse<any>>;
     getTasks: (params: { page: number; pageSize: number }) => Promise<IpcResponse<any>>;
+    getTaskById: (id: string) => Promise<IpcResponse<import('../shared/types/cloud-api').CloudTaskResponse>>;
+    getTaskPages: (params: { taskId: string; page?: number; pageSize?: number }) => Promise<IpcResponse<any>>;
+    cancelTask: (id: string) => Promise<IpcResponse<import('../shared/types/cloud-api').CloudCancelTaskResponse>>;
+    retryTask: (id: string) => Promise<IpcResponse<import('../shared/types/cloud-api').CreateTaskResponse>>;
+    retryPage: (params: { taskId: string; pageNumber: number }) => Promise<IpcResponse<import('../shared/types/cloud-api').CloudRetryPageResponse>>;
+    getTaskResult: (id: string) => Promise<IpcResponse<import('../shared/types/cloud-api').CloudTaskResult>>;
+    downloadPdf: (id: string) => Promise<IpcResponse<{ filePath: string }>>;
     getCredits: () => Promise<IpcResponse<import('../shared/types/cloud-api').CreditsApiResponse>>;
     getCreditHistory: (params: { page: number; pageSize: number; type?: string }) => Promise<IpcResponse<any>>;
+    sseConnect: () => Promise<IpcResponse<void>>;
+    sseDisconnect: () => Promise<IpcResponse<void>>;
   };
 
   shell: {
@@ -279,6 +288,7 @@ interface ElectronAPI {
     onTaskDetailEvent: (callback: (event: TaskDetailEvent) => void) => () => void;
     onAuthStateChanged: (callback: (state: import('../shared/types/cloud-api').AuthState) => void) => () => void;
     onUpdaterStatus: (callback: (data: UpdateStatusData) => void) => () => void;
+    onCloudTaskEvent: (callback: (event: import('../shared/types/cloud-api').CloudSSEEvent) => void) => () => void;
   };
 
   platform: string;

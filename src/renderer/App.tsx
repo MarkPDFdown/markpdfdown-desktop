@@ -5,6 +5,7 @@ import Home from './pages/Home'
 import List from './pages/List'
 import Settings from './pages/Settings'
 import Preview from './pages/Preview'
+import CloudPreview from './pages/CloudPreview'
 import { App as AntdApp } from 'antd'
 import { I18nProvider } from './contexts/I18nContext'
 import './locales'
@@ -20,6 +21,7 @@ function App() {
               <Route path="list" element={<List />} />
               <Route path="settings" element={<Settings />} />
               <Route path="list/preview/:id" element={<Preview />} />
+              <Route path="list/cloud-preview/:id" element={<CloudPreview />} />
           </Route>
         </Routes>
       </Router>

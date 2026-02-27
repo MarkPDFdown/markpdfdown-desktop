@@ -1,0 +1,31 @@
+{
+  "back": "Назад",
+  "fetch_task_failed": "Не удалось загрузить задачу",
+  "download_md": "Скачать MD",
+  "download_pdf": "Скачать PDF",
+  "download_success": "Загрузка завершена",
+  "download_failed": "Загрузка не удалась",
+  "confirm_cancel": "Отменить задачу",
+  "confirm_cancel_content": "Вы уверены, что хотите отменить эту задачу?",
+  "cancel_success": "Задача отменена",
+  "cancel_failed": "Не удалось отменить задачу",
+  "cancel_task": "Отмена",
+  "confirm_retry": "Повторить задачу",
+  "confirm_retry_content": "Будет создана новая задача. Продолжить?",
+  "retry_success": "Повтор начат",
+  "retry_failed": "Повтор не удался",
+  "retry_all": "Повторить всё",
+  "page_retry_success": "Повтор страницы начат",
+  "page_retry_failed": "Повтор страницы не удался",
+  "more_actions": "Ещё",
+  "no_page_data": "Нет данных страницы",
+  "page_label": "Страница {{page}} / {{total}}",
+  "regenerate": "Перегенерировать",
+  "regenerate_tooltip": "Повторить конвертацию этой страницы",
+  "page_status": {
+    "pending": "В ожидании",
+    "processing": "Обработка",
+    "completed": "Завершено",
+    "failed": "Ошибка"
+  }
+}

@@ -5,6 +5,12 @@ import type {
   CreditsApiResponse,
   CreditTransactionApiItem,
   CreateTaskResponse,
+  CloudTaskResponse,
+  CloudTaskPageResponse,
+  CloudTaskResult,
+  CloudCancelTaskResponse,
+  CloudRetryPageResponse,
+  CloudApiPagination,
 } from '../../../shared/types/cloud-api.js';
 
 /**
@@ -99,40 +105,304 @@ class CloudService {
   /**
    * Get tasks from the cloud API
    */
-  public async getTasks(page: number = 1, pageSize: number = 10): Promise<any> {
-    const token = await authManager.getAccessToken();
-    if (!token) {
-      throw new Error('Authentication required');
+  public async getTasks(page: number = 1, pageSize: number = 10): Promise<{
+    success: boolean;
+    data?: CloudTaskResponse[];
+    pagination?: CloudApiPagination;
+    error?: string;
+  }> {
+    try {
+      const params = new URLSearchParams({
+        page: String(page),
+        page_size: String(pageSize),
+      });
+
+      const res = await authManager.fetchWithAuth(
+        `${API_BASE_URL}/api/v1/tasks?${params.toString()}`,
+      );
+
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => null);
+        return {
+          success: false,
+          error: errorBody?.error?.message || `Failed to fetch tasks: ${res.status}`,
+        };
+      }
+
+      const responseJson = await res.json();
+      if (!responseJson.success) {
+        return { success: false, error: responseJson.error?.message || 'Invalid tasks response' };
+      }
+
+      return {
+        success: true,
+        data: responseJson.data,
+        pagination: responseJson.pagination,
+      };
+    } catch (error) {
+      console.error('[CloudService] getTasks error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
+  }
 
-    console.log(`[CloudService] Fetching tasks page ${page}`);
+  /**
+   * Get a single task by ID
+   */
+  public async getTaskById(id: string): Promise<{
+    success: boolean;
+    data?: CloudTaskResponse;
+    error?: string;
+  }> {
+    try {
+      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/tasks/${id}`);
 
-    // Simulating API call delay
-    await new Promise(resolve => setTimeout(resolve, 800));
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => null);
+        return {
+          success: false,
+          error: errorBody?.error?.message || `Failed to fetch task: ${res.status}`,
+        };
+      }
 
-    // Mock response
-    return {
-      success: true,
-      data: [
-        {
-          id: 'cloud-task-1',
-          name: 'Sample Document.pdf',
-          status: 'completed',
-          createdAt: new Date(Date.now() - 3600000).toISOString(),
-          credits: 5
-        },
-        {
-          id: 'cloud-task-2',
-          name: 'Report 2024.pdf',
-          status: 'processing',
-          createdAt: new Date().toISOString(),
-          credits: 3
-        }
-      ],
-      total: 2,
-      page,
-      pageSize
-    };
+      const responseJson = await res.json();
+      if (!responseJson.success || !responseJson.data) {
+        return { success: false, error: 'Invalid task response' };
+      }
+
+      return { success: true, data: responseJson.data };
+    } catch (error) {
+      console.error('[CloudService] getTaskById error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * Get pages for a task
+   */
+  public async getTaskPages(id: string, page: number = 1, pageSize: number = 50): Promise<{
+    success: boolean;
+    data?: CloudTaskPageResponse[];
+    pagination?: CloudApiPagination;
+    error?: string;
+  }> {
+    try {
+      const params = new URLSearchParams({
+        page: String(page),
+        page_size: String(pageSize),
+      });
+
+      const res = await authManager.fetchWithAuth(
+        `${API_BASE_URL}/api/v1/tasks/${id}/pages?${params.toString()}`,
+      );
+
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => null);
+        return {
+          success: false,
+          error: errorBody?.error?.message || `Failed to fetch task pages: ${res.status}`,
+        };
+      }
+
+      const responseJson = await res.json();
+      if (!responseJson.success) {
+        return { success: false, error: responseJson.error?.message || 'Invalid pages response' };
+      }
+
+      return {
+        success: true,
+        data: responseJson.data,
+        pagination: responseJson.pagination,
+      };
+    } catch (error) {
+      console.error('[CloudService] getTaskPages error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * Cancel a task
+   */
+  public async cancelTask(id: string): Promise<{
+    success: boolean;
+    data?: CloudCancelTaskResponse;
+    error?: string;
+  }> {
+    try {
+      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/tasks/${id}/cancel`, {
+        method: 'POST',
+      });
+
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => null);
+        return {
+          success: false,
+          error: errorBody?.error?.message || `Failed to cancel task: ${res.status}`,
+        };
+      }
+
+      const responseJson = await res.json();
+      if (!responseJson.success || !responseJson.data) {
+        return { success: false, error: 'Invalid cancel response' };
+      }
+
+      return { success: true, data: responseJson.data };
+    } catch (error) {
+      console.error('[CloudService] cancelTask error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * Retry an entire task (creates a new task)
+   */
+  public async retryTask(id: string): Promise<{
+    success: boolean;
+    data?: CreateTaskResponse;
+    error?: string;
+  }> {
+    try {
+      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/tasks/${id}/retry`, {
+        method: 'POST',
+      });
+
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => null);
+        return {
+          success: false,
+          error: errorBody?.error?.message || `Failed to retry task: ${res.status}`,
+        };
+      }
+
+      const responseJson = await res.json();
+      if (!responseJson.success || !responseJson.data) {
+        return { success: false, error: 'Invalid retry response' };
+      }
+
+      return { success: true, data: responseJson.data };
+    } catch (error) {
+      console.error('[CloudService] retryTask error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * Retry a single page
+   */
+  public async retryPage(taskId: string, pageNumber: number): Promise<{
+    success: boolean;
+    data?: CloudRetryPageResponse;
+    error?: string;
+  }> {
+    try {
+      const res = await authManager.fetchWithAuth(
+        `${API_BASE_URL}/api/v1/tasks/${taskId}/pages/${pageNumber}/retry`,
+        { method: 'POST' },
+      );
+
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => null);
+        return {
+          success: false,
+          error: errorBody?.error?.message || `Failed to retry page: ${res.status}`,
+        };
+      }
+
+      const responseJson = await res.json();
+      if (!responseJson.success || !responseJson.data) {
+        return { success: false, error: 'Invalid page retry response' };
+      }
+
+      return { success: true, data: responseJson.data };
+    } catch (error) {
+      console.error('[CloudService] retryPage error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * Get task conversion result (merged markdown)
+   */
+  public async getTaskResult(id: string): Promise<{
+    success: boolean;
+    data?: CloudTaskResult;
+    error?: string;
+  }> {
+    try {
+      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/tasks/${id}/result`);
+
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => null);
+        return {
+          success: false,
+          error: errorBody?.error?.message || `Failed to fetch result: ${res.status}`,
+        };
+      }
+
+      const responseJson = await res.json();
+      if (!responseJson.success || !responseJson.data) {
+        return { success: false, error: 'Invalid result response' };
+      }
+
+      return { success: true, data: responseJson.data };
+    } catch (error) {
+      console.error('[CloudService] getTaskResult error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * Download PDF file for a task
+   */
+  public async downloadPdf(id: string): Promise<{
+    success: boolean;
+    data?: { buffer: ArrayBuffer; fileName: string };
+    error?: string;
+  }> {
+    try {
+      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/tasks/${id}/pdf`);
+
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => null);
+        return {
+          success: false,
+          error: errorBody?.error?.message || `Failed to download PDF: ${res.status}`,
+        };
+      }
+
+      const contentDisposition = res.headers.get('Content-Disposition') || '';
+      const match = contentDisposition.match(/filename="?([^";\n]+)"?/);
+      const fileName = match ? match[1] : `task-${id}.pdf`;
+
+      const buffer = await res.arrayBuffer();
+      return { success: true, data: { buffer, fileName } };
+    } catch (error) {
+      console.error('[CloudService] downloadPdf error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
   }
 
   /**

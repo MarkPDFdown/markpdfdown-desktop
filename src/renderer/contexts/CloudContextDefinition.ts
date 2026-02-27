@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import type { DeviceFlowStatus } from '../../shared/types/cloud-api';
+import type { DeviceFlowStatus, CloudTaskResponse, CloudTaskPageResponse, CloudApiPagination, CloudTaskResult } from '../../shared/types/cloud-api';
 
 export interface UserProfile {
   id: number;
@@ -69,7 +69,24 @@ export interface CloudContextType {
   cancelLogin: () => void;
   refreshCredits: () => Promise<void>;
   convertFile: (file: CloudFileInput, model?: string) => Promise<{ success: boolean; taskId?: string; error?: string }>;
-  getTasks: (page?: number, pageSize?: number) => Promise<{ success: boolean; data?: any[]; total?: number; error?: string }>;
+  getTasks: (page?: number, pageSize?: number) => Promise<{
+    success: boolean;
+    data?: CloudTaskResponse[];
+    pagination?: CloudApiPagination;
+    error?: string;
+  }>;
+  getTaskById: (id: string) => Promise<{ success: boolean; data?: CloudTaskResponse; error?: string }>;
+  getTaskPages: (taskId: string, page?: number, pageSize?: number) => Promise<{
+    success: boolean;
+    data?: CloudTaskPageResponse[];
+    pagination?: CloudApiPagination;
+    error?: string;
+  }>;
+  cancelTask: (id: string) => Promise<{ success: boolean; error?: string }>;
+  retryTask: (id: string) => Promise<{ success: boolean; data?: { task_id: string }; error?: string }>;
+  retryPage: (taskId: string, pageNumber: number) => Promise<{ success: boolean; error?: string }>;
+  getTaskResult: (id: string) => Promise<{ success: boolean; data?: CloudTaskResult; error?: string }>;
+  downloadResult: (id: string) => Promise<{ success: boolean; error?: string }>;
   getCreditHistory: (page?: number, pageSize?: number, type?: string) => Promise<{
     success: boolean;
     data?: CreditHistoryItem[];

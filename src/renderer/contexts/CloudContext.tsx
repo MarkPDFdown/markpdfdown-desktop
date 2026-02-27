@@ -189,6 +189,71 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
     }
   }, [isAuthenticated]);
 
+  const getTaskById = useCallback(async (id: string) => {
+    if (!isAuthenticated) return { success: false, error: 'User not signed in' };
+    try {
+      return await window.api.cloud.getTaskById(id);
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }, [isAuthenticated]);
+
+  const getTaskPages = useCallback(async (taskId: string, page?: number, pageSize?: number) => {
+    if (!isAuthenticated) return { success: false, error: 'User not signed in' };
+    try {
+      return await window.api.cloud.getTaskPages({ taskId, page, pageSize });
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }, [isAuthenticated]);
+
+  const cancelTask = useCallback(async (id: string) => {
+    if (!isAuthenticated) return { success: false, error: 'User not signed in' };
+    try {
+      const result = await window.api.cloud.cancelTask(id);
+      if (result.success) refreshCredits();
+      return result;
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }, [isAuthenticated, refreshCredits]);
+
+  const retryTask = useCallback(async (id: string) => {
+    if (!isAuthenticated) return { success: false, error: 'User not signed in' };
+    try {
+      return await window.api.cloud.retryTask(id);
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }, [isAuthenticated]);
+
+  const retryPage = useCallback(async (taskId: string, pageNumber: number) => {
+    if (!isAuthenticated) return { success: false, error: 'User not signed in' };
+    try {
+      return await window.api.cloud.retryPage({ taskId, pageNumber });
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }, [isAuthenticated]);
+
+  const getTaskResult = useCallback(async (id: string) => {
+    if (!isAuthenticated) return { success: false, error: 'User not signed in' };
+    try {
+      return await window.api.cloud.getTaskResult(id);
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }, [isAuthenticated]);
+
+  const downloadResult = useCallback(async (id: string) => {
+    if (!isAuthenticated) return { success: false, error: 'User not signed in' };
+    try {
+      return await window.api.cloud.downloadPdf(id);
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }, [isAuthenticated]);
+
   // Fetch credit history
   const getCreditHistory = useCallback(async (page: number = 1, pageSize: number = 10, type?: string) => {
     if (!isAuthenticated) {
@@ -243,6 +308,18 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
     }
   }, [isAuthenticated, refreshCredits]);
 
+  // SSE lifecycle: connect when authenticated, disconnect when not
+  useEffect(() => {
+    if (isAuthenticated) {
+      window.api?.cloud?.sseConnect?.();
+    } else {
+      window.api?.cloud?.sseDisconnect?.();
+    }
+    return () => {
+      window.api?.cloud?.sseDisconnect?.();
+    };
+  }, [isAuthenticated]);
+
   return (
     <CloudContext.Provider
       value={{
@@ -260,6 +337,13 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
         refreshCredits,
         convertFile,
         getTasks,
+        getTaskById,
+        getTaskPages,
+        cancelTask,
+        retryTask,
+        retryPage,
+        getTaskResult,
+        downloadResult,
         getCreditHistory
       }}
     >

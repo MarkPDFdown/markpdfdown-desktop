@@ -9,6 +9,7 @@ import enUpload from './en-US/upload.json';
 import enProvider from './en-US/provider.json';
 import enSettings from './en-US/settings.json';
 import enAccount from './en-US/account.json';
+import enCloudPreview from './en-US/cloud-preview.json';
 
 // Import Chinese translations
 import zhCommon from './zh-CN/common.json';
@@ -18,6 +19,7 @@ import zhUpload from './zh-CN/upload.json';
 import zhProvider from './zh-CN/provider.json';
 import zhSettings from './zh-CN/settings.json';
 import zhAccount from './zh-CN/account.json';
+import zhCloudPreview from './zh-CN/cloud-preview.json';
 
 // Import Japanese translations
 import jaCommon from './ja-JP/common.json';
@@ -27,6 +29,7 @@ import jaUpload from './ja-JP/upload.json';
 import jaProvider from './ja-JP/provider.json';
 import jaSettings from './ja-JP/settings.json';
 import jaAccount from './ja-JP/account.json';
+import jaCloudPreview from './ja-JP/cloud-preview.json';
 
 // Import Russian translations
 import ruCommon from './ru-RU/common.json';
@@ -36,6 +39,7 @@ import ruUpload from './ru-RU/upload.json';
 import ruProvider from './ru-RU/provider.json';
 import ruSettings from './ru-RU/settings.json';
 import ruAccount from './ru-RU/account.json';
+import ruCloudPreview from './ru-RU/cloud-preview.json';
 
 // Import Persian translations
 import faCommon from './fa-IR/common.json';
@@ -45,6 +49,7 @@ import faUpload from './fa-IR/upload.json';
 import faProvider from './fa-IR/provider.json';
 import faSettings from './fa-IR/settings.json';
 import faAccount from './fa-IR/account.json';
+import faCloudPreview from './fa-IR/cloud-preview.json';
 
 // Import Arabic translations
 import arCommon from './ar-SA/common.json';
@@ -54,6 +59,7 @@ import arUpload from './ar-SA/upload.json';
 import arProvider from './ar-SA/provider.json';
 import arSettings from './ar-SA/settings.json';
 import arAccount from './ar-SA/account.json';
+import arCloudPreview from './ar-SA/cloud-preview.json';
 
 const resources = {
   'en-US': {
@@ -64,6 +70,7 @@ const resources = {
     provider: enProvider,
     settings: enSettings,
     account: enAccount,
+    'cloud-preview': enCloudPreview,
   },
   'zh-CN': {
     common: zhCommon,
@@ -73,6 +80,7 @@ const resources = {
     provider: zhProvider,
     settings: zhSettings,
     account: zhAccount,
+    'cloud-preview': zhCloudPreview,
   },
   'ja-JP': {
     common: jaCommon,
@@ -82,6 +90,7 @@ const resources = {
     provider: jaProvider,
     settings: jaSettings,
     account: jaAccount,
+    'cloud-preview': jaCloudPreview,
   },
   'ru-RU': {
     common: ruCommon,
@@ -91,6 +100,7 @@ const resources = {
     provider: ruProvider,
     settings: ruSettings,
     account: ruAccount,
+    'cloud-preview': ruCloudPreview,
   },
   'fa-IR': {
     common: faCommon,
@@ -100,6 +110,7 @@ const resources = {
     provider: faProvider,
     settings: faSettings,
     account: faAccount,
+    'cloud-preview': faCloudPreview,
   },
   'ar-SA': {
     common: arCommon,
@@ -109,6 +120,7 @@ const resources = {
     provider: arProvider,
     settings: arSettings,
     account: arAccount,
+    'cloud-preview': arCloudPreview,
   },
 };
 
@@ -122,7 +134,7 @@ i18n
     lng: savedLanguage,
     fallbackLng: 'en-US',
     defaultNS: 'common',
-    ns: ['common', 'home', 'list', 'upload', 'provider', 'settings', 'account'],
+    ns: ['common', 'home', 'list', 'upload', 'provider', 'settings', 'account', 'cloud-preview'],
     interpolation: {
       escapeValue: false, // React already escapes values
     },

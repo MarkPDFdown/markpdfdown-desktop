@@ -89,10 +89,19 @@ interface WindowAPI {
     getAuthState: () => Promise<any>;
   };
   cloud: {
-    convert: (fileData: { path?: string; content?: ArrayBuffer; name: string }) => Promise<any>;
+    convert: (fileData: { path?: string; content?: ArrayBuffer; name: string; model?: string }) => Promise<any>;
     getTasks: (params: { page: number; pageSize: number }) => Promise<any>;
+    getTaskById: (id: string) => Promise<any>;
+    getTaskPages: (params: { taskId: string; page?: number; pageSize?: number }) => Promise<any>;
+    cancelTask: (id: string) => Promise<any>;
+    retryTask: (id: string) => Promise<any>;
+    retryPage: (params: { taskId: string; pageNumber: number }) => Promise<any>;
+    getTaskResult: (id: string) => Promise<any>;
+    downloadPdf: (id: string) => Promise<any>;
     getCredits: () => Promise<any>;
     getCreditHistory: (params: { page: number; pageSize: number; type?: string }) => Promise<any>;
+    sseConnect: () => Promise<any>;
+    sseDisconnect: () => Promise<any>;
   };
   shell: {
     openExternal: (url: string) => void;
@@ -112,6 +121,7 @@ interface WindowAPI {
     onTaskDetailEvent: (callback: (event: TaskDetailEventData) => void) => () => void;
     onAuthStateChanged: (callback: (state: any) => void) => () => void;
     onUpdaterStatus: (callback: (data: any) => void) => () => void;
+    onCloudTaskEvent: (callback: (event: any) => void) => () => void;
   };
   platform: NodeJS.Platform;
   app: {

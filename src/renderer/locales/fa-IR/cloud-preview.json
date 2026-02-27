@@ -1,0 +1,31 @@
+{
+  "back": "بازگشت",
+  "fetch_task_failed": "دریافت وظیفه ناموفق بود",
+  "download_md": "دانلود MD",
+  "download_pdf": "دانلود PDF",
+  "download_success": "دانلود موفق",
+  "download_failed": "دانلود ناموفق",
+  "confirm_cancel": "لغو وظیفه",
+  "confirm_cancel_content": "آیا مطمئن هستید که می‌خواهید این وظیفه را لغو کنید؟",
+  "cancel_success": "وظیفه لغو شد",
+  "cancel_failed": "لغو وظیفه ناموفق بود",
+  "cancel_task": "لغو",
+  "confirm_retry": "تلاش مجدد وظیفه",
+  "confirm_retry_content": "یک وظیفه جدید ایجاد خواهد شد. ادامه می‌دهید؟",
+  "retry_success": "تلاش مجدد شروع شد",
+  "retry_failed": "تلاش مجدد ناموفق بود",
+  "retry_all": "تلاش مجدد همه",
+  "page_retry_success": "تلاش مجدد صفحه شروع شد",
+  "page_retry_failed": "تلاش مجدد صفحه ناموفق بود",
+  "more_actions": "بیشتر",
+  "no_page_data": "داده صفحه‌ای موجود نیست",
+  "page_label": "صفحه {{page}} / {{total}}",
+  "regenerate": "بازتولید",
+  "regenerate_tooltip": "تلاش مجدد تبدیل این صفحه",
+  "page_status": {
+    "pending": "در انتظار",
+    "processing": "در حال پردازش",
+    "completed": "تکمیل شده",
+    "failed": "ناموفق"
+  }
+}

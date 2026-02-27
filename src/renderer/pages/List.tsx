@@ -13,6 +13,8 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Task } from "../../shared/types/Task";
 import { CloudContext } from "../contexts/CloudContextDefinition";
+import { mapCloudTasksToTasks } from "../utils/cloudTaskMapper";
+import type { CloudSSEEvent } from "../../shared/types/cloud-api";
 
 const { Text } = Typography;
 
@@ -66,19 +68,8 @@ const List: React.FC = () => {
       // Handle cloud tasks
       if (cloudResult) {
         if (cloudResult.success && cloudResult.data) {
-          // Add marker to cloud tasks
-          const cloudTasks = cloudResult.data.map((task: Task) => ({
-            ...task,
-            isCloud: true,
-            provider: -1 // Ensure provider is set to cloud
-          }));
+          const cloudTasks = mapCloudTasksToTasks(cloudResult.data);
           combinedList = [...cloudTasks, ...combinedList];
-          // Note: Cloud pagination total logic might need adjustment based on backend response
-          // For now, we just add the current page's count if we want strictly page-by-page
-          // But usually we'd want a unified total.
-          // Since we can't easily merge pagination across two services without a unified backend,
-          // we'll just display them together for the current page request.
-          // In a real scenario, we might want separate tabs or a unified BFF.
         } else {
            console.error("Failed to fetch cloud tasks:", cloudResult.error);
         }
@@ -156,6 +147,78 @@ const List: React.FC = () => {
       cleanup();
     };
   }, [handleTaskEvent]);
+
+  // Listen for cloud SSE events to update task list in real-time
+  useEffect(() => {
+    if (!window.api?.events?.onCloudTaskEvent) return;
+
+    const handleCloudEvent = (event: CloudSSEEvent) => {
+      const { type, data } = event;
+      if (type === 'heartbeat') return;
+
+      const taskId = (data as any).task_id;
+      if (!taskId) return;
+
+      setData(prevData => {
+        const index = prevData.findIndex(t => t.id === taskId);
+        if (index === -1) {
+          // Task not in list, refresh
+          fetchTasks(paginationRef.current.current, paginationRef.current.pageSize);
+          return prevData;
+        }
+
+        const newData = [...prevData];
+        const task = { ...newData[index] };
+
+        switch (type) {
+          case 'page_started':
+          case 'page_completed': {
+            const totalPages = (data as any).total_pages || task.pages || 1;
+            const completed = type === 'page_completed'
+              ? (task.completed_count || 0) + 1
+              : task.completed_count || 0;
+            task.completed_count = completed;
+            task.progress = Math.round((completed / totalPages) * 100);
+            task.status = 3; // PROCESSING
+            break;
+          }
+          case 'page_failed': {
+            task.failed_count = (task.failed_count || 0) + 1;
+            break;
+          }
+          case 'completed': {
+            task.status = (data as any).status || 6;
+            task.progress = 100;
+            task.completed_count = (data as any).pages_completed;
+            task.failed_count = (data as any).pages_failed;
+            break;
+          }
+          case 'error': {
+            task.status = 0; // FAILED
+            task.error = (data as any).error;
+            break;
+          }
+          case 'cancelled': {
+            task.status = 7; // CANCELLED
+            break;
+          }
+          case 'pdf_ready': {
+            task.status = 2; // SPLITTING done, start processing
+            task.pages = (data as any).page_count;
+            break;
+          }
+          default:
+            return prevData;
+        }
+
+        newData[index] = task;
+        return newData;
+      });
+    };
+
+    const cleanup = window.api.events.onCloudTaskEvent(handleCloudEvent);
+    return () => cleanup();
+  }, [fetchTasks]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -261,6 +324,54 @@ const List: React.FC = () => {
   // 取消任务
   const handleCancelTask = (id: string) => {
     handleUpdateTaskStatus(id, 7, t('actions.cancel'));
+  };
+
+  // 云端取消任务
+  const handleCloudCancelTask = async (id: string) => {
+    if (!cloudContext) return;
+    modal.confirm({
+      title: t('confirmations.cancel_title', { action: t('actions.cancel') }),
+      content: t('confirmations.cancel_content', { action: t('actions.cancel') }),
+      okText: t('confirmations.ok'),
+      cancelText: t('confirmations.cancel'),
+      onOk: async () => {
+        try {
+          const result = await cloudContext.cancelTask(id);
+          if (result.success) {
+            message.success(t('messages.action_success', { action: t('actions.cancel') }));
+            fetchTasks(pagination.current, pagination.pageSize);
+          } else {
+            message.error(result.error || t('messages.action_failed', { action: t('actions.cancel') }));
+          }
+        } catch {
+          message.error(t('messages.action_failed', { action: t('actions.cancel') }));
+        }
+      },
+    });
+  };
+
+  // 云端重试任务
+  const handleCloudRetryTask = async (id: string) => {
+    if (!cloudContext) return;
+    modal.confirm({
+      title: t('confirmations.cancel_title', { action: t('actions.retry') }),
+      content: t('confirmations.cancel_content', { action: t('actions.retry') }),
+      okText: t('confirmations.ok'),
+      cancelText: t('confirmations.cancel'),
+      onOk: async () => {
+        try {
+          const result = await cloudContext.retryTask(id);
+          if (result.success) {
+            message.success(t('messages.action_success', { action: t('actions.retry') }));
+            fetchTasks(pagination.current, pagination.pageSize);
+          } else {
+            message.error(result.error || t('messages.action_failed', { action: t('actions.retry') }));
+          }
+        } catch {
+          message.error(t('messages.action_failed', { action: t('actions.retry') }));
+        }
+      },
+    });
   };
 
   const getStatusText = (status: number) => {
@@ -415,27 +526,28 @@ const List: React.FC = () => {
       render: (_text: string, record: Task) => (
         <Space size="small">
           {(() => {
-            // Cloud tasks currently don't support preview/actions in this version
-            if (record.provider === -1) {
-               return <Text type="secondary" style={{ fontSize: '12px' }}>{t('task_type.cloud')}</Text>;
-            }
+            const isCloud = record.provider === -1;
 
-            // 可查看: SPLITTING(2), PROCESSING(3), READY_TO_MERGE(4), MERGING(5), COMPLETED(6), PARTIAL_FAILED(8)
+            // View button: cloud tasks go to cloud-preview, local to preview
             if (record.status && (record.status > 1 && record.status < 7 || record.status === 8)) {
+              const previewPath = isCloud
+                ? `/list/cloud-preview/${record.id}`
+                : `/list/preview/${record.id}`;
               return (
-                <Link type="success" to={`/list/preview/${record.id}`}>
+                <Link type="success" to={previewPath}>
                   {t('actions.view')}
                 </Link>
               );
             }
           })()}
           {(() => {
+            const isCloud = record.provider === -1;
             if (record.status && record.status > 0 && record.status < 6) {
               return (
                 <Text
                   type="secondary"
                   style={{ cursor: "pointer" }}
-                  onClick={() => record.id && handleCancelTask(record.id)}
+                  onClick={() => record.id && (isCloud ? handleCloudCancelTask(record.id) : handleCancelTask(record.id))}
                 >
                   {t('actions.cancel')}
                 </Text>
@@ -443,12 +555,13 @@ const List: React.FC = () => {
             }
           })()}
           {(() => {
+            const isCloud = record.provider === -1;
             if (record.status === 0) {
               return (
                 <Text
                   type="warning"
                   style={{ cursor: "pointer" }}
-                  onClick={() => record.id && handleRetryTask(record.id)}
+                  onClick={() => record.id && (isCloud ? handleCloudRetryTask(record.id) : handleRetryTask(record.id))}
                 >
                   {t('actions.retry')}
                 </Text>
@@ -456,6 +569,8 @@ const List: React.FC = () => {
             }
           })()}
           {(() => {
+            // Cloud tasks don't support delete (no API)
+            if (record.provider === -1) return null;
             if (record.status === 0 || (record.status && record.status >= 6)) {
               return (
                 <Text
