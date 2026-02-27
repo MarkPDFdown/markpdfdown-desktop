@@ -264,8 +264,8 @@ const List: React.FC = () => {
     fetchTasks(newPagination.current, newPagination.pageSize);
   };
 
-  // 删除任务
-  const handleDeleteTask = async (id: string) => {
+  // 删除任务（支持本地和云端任务）
+  const handleDeleteTask = async (id: string, isCloud: boolean = false) => {
     modal.confirm({
       title: t('confirmations.delete_title'),
       content: t('confirmations.delete_content'),
@@ -273,7 +273,14 @@ const List: React.FC = () => {
       cancelText: t('confirmations.cancel'),
       onOk: async () => {
         try {
-          const result = await window.api.task.delete(id);
+          let result;
+          if (isCloud) {
+            // 云端任务删除
+            result = await window.api.cloud.deleteTask(id);
+          } else {
+            // 本地任务删除
+            result = await window.api.task.delete(id);
+          }
           if (result.success) {
             message.success(t('messages.delete_success'));
             fetchTasks(pagination.current, pagination.pageSize);
@@ -569,14 +576,30 @@ const List: React.FC = () => {
             }
           })()}
           {(() => {
-            // Cloud tasks don't support delete (no API)
-            if (record.provider === -1) return null;
+            // 云端任务删除：仅终态可删除 (FAILED=0, COMPLETED=6, CANCELLED=7, PARTIAL_FAILED=8)
+            const isCloud = record.provider === -1;
+            const terminalStatuses = [0, 6, 7, 8];
+            if (isCloud) {
+              if (record.status !== undefined && terminalStatuses.includes(record.status)) {
+                return (
+                  <Text
+                    type="danger"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => record.id && handleDeleteTask(record.id, true)}
+                  >
+                    {t('actions.delete')}
+                  </Text>
+                );
+              }
+              return null;
+            }
+            // 本地任务删除
             if (record.status === 0 || (record.status && record.status >= 6)) {
               return (
                 <Text
                   type="danger"
                   style={{ cursor: "pointer" }}
-                  onClick={() => record.id && handleDeleteTask(record.id)}
+                  onClick={() => record.id && handleDeleteTask(record.id, false)}
                 >
                   {t('actions.delete')}
                 </Text>

@@ -95,6 +95,7 @@ interface WindowAPI {
     getTaskPages: (params: { taskId: string; page?: number; pageSize?: number }) => Promise<any>;
     cancelTask: (id: string) => Promise<any>;
     retryTask: (id: string) => Promise<any>;
+    deleteTask: (id: string) => Promise<any>;
     retryPage: (params: { taskId: string; pageNumber: number }) => Promise<any>;
     getTaskResult: (id: string) => Promise<any>;
     downloadPdf: (id: string) => Promise<any>;

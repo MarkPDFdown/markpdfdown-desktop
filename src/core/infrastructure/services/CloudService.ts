@@ -526,6 +526,43 @@ class CloudService {
       };
     }
   }
+
+  /**
+   * Delete a cloud task (only terminal states can be deleted)
+   * Terminal states: FAILED=0, COMPLETED=6, CANCELLED=7, PARTIAL_FAILED=8
+   */
+  public async deleteTask(id: string): Promise<{
+    success: boolean;
+    data?: { id: string; message: string };
+    error?: string;
+  }> {
+    try {
+      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/tasks/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => null);
+        return {
+          success: false,
+          error: errorBody?.error?.message || `Failed to delete task: ${res.status}`,
+        };
+      }
+
+      const responseJson = await res.json();
+      if (!responseJson.success || !responseJson.data) {
+        return { success: false, error: 'Invalid delete response' };
+      }
+
+      return { success: true, data: responseJson.data };
+    } catch (error) {
+      console.error('[CloudService] deleteTask error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
 }
 
 export default CloudService.getInstance();

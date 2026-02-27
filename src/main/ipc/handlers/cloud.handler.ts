@@ -100,6 +100,21 @@ export function registerCloudHandlers() {
   });
 
   /**
+   * Delete task (only terminal states can be deleted)
+   */
+  ipcMain.handle('cloud:deleteTask', async (_, id: string) => {
+    try {
+      return await cloudService.deleteTask(id);
+    } catch (error) {
+      console.error('[IPC] cloud:deleteTask error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
    * Retry single page
    */
   ipcMain.handle('cloud:retryPage', async (_, params: { taskId: string; pageNumber: number }) => {

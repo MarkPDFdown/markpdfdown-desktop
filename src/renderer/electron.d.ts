@@ -259,9 +259,11 @@ interface ElectronAPI {
     getTaskPages: (params: { taskId: string; page?: number; pageSize?: number }) => Promise<IpcResponse<any>>;
     cancelTask: (id: string) => Promise<IpcResponse<import('../shared/types/cloud-api').CloudCancelTaskResponse>>;
     retryTask: (id: string) => Promise<IpcResponse<import('../shared/types/cloud-api').CreateTaskResponse>>;
+    deleteTask: (id: string) => Promise<IpcResponse<{ id: string; message: string }>>;
     retryPage: (params: { taskId: string; pageNumber: number }) => Promise<IpcResponse<import('../shared/types/cloud-api').CloudRetryPageResponse>>;
     getTaskResult: (id: string) => Promise<IpcResponse<import('../shared/types/cloud-api').CloudTaskResult>>;
     downloadPdf: (id: string) => Promise<IpcResponse<{ filePath: string }>>;
+    getPageImage: (params: { taskId: string; pageNumber: number }) => Promise<IpcResponse<{ dataUrl: string }>>;
     getCredits: () => Promise<IpcResponse<import('../shared/types/cloud-api').CreditsApiResponse>>;
     getCreditHistory: (params: { page: number; pageSize: number; type?: string }) => Promise<IpcResponse<any>>;
     sseConnect: () => Promise<IpcResponse<void>>;

@@ -99,6 +99,8 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("cloud:cancelTask", id),
     retryTask: (id: string) =>
       ipcRenderer.invoke("cloud:retryTask", id),
+    deleteTask: (id: string) =>
+      ipcRenderer.invoke("cloud:deleteTask", id),
     retryPage: (params: { taskId: string; pageNumber: number }) =>
       ipcRenderer.invoke("cloud:retryPage", params),
     getTaskResult: (id: string) =>

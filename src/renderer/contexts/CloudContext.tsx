@@ -227,6 +227,15 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
     }
   }, [isAuthenticated]);
 
+  const deleteTask = useCallback(async (id: string) => {
+    if (!isAuthenticated) return { success: false, error: 'User not signed in' };
+    try {
+      return await window.api.cloud.deleteTask(id);
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }, [isAuthenticated]);
+
   const retryPage = useCallback(async (taskId: string, pageNumber: number) => {
     if (!isAuthenticated) return { success: false, error: 'User not signed in' };
     try {
@@ -341,6 +350,7 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
         getTaskPages,
         cancelTask,
         retryTask,
+        deleteTask,
         retryPage,
         getTaskResult,
         downloadResult,
