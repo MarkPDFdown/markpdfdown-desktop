@@ -309,7 +309,7 @@ const AppLayout: React.FC = () => {
           </div>
         </Sider>
 
-        <Layout style={{ flex: "1 1 auto", marginLeft: '80px', minWidth: 0, overflow: "hidden" }}>
+        <Layout style={{ flex: "1 1 auto", marginLeft: '80px', minWidth: 0, height: "100vh", overflow: "hidden" }}>
           <Header style={{
             ...headerStyle,
             position: 'fixed',
@@ -329,6 +329,7 @@ const AppLayout: React.FC = () => {
               borderRadius: borderRadiusLG,
               flex: "1 1 auto",
               overflow: "hidden",
+              minHeight: 0,
             }}
           >
             <div style={{ padding: 24, height: "100%", overflow: "hidden" }}>

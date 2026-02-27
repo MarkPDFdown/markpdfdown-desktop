@@ -30,7 +30,14 @@ const Settings: React.FC = () => {
       children: <About />,
     },
   ];
-  return <Tabs defaultActiveKey="3" items={items} />;
+  return (
+    <Tabs
+      defaultActiveKey="3"
+      items={items}
+      style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+      className="settings-tabs"
+    />
+  );
 };
 
 export default Settings;
