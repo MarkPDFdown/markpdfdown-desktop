@@ -84,7 +84,6 @@ import { windowManager } from './WindowManager.js';
 import { eventBridge } from './ipc/eventBridge.js';
 import { updateService } from './services/UpdateService.js';
 import { authManager } from '../core/infrastructure/services/AuthManager.js';
-import { cloudSSEManager } from '../core/infrastructure/services/CloudSSEManager.js';
 import fileLogic from "../core/infrastructure/services/FileService.js";
 
 // 自定义协议名称（用于 OAuth 回调）
@@ -372,12 +371,8 @@ async function initializeBackgroundServices() {
     await authManager.initialize();
     console.log(`[Main] Auth session restored in ${Date.now() - authStartTime}ms`);
 
-    // Start SSE if authenticated
-    if (authManager.getAuthState().isAuthenticated) {
-      cloudSSEManager.connect().catch(err =>
-        console.error('[Main] SSE auto-connect failed:', err)
-      );
-    }
+    // SSE connection is managed by renderer's CloudContext via IPC (sseConnect/sseDisconnect)
+    // to avoid duplicate connections from both main process and renderer
 
     // 注入预设供应商
     console.log("[Main] Injecting preset providers...");

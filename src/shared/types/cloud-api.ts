@@ -179,6 +179,7 @@ export interface CloudApiPagination {
 // ============ SSE Event Types ============
 
 export type CloudSSEEventType =
+  | 'connected'
   | 'pdf_ready'
   | 'page_started'
   | 'page_completed'
@@ -247,7 +248,12 @@ export interface CloudSSEHeartbeatData {
   time: string;
 }
 
+export interface CloudSSEConnectedData {
+  message: string;
+}
+
 export type CloudSSEEvent =
+  | { type: 'connected'; data: CloudSSEConnectedData }
   | { type: 'pdf_ready'; data: CloudSSEPDFReadyData }
   | { type: 'page_started'; data: CloudSSEPageStartedData }
   | { type: 'page_completed'; data: CloudSSEPageCompletedData }

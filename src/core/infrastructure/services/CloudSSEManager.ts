@@ -7,6 +7,18 @@ const HEARTBEAT_TIMEOUT_MS = 90_000; // 90s without heartbeat triggers reconnect
 const INITIAL_RECONNECT_DELAY_MS = 1_000;
 const MAX_RECONNECT_DELAY_MS = 30_000;
 
+/** Event types that should be forwarded to the renderer */
+const FORWARDABLE_EVENTS = new Set<CloudSSEEventType>([
+  'pdf_ready',
+  'page_started',
+  'page_completed',
+  'page_failed',
+  'page_retry_started',
+  'completed',
+  'error',
+  'cancelled',
+]);
+
 class CloudSSEManager {
   private static instance: CloudSSEManager;
 
@@ -27,23 +39,33 @@ class CloudSSEManager {
   }
 
   /**
-   * Connect to the global SSE endpoint
+   * Connect to the global SSE endpoint.
+   * Safe to call multiple times — tears down any existing connection first.
    */
   public async connect(): Promise<void> {
     if (this.connected) {
-      console.log('[CloudSSE] Already connected');
+      console.log('[CloudSSE] Already connected, skipping');
       return;
     }
+
+    // Set flag synchronously before any await to prevent concurrent connect() calls
+    this.connected = true;
 
     const token = await authManager.getAccessToken();
     if (!token) {
       console.log('[CloudSSE] No auth token, skipping connect');
+      this.connected = false;
       return;
     }
 
-    this.connected = true;
+    // If disconnect() was called while we were awaiting the token, bail out
+    if (!this.connected) {
+      console.log('[CloudSSE] Disconnected while obtaining token, aborting');
+      return;
+    }
+
     this.reconnectDelay = INITIAL_RECONNECT_DELAY_MS;
-    await this.startStream(token);
+    await this.startStream();
   }
 
   /**
@@ -52,6 +74,7 @@ class CloudSSEManager {
   public disconnect(): void {
     console.log('[CloudSSE] Disconnecting');
     this.connected = false;
+    this.lastEventId = '0';
     this.cleanup();
   }
 
@@ -97,23 +120,27 @@ class CloudSSEManager {
 
     this.reconnectTimer = setTimeout(async () => {
       this.reconnectTimer = null;
-      const token = await authManager.getAccessToken();
-      if (!token || !this.connected) return;
-      await this.startStream(token);
+      if (!this.connected) return;
+      await this.startStream();
     }, this.reconnectDelay);
 
     // Exponential backoff
     this.reconnectDelay = Math.min(this.reconnectDelay * 2, MAX_RECONNECT_DELAY_MS);
   }
 
-  private async startStream(token: string): Promise<void> {
+  private async startStream(): Promise<void> {
+    // Abort any lingering previous stream before starting a new one
+    if (this.abortController) {
+      this.abortController.abort();
+    }
+
     const url = `${API_BASE_URL}/api/v1/tasks/events`;
     this.abortController = new AbortController();
 
     const headers: Record<string, string> = {
-      Authorization: `Bearer ${token}`,
       Accept: 'text/event-stream',
       'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
     };
 
     if (this.lastEventId !== '0') {
@@ -122,10 +149,12 @@ class CloudSSEManager {
 
     try {
       console.log('[CloudSSE] Connecting to', url);
-      const res = await fetch(url, {
+      const res = await authManager.fetchWithAuth(url, {
         headers,
         signal: this.abortController.signal,
       });
+
+      console.log(`[CloudSSE] Response status: ${res.status}, content-type: ${res.headers.get('content-type')}`);
 
       if (!res.ok) {
         console.error(`[CloudSSE] HTTP error: ${res.status}`);
@@ -150,7 +179,7 @@ class CloudSSEManager {
         console.log('[CloudSSE] Stream aborted');
         return;
       }
-      console.error('[CloudSSE] Stream error:', error);
+      console.error('[CloudSSE] Stream error:', error?.message || error);
       this.reconnect();
     }
   }
@@ -159,13 +188,20 @@ class CloudSSEManager {
     const reader = body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+    let chunkCount = 0;
 
     try {
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          console.log(`[CloudSSE] Stream ended after ${chunkCount} chunks`);
+          break;
+        }
 
-        buffer += decoder.decode(value, { stream: true });
+        chunkCount++;
+        const chunk = decoder.decode(value, { stream: true });
+        console.log(`[CloudSSE] Chunk #${chunkCount} (${value.byteLength} bytes)`);
+        buffer += chunk;
 
         // Process complete SSE messages (separated by double newline)
         const messages = buffer.split('\n\n');
@@ -180,7 +216,7 @@ class CloudSSEManager {
       }
     } catch (error: any) {
       if (error.name !== 'AbortError') {
-        console.error('[CloudSSE] Read error:', error);
+        console.error('[CloudSSE] Read error:', error?.message || error);
       }
     } finally {
       reader.releaseLock();
@@ -201,6 +237,8 @@ class CloudSSEManager {
       if (line.startsWith('event:')) {
         eventType = line.slice(6).trim();
       } else if (line.startsWith('data:')) {
+        // Per SSE spec, multi-line data fields are joined with newline
+        if (data.length > 0) data += '\n';
         data += line.slice(5).trim();
       } else if (line.startsWith('id:')) {
         id = line.slice(3).trim();
@@ -216,14 +254,30 @@ class CloudSSEManager {
     // Reset heartbeat on any event
     this.resetHeartbeatTimer();
 
+    // Log non-heartbeat events for debugging
+    if (eventType !== 'heartbeat') {
+      console.log(`[CloudSSE] Event: type=${eventType}, id=${id || 'none'}, data=${data.substring(0, 200)}`);
+    }
+
+    // connected and heartbeat are control events, don't forward to renderer
+    if (eventType === 'connected' || eventType === 'heartbeat') {
+      return;
+    }
+
     try {
       const parsedData = JSON.parse(data);
+
+      if (!FORWARDABLE_EVENTS.has(eventType as CloudSSEEventType)) {
+        console.warn(`[CloudSSE] Unknown event type: ${eventType}, skipping`);
+        return;
+      }
+
       const event: CloudSSEEvent = {
         type: eventType as CloudSSEEventType,
         data: parsedData,
       } as CloudSSEEvent;
 
-      // Forward to renderer
+      console.log(`[CloudSSE] Forwarding to renderer: type=${eventType}, task_id=${parsedData.task_id || 'none'}`);
       windowManager.sendToRenderer('cloud:taskEvent', event);
     } catch (error) {
       console.error('[CloudSSE] Failed to parse event data:', error, data);

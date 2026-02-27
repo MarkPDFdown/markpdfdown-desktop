@@ -152,18 +152,33 @@ const List: React.FC = () => {
   useEffect(() => {
     if (!window.api?.events?.onCloudTaskEvent) return;
 
+    console.log('[List] Registering cloud SSE event listener');
+
+    // Track tasks not found in list to trigger a single refresh
+    let pendingRefresh = false;
+
     const handleCloudEvent = (event: CloudSSEEvent) => {
       const { type, data } = event;
-      if (type === 'heartbeat') return;
+
+      // Skip non-business events
+      if (type === 'heartbeat' || type === 'connected') return;
 
       const taskId = (data as any).task_id;
       if (!taskId) return;
 
+      console.log(`[List] Cloud SSE event: type=${type}, task_id=${taskId}`);
+
       setData(prevData => {
         const index = prevData.findIndex(t => t.id === taskId);
         if (index === -1) {
-          // Task not in list, refresh
-          fetchTasks(paginationRef.current.current, paginationRef.current.pageSize);
+          // Task not in list, schedule a refresh outside of setState
+          if (!pendingRefresh) {
+            pendingRefresh = true;
+            queueMicrotask(() => {
+              pendingRefresh = false;
+              fetchTasks(paginationRef.current.current, paginationRef.current.pageSize);
+            });
+          }
           return prevData;
         }
 
@@ -172,17 +187,23 @@ const List: React.FC = () => {
 
         switch (type) {
           case 'page_started':
+          case 'page_retry_started': {
+            task.status = 3; // PROCESSING
+            break;
+          }
           case 'page_completed': {
+            const pageNumber = (data as any).page;
             const totalPages = (data as any).total_pages || task.pages || 1;
-            const completed = type === 'page_completed'
-              ? (task.completed_count || 0) + 1
-              : task.completed_count || 0;
+            // Use page number directly to avoid duplicate counting from replayed events
+            // page is 1-based, so completed_count = page number when pages complete in order
+            const completed = Math.max(task.completed_count || 0, pageNumber || 0);
             task.completed_count = completed;
             task.progress = Math.round((completed / totalPages) * 100);
             task.status = 3; // PROCESSING
             break;
           }
           case 'page_failed': {
+            // Increment as approximation; the 'completed' event provides authoritative pages_failed
             task.failed_count = (task.failed_count || 0) + 1;
             break;
           }
@@ -203,7 +224,7 @@ const List: React.FC = () => {
             break;
           }
           case 'pdf_ready': {
-            task.status = 2; // SPLITTING done, start processing
+            task.status = 3; // PROCESSING (splitting done, pages ready for conversion)
             task.pages = (data as any).page_count;
             break;
           }
@@ -217,7 +238,10 @@ const List: React.FC = () => {
     };
 
     const cleanup = window.api.events.onCloudTaskEvent(handleCloudEvent);
-    return () => cleanup();
+    return () => {
+      console.log('[List] Cleaning up cloud SSE event listener');
+      cleanup();
+    };
   }, [fetchTasks]);
 
   useEffect(() => {
