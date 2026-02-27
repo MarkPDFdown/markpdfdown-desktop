@@ -128,6 +128,7 @@ export interface CloudTaskResponse {
   created_at: string;
   started_at?: string;
   completed_at?: string;
+  model_tier?: string;
 }
 
 export interface CloudTaskPageResponse {

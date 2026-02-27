@@ -38,7 +38,7 @@ export function mapCloudTaskToTask(ct: CloudTaskResponse): Task & { isCloud: boo
     type,
     pages: pageCount,
     provider: -1,
-    model_name: modelTierMap[ct.status_name?.toLowerCase()] || 'Cloud',
+    model_name: modelTierMap[ct.model_tier?.toLowerCase() || ''] || 'Cloud',
     progress,
     status: ct.status,
     completed_count: pagesCompleted,
