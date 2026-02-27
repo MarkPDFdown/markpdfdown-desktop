@@ -68,7 +68,7 @@ export interface CloudContextType {
   logout: () => void;
   cancelLogin: () => void;
   refreshCredits: () => Promise<void>;
-  convertFile: (file: CloudFileInput, model?: string) => Promise<{ success: boolean; taskId?: string; error?: string }>;
+  convertFile: (file: CloudFileInput, model?: string, pageRange?: string) => Promise<{ success: boolean; taskId?: string; error?: string }>;
   getTasks: (page?: number, pageSize?: number) => Promise<{
     success: boolean;
     data?: CloudTaskResponse[];

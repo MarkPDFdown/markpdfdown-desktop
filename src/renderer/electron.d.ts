@@ -253,7 +253,7 @@ interface ElectronAPI {
   };
 
   cloud: {
-    convert: (fileData: { path?: string; content?: ArrayBuffer; name: string; model?: string }) => Promise<IpcResponse<any>>;
+    convert: (fileData: { path?: string; content?: ArrayBuffer; name: string; model?: string; page_range?: string }) => Promise<IpcResponse<any>>;
     getTasks: (params: { page: number; pageSize: number }) => Promise<IpcResponse<any>>;
     getTaskById: (id: string) => Promise<IpcResponse<import('../shared/types/cloud-api').CloudTaskResponse>>;
     getTaskPages: (params: { taskId: string; page?: number; pageSize?: number }) => Promise<IpcResponse<any>>;

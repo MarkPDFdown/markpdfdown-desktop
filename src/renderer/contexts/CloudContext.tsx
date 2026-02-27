@@ -134,15 +134,16 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
   }, [isAuthenticated]);
 
   // Cloud conversion function
-  const convertFile = useCallback(async (file: CloudFileInput, model?: string) => {
+  const convertFile = useCallback(async (file: CloudFileInput, model?: string, pageRange?: string) => {
     if (!isAuthenticated) {
       return { success: false, error: 'User not signed in' };
     }
 
     try {
-      const fileData: { path?: string; content?: ArrayBuffer; name: string; model?: string } = {
+      const fileData: { path?: string; content?: ArrayBuffer; name: string; model?: string; page_range?: string } = {
         name: file.name,
-        model: model || 'lite'
+        model: model || 'lite',
+        page_range: pageRange || undefined,
       };
 
       if (file.url) {

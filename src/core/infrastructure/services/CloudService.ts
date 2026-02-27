@@ -38,6 +38,7 @@ class CloudService {
     content?: ArrayBuffer;
     name: string;
     model?: string;
+    page_range?: string;
   }): Promise<{
     success: boolean;
     data?: CreateTaskResponse;
@@ -72,6 +73,11 @@ class CloudService {
       // Add model and language parameters
       formData.append('model', model);
       formData.append('language', 'auto');
+
+      // Add page_range if specified
+      if (fileData.page_range) {
+        formData.append('page_range', fileData.page_range);
+      }
 
       const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/convert`, {
         method: 'POST',

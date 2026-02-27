@@ -276,7 +276,7 @@ const UploadPanel: React.FC = () => {
             name: file.name,
             url: file.url,
             originFileObj: file.originFileObj as File | undefined
-          }, modelTier);
+          }, modelTier, pageRange || undefined);
           if (result.success) {
             successCount++;
           } else {

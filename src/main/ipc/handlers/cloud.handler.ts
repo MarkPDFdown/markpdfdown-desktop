@@ -11,7 +11,7 @@ export function registerCloudHandlers() {
   /**
    * Convert file via cloud
    */
-  ipcMain.handle('cloud:convert', async (_, fileData: { path?: string; content?: ArrayBuffer; name: string; model?: string }) => {
+  ipcMain.handle('cloud:convert', async (_, fileData: { path?: string; content?: ArrayBuffer; name: string; model?: string; page_range?: string }) => {
     try {
       const result = await cloudService.convert(fileData);
       return result;

@@ -87,7 +87,7 @@ contextBridge.exposeInMainWorld("api", {
 
   // ==================== Cloud APIs ====================
   cloud: {
-    convert: (fileData: { path?: string; content?: ArrayBuffer; name: string; model?: string }) =>
+    convert: (fileData: { path?: string; content?: ArrayBuffer; name: string; model?: string; page_range?: string }) =>
       ipcRenderer.invoke("cloud:convert", fileData),
     getTasks: (params: { page: number; pageSize: number }) =>
       ipcRenderer.invoke("cloud:getTasks", params),
