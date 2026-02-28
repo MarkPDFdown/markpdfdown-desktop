@@ -2,6 +2,10 @@
   "dragger": {
     "text": "فایل‌ها را به اینجا بکشید یا برای انتخاب فایل‌ها روی دکمه زیر کلیک کنید",
     "hint": "پشتیبانی از بارگذاری تکی یا دسته‌ای فایل‌های PDF/JPG/PNG",
+    "hint_local": "پشتیبانی از فایل‌های PDF و تصویری. برای استفاده از تبدیل رایگان و پشتیبانی از فرمت‌های بیشتر وارد شوید",
+    "hint_logged_in_non_cloud": "در حال حاضر فقط فایل‌های PDF یا تصویری پشتیبانی می‌شوند. برای فعال شدن فایل‌های Office، مدل ابری Markdown.Fit را انتخاب کنید",
+    "hint_cloud_logged_in": "پشتیبانی از فایل‌های PDF، تصویری و Office (Word/Excel/PPT)",
+    "login_hint": "برای استفاده از تبدیل رایگان و پشتیبانی از فرمت‌های بیشتر وارد شوید",
     "button": "انتخاب فایل‌ها"
   },
   "form": {
@@ -22,8 +26,9 @@
     "update_status_failed": "به‌روزرسانی وضعیت تسک ناموفق بود: {{filename}}",
     "tasks_created": "{{count}} تسک ایجاد شد",
     "upload_error": "خطا در بارگذاری",
-    "invalid_file_type": "فایل {{filename}} یک فایل PDF معتبر نیست",
-    "invalid_file_path": "نمی‌توان مسیر فایل {{filename}} را دریافت کرد"
+    "invalid_file_type": "فایل {{filename}} از نوع فایل پشتیبانی‌شده نیست",
+    "invalid_file_path": "نمی‌توان مسیر فایل {{filename}} را دریافت کرد",
+    "office_not_supported": "فایل {{filename}} یک فایل Office است. لطفاً مدل ابری را انتخاب کرده و وارد شوید"
   },
   "cloud": {
     "provider_name": "ابر Markdown.Fit",

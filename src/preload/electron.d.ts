@@ -72,7 +72,7 @@ interface WindowAPI {
     retryFailed: (taskId: string) => Promise<any>;
   };
   file: {
-    selectDialog: () => Promise<any>;
+    selectDialog: (allowOffice?: boolean) => Promise<any>;
     upload: (taskId: string, filePath: string) => Promise<any>;
     uploadFileContent: (taskId: string, fileName: string, fileBuffer: ArrayBuffer) => Promise<any>;
     getImagePath: (taskId: string, page: number) => Promise<any>;

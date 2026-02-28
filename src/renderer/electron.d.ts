@@ -219,7 +219,7 @@ interface ElectronAPI {
   };
 
   file: {
-    selectDialog: () => Promise<IpcResponse<FileDialogResult>>;
+    selectDialog: (allowOffice?: boolean) => Promise<IpcResponse<FileDialogResult>>;
     upload: (
       taskId: string,
       filePath: string,

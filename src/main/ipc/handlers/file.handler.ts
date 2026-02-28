@@ -98,20 +98,34 @@ export function registerFileHandlers() {
 
   /**
    * File selection dialog
+   * @param allowOffice - If true, includes Office file types in the filter
    */
-  ipcMain.handle(IPC_CHANNELS.FILE.SELECT_DIALOG, async (): Promise<IpcResponse> => {
+  ipcMain.handle(IPC_CHANNELS.FILE.SELECT_DIALOG, async (_, allowOffice?: boolean): Promise<IpcResponse> => {
     try {
+      const pdfAndImageExtensions = ["pdf", "jpg", "jpeg", "png", "bmp", "gif"];
+      const officeExtensions = ["doc", "docx", "xls", "xlsx", "ppt", "pptx"];
+
+      // Keep the first filter as the default one shown by OS dialogs.
+      const filters = allowOffice
+        ? [
+            {
+              name: "Supported Files",
+              extensions: [...pdfAndImageExtensions, ...officeExtensions],
+            },
+            { name: "PDF and Images", extensions: pdfAndImageExtensions },
+            { name: "Office Documents", extensions: officeExtensions },
+            { name: "All Files", extensions: ["*"] },
+          ]
+        : [
+            { name: "PDF and Images", extensions: pdfAndImageExtensions },
+            { name: "PDF Documents", extensions: ["pdf"] },
+            { name: "Images", extensions: ["jpg", "jpeg", "png", "bmp", "gif"] },
+            { name: "All Files", extensions: ["*"] },
+          ];
+
       const result = await dialog.showOpenDialog({
         properties: ["openFile", "multiSelections"],
-        filters: [
-          {
-            name: "PDF and Images",
-            extensions: ["pdf", "jpg", "jpeg", "png", "bmp", "gif"],
-          },
-          { name: "PDF Documents", extensions: ["pdf"] },
-          { name: "Images", extensions: ["jpg", "jpeg", "png", "bmp", "gif"] },
-          { name: "All Files", extensions: ["*"] },
-        ],
+        filters,
       });
 
       return {

@@ -58,7 +58,7 @@ contextBridge.exposeInMainWorld("api", {
 
   // ==================== File APIs ====================
   file: {
-    selectDialog: () => ipcRenderer.invoke("file:selectDialog"),
+    selectDialog: (allowOffice?: boolean) => ipcRenderer.invoke("file:selectDialog", allowOffice),
     upload: (taskId: string, filePath: string) =>
       ipcRenderer.invoke("file:upload", taskId, filePath),
     uploadFileContent: (taskId: string, fileName: string, fileBuffer: ArrayBuffer) =>

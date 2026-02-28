@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useMemo } from "react";
 import {
   Button,
   Col,
@@ -13,7 +13,7 @@ import {
   UploadProps,
   Tooltip
 } from "antd";
-import { FileMarkdownOutlined, InboxOutlined, CloudOutlined } from "@ant-design/icons";
+import { FileMarkdownOutlined, InboxOutlined, CloudOutlined, LoginOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { CloudContext } from "../contexts/CloudContextDefinition";
@@ -33,6 +33,12 @@ const CLOUD_MODEL_TIERS = [
 
 type CloudModelTier = typeof CLOUD_MODEL_TIERS[number]['id'];
 
+// Supported Office file extensions
+const OFFICE_EXTENSIONS = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
+const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'bmp', 'gif'];
+
+type FileCategory = 'pdf' | 'image' | 'office' | 'unsupported';
+
 // 定义模型数据接口
 interface ModelType {
   id: string;
@@ -48,6 +54,36 @@ interface ModelGroupType {
 
 const SELECTED_MODEL_KEY = "markpdfdown_selected_model";
 
+// Check if current selection supports Office files (requires: logged in + cloud model selected)
+const supportsOfficeFiles = (
+  isAuthenticated: boolean | undefined,
+  selectedModel: string
+): boolean => {
+  if (!isAuthenticated || !selectedModel) return false;
+  const [, providerIdStr] = selectedModel.split("@");
+  const providerId = parseInt(providerIdStr, 10);
+  return providerId === CLOUD_PROVIDER_ID;
+};
+
+const getFileCategory = (fileName: string, fileType?: string): FileCategory => {
+  const fileNameLower = fileName.toLowerCase();
+  const mimeType = fileType?.toLowerCase();
+
+  if (mimeType === 'application/pdf' || fileNameLower.endsWith('.pdf')) {
+    return 'pdf';
+  }
+
+  if ((mimeType?.startsWith('image/') ?? false) || IMAGE_EXTENSIONS.some(ext => fileNameLower.endsWith(`.${ext}`))) {
+    return 'image';
+  }
+
+  if (OFFICE_EXTENSIONS.some(ext => fileNameLower.endsWith(`.${ext}`))) {
+    return 'office';
+  }
+
+  return 'unsupported';
+};
+
 const UploadPanel: React.FC = () => {
   const navigate = useNavigate();
   const { message } = App.useApp();
@@ -61,6 +97,18 @@ const UploadPanel: React.FC = () => {
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [pageRange, setPageRange] = useState<string>("");
   const { Dragger } = Upload;
+
+  // Determine if Office files are supported based on current selection
+  const canUseOfficeFiles = useMemo(
+    () => supportsOfficeFiles(cloudContext?.isAuthenticated, selectedModel),
+    [cloudContext?.isAuthenticated, selectedModel]
+  );
+  const isAuthenticated = Boolean(cloudContext?.isAuthenticated);
+  const draggerHint = canUseOfficeFiles
+    ? t('dragger.hint_cloud_logged_in')
+    : isAuthenticated
+      ? t('dragger.hint_logged_in_non_cloud')
+      : t('dragger.hint_local');
 
   // 获取所有模型数据
   useEffect(() => {
@@ -172,7 +220,7 @@ const UploadPanel: React.FC = () => {
   // 处理文件选择（使用文件对话框）
   const handleFileSelect = async () => {
     try {
-      const dialogResult = await window.api.file.selectDialog();
+      const dialogResult = await window.api.file.selectDialog(canUseOfficeFiles);
 
       if (
         dialogResult.success &&
@@ -180,23 +228,45 @@ const UploadPanel: React.FC = () => {
         !dialogResult.data.canceled &&
         dialogResult.data.filePaths.length > 0
       ) {
-        // 将选中的文件路径转换为 UploadFile 格式
-        const newFiles: UploadFile[] = dialogResult.data.filePaths.map(
-          (filePath: string, index: number) => {
-            // 从文件路径中提取文件名
-            const fileName = filePath.split(/[\\/]/).pop() || filePath;
+        // 二次校验对话框返回的文件，避免通过系统对话框绕过类型限制
+        const rejectedOfficeFiles: string[] = [];
+        const rejectedUnsupportedFiles: string[] = [];
+        const newFiles: UploadFile[] = [];
 
-            return {
-              uid: `${Date.now()}-${index}`,
-              name: fileName,
-              status: "done",
-              // 存储原始文件路径，用于后续上传
-              url: filePath,
-            };
-          },
-        );
+        dialogResult.data.filePaths.forEach((filePath: string, index: number) => {
+          const fileName = filePath.split(/[\\/]/).pop() || filePath;
+          const category = getFileCategory(fileName);
 
-        setFileList([...fileList, ...newFiles]);
+          if (category === 'unsupported') {
+            rejectedUnsupportedFiles.push(fileName);
+            return;
+          }
+
+          if (category === 'office' && !canUseOfficeFiles) {
+            rejectedOfficeFiles.push(fileName);
+            return;
+          }
+
+          newFiles.push({
+            uid: `${Date.now()}-${index}`,
+            name: fileName,
+            status: "done",
+            // 存储原始文件路径，用于后续上传
+            url: filePath,
+          });
+        });
+
+        if (rejectedUnsupportedFiles.length > 0) {
+          message.error(t('messages.invalid_file_type', { filename: rejectedUnsupportedFiles.join(', ') }));
+        }
+
+        if (rejectedOfficeFiles.length > 0) {
+          message.error(t('messages.office_not_supported', { filename: rejectedOfficeFiles.join(', ') }));
+        }
+
+        if (newFiles.length > 0) {
+          setFileList((prevList) => [...prevList, ...newFiles]);
+        }
       }
     } catch (error) {
       console.error("Failed to select files:", error);
@@ -207,6 +277,12 @@ const UploadPanel: React.FC = () => {
     }
   };
 
+  // Dynamic accept attribute based on whether Office files are supported
+  const baseAcceptExtensions = ['.pdf', ...IMAGE_EXTENSIONS.map((ext) => `.${ext}`)];
+  const acceptExtensions = canUseOfficeFiles
+    ? [...baseAcceptExtensions, ...OFFICE_EXTENSIONS.map((ext) => `.${ext}`)].join(',')
+    : baseAcceptExtensions.join(',');
+
   const props: UploadProps = {
     onRemove: (file) => {
       const index = fileList.indexOf(file);
@@ -215,11 +291,16 @@ const UploadPanel: React.FC = () => {
       setFileList(newFileList);
     },
     beforeUpload: (file) => {
-      // 检查文件类型
-      const isPDF = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      const category = getFileCategory(file.name, file.type);
 
-      if (!isPDF) {
+      if (category === 'unsupported') {
         message.error(t('messages.invalid_file_type', { filename: file.name }));
+        return Upload.LIST_IGNORE;
+      }
+
+      // If Office file but not supported in current mode
+      if (category === 'office' && !canUseOfficeFiles) {
+        message.error(t('messages.office_not_supported', { filename: file.name }));
         return Upload.LIST_IGNORE;
       }
 
@@ -240,7 +321,7 @@ const UploadPanel: React.FC = () => {
     },
     fileList,
     showUploadList: true,
-    accept: '.pdf',
+    accept: acceptExtensions,
     multiple: true,
   };
 
@@ -415,8 +496,14 @@ const UploadPanel: React.FC = () => {
             </p>
             <p className="ant-upload-text">{t('dragger.text')}</p>
             <p className="ant-upload-hint">
-              {t('dragger.hint')}
+              {draggerHint}
             </p>
+            {!canUseOfficeFiles && !isAuthenticated && (
+              <p style={{ marginTop: 8, color: '#faad14' }}>
+                <LoginOutlined style={{ marginRight: 4 }} />
+                {t('dragger.login_hint')}
+              </p>
+            )}
             <Button
               type="primary"
               onClick={(e) => {
