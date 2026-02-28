@@ -13,7 +13,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Task } from "../../shared/types/Task";
 import { CloudContext } from "../contexts/CloudContextDefinition";
-import { mapCloudTasksToTasks } from "../utils/cloudTaskMapper";
+import { mapCloudTasksToTasks, type CloudTask } from "../utils/cloudTaskMapper";
 import type { CloudSSEEvent } from "../../shared/types/cloud-api";
 
 const { Text } = Typography;
@@ -25,7 +25,7 @@ const List: React.FC = () => {
   const cloudContext = useContext(CloudContext);
 
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<Task[]>([]);
+  const [data, setData] = useState<(Task | CloudTask)[]>([]);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
@@ -39,22 +39,30 @@ const List: React.FC = () => {
   const paginationRef = useRef(pagination);
   paginationRef.current = pagination;
 
+  // Max items to fetch for unified sorting and local pagination
+  const MAX_FETCH_ITEMS = 100;
+
   const fetchTasks = useCallback(async (page = 1, pageSize = 10) => {
     setLoading(true);
     try {
+      // Fetch enough data for unified sorting and local pagination
+      // We fetch up to MAX_FETCH_ITEMS from each source, then combine and paginate locally
+
       // Parallel fetch local and cloud tasks
-      const promises: Promise<any>[] = [window.api.task.getAll({ page, pageSize })];
+      const promises: Promise<any>[] = [
+        window.api.task.getAll({ page: 1, pageSize: MAX_FETCH_ITEMS })
+      ];
 
       // Only fetch cloud tasks if authenticated
       if (cloudContext?.isAuthenticated) {
-        promises.push(cloudContext.getTasks(page, pageSize));
+        promises.push(cloudContext.getTasks(1, MAX_FETCH_ITEMS));
       }
 
       const results = await Promise.all(promises);
       const localResult = results[0];
       const cloudResult = results.length > 1 ? results[1] : null;
 
-      let combinedList: Task[] = [];
+      let combinedList: (Task | CloudTask)[] = [];
       let totalCount = 0;
 
       // Handle local tasks
@@ -69,17 +77,39 @@ const List: React.FC = () => {
       if (cloudResult) {
         if (cloudResult.success && cloudResult.data) {
           const cloudTasks = mapCloudTasksToTasks(cloudResult.data);
+          // Add cloud task count to total for accurate pagination
+          if (cloudResult.pagination) {
+            totalCount += cloudResult.pagination.total;
+          }
+          // Merge cloud and local tasks
           combinedList = [...cloudTasks, ...combinedList];
         } else {
            console.error("Failed to fetch cloud tasks:", cloudResult.error);
         }
       }
 
-      setData(combinedList);
+      // Sort by unified timestamp (newest first)
+      // Cloud tasks use sortTimestamp, local tasks use createdAt
+      const getTimestamp = (t: Task | CloudTask): number => {
+        const task = t as any;
+        if (task.sortTimestamp) return task.sortTimestamp;
+        const createdAt = task.createdAt;
+        if (!createdAt) return 0;
+        if (createdAt instanceof Date) return createdAt.getTime();
+        return 0;
+      };
+      combinedList.sort((a, b) => getTimestamp(b) - getTimestamp(a));
+
+      // Local pagination: slice the sorted combined list
+      const startIndex = (page - 1) * pageSize;
+      const paginatedList = combinedList.slice(startIndex, startIndex + pageSize);
+
+      setData(paginatedList);
       setPagination(prev => ({
         ...prev,
         current: page,
-        total: totalCount, // Using local total for pagination for now as basic implementation
+        pageSize,
+        total: totalCount,
       }));
 
     } catch (error) {
