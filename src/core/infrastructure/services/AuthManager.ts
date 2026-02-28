@@ -295,6 +295,10 @@ class AuthManager {
 
   /**
    * Make an authenticated API request. Automatically retries once on 401 by refreshing the token.
+   * @param url - Request URL
+   * @param options - Request options
+   * @param options.body - Request body. If body is FormData, uses 120s timeout for uploads.
+   *                       If method is GET, no timeout is set (for downloads).
    */
   public async fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
     const token = await this.getAccessToken();
@@ -302,14 +306,19 @@ class AuthManager {
       throw new Error('Authentication required');
     }
 
-    // Create abort controller for timeout
+    // Determine timeout based on request type
+    const isFormData = options.body instanceof FormData;
+    const isDownload = url.includes('/result') || url.includes('/download');
+    const timeoutMs = isFormData ? 120 * 1000 : isDownload ? 0 : 8000;
+
+    // Create abort controller for timeout (skip if no timeout for downloads)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const timeoutId = timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : null;
 
     try {
       const res = await fetch(url, {
         ...options,
-        signal: controller.signal,
+        signal: timeoutId ? controller.signal : undefined,
         headers: {
           ...this.getDefaultHeaders(),
           Authorization: `Bearer ${token}`,
@@ -338,14 +347,14 @@ class AuthManager {
         throw new Error('Authentication required');
       }
 
-      // Retry with new token (also with timeout)
+      // Retry with new token (use same timeout strategy)
       const retryController = new AbortController();
-      const retryTimeoutId = setTimeout(() => retryController.abort(), 8000);
+      const retryTimeoutId = timeoutMs > 0 ? setTimeout(() => retryController.abort(), timeoutMs) : null;
 
       try {
         return await fetch(url, {
           ...options,
-          signal: retryController.signal,
+          signal: retryTimeoutId ? retryController.signal : undefined,
           headers: {
             ...this.getDefaultHeaders(),
             Authorization: `Bearer ${this.accessToken}`,
@@ -353,10 +362,10 @@ class AuthManager {
           },
         });
       } finally {
-        clearTimeout(retryTimeoutId);
+        if (retryTimeoutId) clearTimeout(retryTimeoutId);
       }
     } finally {
-      clearTimeout(timeoutId);
+      if (timeoutId) clearTimeout(timeoutId);
     }
   }
 
