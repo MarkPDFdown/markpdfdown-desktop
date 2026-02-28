@@ -32,7 +32,7 @@ const List: React.FC = () => {
     total: 0,
   });
   const [isPageVisible, setIsPageVisible] = useState(!document.hidden);
-  const [pollInterval, setPollInterval] = useState(30000); // 默认30秒
+  const [pollInterval, setPollInterval] = useState(120000); // 默认120秒
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 使用 ref 存储 pagination，避免 useEffect 无限循环
@@ -128,9 +128,9 @@ const List: React.FC = () => {
     // 动态调整轮询间隔
     if (type === 'task:status_changed' && task?.status) {
       if (task.status >= 1 && task.status <= 5) {
-        setPollInterval(10000); // 活跃任务：10秒
+        setPollInterval(60000); // 活跃任务：60秒
       } else {
-        setPollInterval(30000); // 完成任务：30秒
+        setPollInterval(120000); // 空闲：120秒
       }
     }
   }, [fetchTasks]);
