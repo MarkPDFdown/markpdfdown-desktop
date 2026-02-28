@@ -302,45 +302,62 @@ class AuthManager {
       throw new Error('Authentication required');
     }
 
-    const res = await fetch(url, {
-      ...options,
-      headers: {
-        ...this.getDefaultHeaders(),
-        Authorization: `Bearer ${token}`,
-        ...options.headers,
-      },
-    });
-
-    if (res.status !== 401) {
-      return res;
-    }
-
-    // 401: attempt refresh
-    if (!this.refreshToken) {
-      this.clearTokens();
-      this.broadcastState();
-      throw new Error('Authentication required');
-    }
+    // Create abort controller for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
     try {
-      await this.refreshAccessToken();
-    } catch (err) {
-      if (err instanceof AuthTokenInvalidError) {
+      const res = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+        headers: {
+          ...this.getDefaultHeaders(),
+          Authorization: `Bearer ${token}`,
+          ...options.headers,
+        },
+      });
+
+      if (res.status !== 401) {
+        return res;
+      }
+
+      // 401: attempt refresh
+      if (!this.refreshToken) {
         this.clearTokens();
         this.broadcastState();
+        throw new Error('Authentication required');
       }
-      throw new Error('Authentication required');
-    }
 
-    // Retry with new token
-    return fetch(url, {
-      ...options,
-      headers: {
-        ...this.getDefaultHeaders(),
-        Authorization: `Bearer ${this.accessToken}`,
-        ...options.headers,
-      },
-    });
+      try {
+        await this.refreshAccessToken();
+      } catch (err) {
+        if (err instanceof AuthTokenInvalidError) {
+          this.clearTokens();
+          this.broadcastState();
+        }
+        throw new Error('Authentication required');
+      }
+
+      // Retry with new token (also with timeout)
+      const retryController = new AbortController();
+      const retryTimeoutId = setTimeout(() => retryController.abort(), 8000);
+
+      try {
+        return await fetch(url, {
+          ...options,
+          signal: retryController.signal,
+          headers: {
+            ...this.getDefaultHeaders(),
+            Authorization: `Bearer ${this.accessToken}`,
+            ...options.headers,
+          },
+        });
+      } finally {
+        clearTimeout(retryTimeoutId);
+      }
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   // ─── Private Methods ─────────────────────────────────────────────
