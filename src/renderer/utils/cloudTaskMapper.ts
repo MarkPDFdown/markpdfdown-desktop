@@ -43,6 +43,9 @@ export function mapCloudTaskToTask(ct: CloudTaskResponse): CloudTask {
     ultra: 'Fit Ultra',
   };
 
+  // Cloud provider name
+  const providerName = 'Markdown.Fit';
+
   // Parse created_at to unified timestamp (Unix timestamp in milliseconds)
   // Use started_at as fallback if created_at is not available
   const sortTimestamp = ct.created_at
@@ -55,7 +58,7 @@ export function mapCloudTaskToTask(ct: CloudTaskResponse): CloudTask {
     type,
     pages: pageCount,
     provider: -1,
-    model_name: modelTierMap[ct.model_tier?.toLowerCase() || ''] || 'Cloud',
+    model_name: (modelTierMap[ct.model_tier?.toLowerCase() || ''] || 'Cloud') + ' | ' + providerName,
     progress,
     status: ct.status,
     completed_count: pagesCompleted,
