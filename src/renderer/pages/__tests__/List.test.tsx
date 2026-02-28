@@ -157,7 +157,7 @@ describe('List', () => {
       )
 
       await waitFor(() => {
-        expect(window.api.task.getAll).toHaveBeenCalledWith({ page: 1, pageSize: 10 })
+        expect(window.api.task.getAll).toHaveBeenCalledWith({ page: 1, pageSize: 100 })
       })
     })
 
@@ -318,7 +318,7 @@ describe('List', () => {
       )
 
       await waitFor(() => {
-        expect(window.api.task.getAll).toHaveBeenCalledWith({ page: 1, pageSize: 10 })
+        expect(window.api.task.getAll).toHaveBeenCalledWith({ page: 1, pageSize: 100 })
       })
     })
   })

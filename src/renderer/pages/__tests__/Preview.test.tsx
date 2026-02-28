@@ -4,48 +4,55 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { App } from 'antd'
 import Preview from '../Preview'
 
+const translations: Record<string, string> = {
+  'preview.back': 'Back',
+  'preview.download': 'Download',
+  'preview.cancel': 'Cancel',
+  'preview.retry': 'Retry',
+  'preview.retry_failed': 'Retry Failed',
+  'preview.retry_all': 'Retry All',
+  'preview.more_actions': 'More Actions',
+  'preview.delete': 'Delete',
+  'preview.regenerate': 'Regenerate',
+  'preview.regenerate_tooltip': 'Regenerate this page',
+  'preview.confirm_delete': 'Delete Task',
+  'preview.confirm_delete_content': 'Are you sure you want to delete this task?',
+  'preview.confirm_cancel': 'Cancel Task',
+  'preview.confirm_cancel_content': 'Are you sure you want to cancel this task?',
+  'preview.confirm_retry': 'Retry Task',
+  'preview.confirm_retry_content': 'Are you sure you want to retry this task?',
+  'preview.delete_success': 'Task deleted',
+  'preview.delete_failed': 'Failed to delete task',
+  'preview.cancel_success': 'Task cancelled',
+  'preview.cancel_failed': 'Failed to cancel task',
+  'preview.retry_success': 'Task retrying',
+  'preview.retry_failed_msg': 'Failed to retry task',
+  'preview.image_load_failed': 'Image failed to load or does not exist',
+  'preview.status.failed': 'Failed',
+  'preview.status.pending': 'Pending',
+  'preview.status.processing': 'Processing',
+  'preview.status.completed': 'Completed',
+  'preview.status.retrying': 'Retrying',
+  'common.confirm': 'Confirm',
+  'common.cancel': 'Cancel',
+}
+
+const tMock = (key: string, params?: any) => {
+  if (key === 'common.pages') {
+    return `${params?.count || 0} pages`
+  }
+  return translations[key] || key
+}
+
+const i18nMock = {
+  changeLanguage: vi.fn(),
+}
+
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, params?: any) => {
-      const translations: Record<string, string> = {
-        'preview.back': 'Back',
-        'preview.download': 'Download',
-        'preview.cancel': 'Cancel',
-        'preview.retry': 'Retry',
-        'preview.retry_failed': 'Retry Failed',
-        'preview.retry_all': 'Retry All',
-        'preview.more_actions': 'More Actions',
-        'preview.delete': 'Delete',
-        'preview.regenerate': 'Regenerate',
-        'preview.regenerate_tooltip': 'Regenerate this page',
-        'preview.confirm_delete': 'Delete Task',
-        'preview.confirm_delete_content': 'Are you sure you want to delete this task?',
-        'preview.confirm_cancel': 'Cancel Task',
-        'preview.confirm_cancel_content': 'Are you sure you want to cancel this task?',
-        'preview.confirm_retry': 'Retry Task',
-        'preview.confirm_retry_content': 'Are you sure you want to retry this task?',
-        'preview.delete_success': 'Task deleted',
-        'preview.delete_failed': 'Failed to delete task',
-        'preview.cancel_success': 'Task cancelled',
-        'preview.cancel_failed': 'Failed to cancel task',
-        'preview.retry_success': 'Task retrying',
-        'preview.retry_failed_msg': 'Failed to retry task',
-        'preview.image_load_failed': 'Image failed to load or does not exist',
-        'preview.status.failed': 'Failed',
-        'preview.status.pending': 'Pending',
-        'preview.status.processing': 'Processing',
-        'preview.status.completed': 'Completed',
-        'preview.status.retrying': 'Retrying',
-        'common.confirm': 'Confirm',
-        'common.cancel': 'Cancel',
-        'common.pages': `${params?.count || 0} pages`
-      }
-      return translations[key] || key
-    },
-    i18n: {
-      changeLanguage: vi.fn()
-    }
+    t: tMock,
+    i18n: i18nMock
   })
 }))
 
@@ -396,8 +403,15 @@ describe('Preview', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText('Regenerate')).toBeInTheDocument()
+        expect(window.api.taskDetail.getByPage).toHaveBeenCalledWith('task-1', 1)
       })
+      await waitFor(() => {
+        expect(screen.getByTestId('markdown-preview')).toHaveTextContent('Page 1 Content')
+      })
+
+      const reloadIcon = screen.getByRole('img', { name: 'reload' })
+      const regenerateButton = reloadIcon.closest('button')
+      expect(regenerateButton).toBeInTheDocument()
     })
 
     it('should call retry API when clicking regenerate', async () => {
@@ -408,10 +422,19 @@ describe('Preview', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText('Regenerate')).toBeInTheDocument()
+        expect(window.api.taskDetail.getByPage).toHaveBeenCalledWith('task-1', 1)
+      })
+      await waitFor(() => {
+        expect(screen.getByTestId('markdown-preview')).toHaveTextContent('Page 1 Content')
       })
 
-      const regenerateButton = screen.getByText('Regenerate')
+      const reloadIcon = screen.getByRole('img', { name: 'reload' })
+      const regenerateButton = reloadIcon.closest('button')
+      expect(regenerateButton).toBeInTheDocument()
+      if (!regenerateButton) {
+        throw new Error('Regenerate button not found')
+      }
+
       fireEvent.click(regenerateButton)
 
       await waitFor(() => {
