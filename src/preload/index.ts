@@ -117,6 +117,8 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("cloud:sseConnect"),
     sseDisconnect: () =>
       ipcRenderer.invoke("cloud:sseDisconnect"),
+    sseResetAndDisconnect: () =>
+      ipcRenderer.invoke("cloud:sseResetAndDisconnect"),
   },
 
   // ==================== Shell APIs ====================

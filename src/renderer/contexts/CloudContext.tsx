@@ -318,14 +318,16 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
     }
   }, [isAuthenticated, refreshCredits]);
 
-  // SSE lifecycle: connect when authenticated, disconnect when not
+  // SSE lifecycle: connect when authenticated, full reset when logged out
   useEffect(() => {
     if (isAuthenticated) {
       window.api?.cloud?.sseConnect?.();
     } else {
-      window.api?.cloud?.sseDisconnect?.();
+      // User logged out: full reset clears lastEventId so next login starts fresh
+      window.api?.cloud?.sseResetAndDisconnect?.();
     }
     return () => {
+      // Component unmount: preserve lastEventId for seamless resumption
       window.api?.cloud?.sseDisconnect?.();
     };
   }, [isAuthenticated]);

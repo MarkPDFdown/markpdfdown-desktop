@@ -268,6 +268,7 @@ interface ElectronAPI {
     getCreditHistory: (params: { page: number; pageSize: number; type?: string }) => Promise<IpcResponse<any>>;
     sseConnect: () => Promise<IpcResponse<void>>;
     sseDisconnect: () => Promise<IpcResponse<void>>;
+    sseResetAndDisconnect: () => Promise<IpcResponse<void>>;
   };
 
   shell: {

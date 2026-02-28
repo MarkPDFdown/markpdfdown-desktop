@@ -239,7 +239,7 @@ export function registerCloudHandlers() {
   });
 
   /**
-   * SSE disconnect
+   * SSE disconnect (preserves lastEventId for resumption)
    */
   ipcMain.handle('cloud:sseDisconnect', async () => {
     try {
@@ -247,6 +247,22 @@ export function registerCloudHandlers() {
       return { success: true };
     } catch (error) {
       console.error('[IPC] cloud:sseDisconnect error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * SSE full reset and disconnect (clears lastEventId, used on logout)
+   */
+  ipcMain.handle('cloud:sseResetAndDisconnect', async () => {
+    try {
+      cloudSSEManager.resetAndDisconnect();
+      return { success: true };
+    } catch (error) {
+      console.error('[IPC] cloud:sseResetAndDisconnect error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error)

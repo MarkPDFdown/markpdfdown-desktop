@@ -104,6 +104,7 @@ interface WindowAPI {
     getCreditHistory: (params: { page: number; pageSize: number; type?: string }) => Promise<any>;
     sseConnect: () => Promise<any>;
     sseDisconnect: () => Promise<any>;
+    sseResetAndDisconnect: () => Promise<any>;
   };
   shell: {
     openExternal: (url: string) => void;

@@ -41,6 +41,7 @@ class CloudSSEManager {
   /**
    * Connect to the global SSE endpoint.
    * Safe to call multiple times — tears down any existing connection first.
+   * Preserves lastEventId so reconnection can resume from where it left off.
    */
   public async connect(): Promise<void> {
     if (this.connected) {
@@ -69,10 +70,21 @@ class CloudSSEManager {
   }
 
   /**
-   * Disconnect from SSE
+   * Disconnect from SSE but preserve lastEventId for resumption.
+   * Use this for temporary disconnections (e.g., component unmount, re-render).
    */
   public disconnect(): void {
-    console.log('[CloudSSE] Disconnecting');
+    console.log('[CloudSSE] Disconnecting (preserving lastEventId for resumption)');
+    this.connected = false;
+    this.cleanup();
+  }
+
+  /**
+   * Fully disconnect and reset all state including lastEventId.
+   * Use this only on explicit logout — the next connect() will start fresh.
+   */
+  public resetAndDisconnect(): void {
+    console.log('[CloudSSE] Full reset and disconnect');
     this.connected = false;
     this.lastEventId = '0';
     this.cleanup();
@@ -115,8 +127,13 @@ class CloudSSEManager {
       clearTimeout(this.heartbeatTimer);
       this.heartbeatTimer = null;
     }
+    // Cancel any pending reconnect timer to prevent duplicate connections
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
 
-    console.log(`[CloudSSE] Reconnecting in ${this.reconnectDelay}ms...`);
+    console.log(`[CloudSSE] Reconnecting in ${this.reconnectDelay}ms (lastEventId=${this.lastEventId})...`);
 
     this.reconnectTimer = setTimeout(async () => {
       this.reconnectTimer = null;
@@ -148,7 +165,7 @@ class CloudSSEManager {
     }
 
     try {
-      console.log('[CloudSSE] Connecting to', url);
+      console.log(`[CloudSSE] Connecting to ${url} (Last-Event-ID=${this.lastEventId})`);
       const res = await authManager.fetchWithAuth(url, {
         headers,
         signal: this.abortController.signal,
@@ -189,6 +206,7 @@ class CloudSSEManager {
     const decoder = new TextDecoder();
     let buffer = '';
     let chunkCount = 0;
+    let aborted = false;
 
     try {
       while (true) {
@@ -215,15 +233,17 @@ class CloudSSEManager {
         }
       }
     } catch (error: any) {
-      if (error.name !== 'AbortError') {
+      if (error.name === 'AbortError') {
+        aborted = true;
+      } else {
         console.error('[CloudSSE] Read error:', error?.message || error);
       }
     } finally {
       reader.releaseLock();
     }
 
-    // Stream ended, reconnect if still connected
-    if (this.connected) {
+    // Only reconnect if stream ended naturally (not aborted by reconnect/disconnect)
+    if (!aborted && this.connected) {
       this.reconnect();
     }
   }
