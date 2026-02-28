@@ -15,6 +15,19 @@ const REFRESH_TOKEN_DIR = 'auth';
 const REFRESH_TOKEN_FILE = 'refresh_token.enc';
 const TOKEN_REFRESH_MARGIN_MS = 60 * 1000; // Refresh 1 minute before expiry
 const DEVICE_POLL_INTERVAL_MS = 5000;
+const INIT_RETRY_DELAY_MS = 30 * 1000; // Retry initialization after 30 seconds on transient failure
+const MAX_AUTO_REFRESH_RETRIES = 3; // Max retries for scheduled auto-refresh
+
+/**
+ * Thrown when the refresh token is definitively invalid (e.g. revoked, expired)
+ * and the user must re-authenticate.
+ */
+class AuthTokenInvalidError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AuthTokenInvalidError';
+  }
+}
 
 function buildUserAgent(): string {
   const appVersion = app.getVersion();
@@ -40,6 +53,8 @@ class AuthManager {
 
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
   private refreshTimer: ReturnType<typeof setTimeout> | null = null;
+  private initRetryTimer: ReturnType<typeof setTimeout> | null = null;
+  private autoRefreshRetryCount: number = 0;
   private deviceCode: string | null = null;
   private pollExpiresAt: number = 0;
 
@@ -79,7 +94,18 @@ class AuthManager {
       console.log('[AuthManager] Session restored successfully');
     } catch (err) {
       console.warn('[AuthManager] Failed to restore session:', err);
-      this.clearTokens();
+      // Only clear tokens if the refresh token is definitively invalid (auth error).
+      // For transient errors (network, server), keep the refresh token so we can retry later.
+      if (err instanceof AuthTokenInvalidError) {
+        this.clearTokens();
+      } else {
+        // Keep refresh token on disk, clear only in-memory access token
+        this.accessToken = null;
+        this.accessTokenExpiresAt = 0;
+        this.userProfile = null;
+        // Schedule a retry after a delay
+        this.scheduleInitRetry();
+      }
     }
 
     this.isLoading = false;
@@ -221,12 +247,12 @@ class AuthManager {
    * Get a valid access token, refreshing if needed
    */
   public async getAccessToken(): Promise<string | null> {
-    if (!this.accessToken || !this.refreshToken) {
+    if (!this.refreshToken) {
       return null;
     }
 
     // If token is still valid (with margin), return it
-    if (Date.now() < this.accessTokenExpiresAt - TOKEN_REFRESH_MARGIN_MS) {
+    if (this.accessToken && Date.now() < this.accessTokenExpiresAt - TOKEN_REFRESH_MARGIN_MS) {
       return this.accessToken;
     }
 
@@ -234,9 +260,13 @@ class AuthManager {
     try {
       await this.refreshAccessToken();
       return this.accessToken;
-    } catch {
-      this.clearTokens();
-      this.broadcastState();
+    } catch (err) {
+      if (err instanceof AuthTokenInvalidError) {
+        // Refresh token is definitively invalid, clear everything
+        this.clearTokens();
+        this.broadcastState();
+      }
+      // For transient errors, don't clear the refresh token — let caller handle the failure
       return null;
     }
   }
@@ -294,9 +324,11 @@ class AuthManager {
 
     try {
       await this.refreshAccessToken();
-    } catch {
-      this.clearTokens();
-      this.broadcastState();
+    } catch (err) {
+      if (err instanceof AuthTokenInvalidError) {
+        this.clearTokens();
+        this.broadcastState();
+      }
       throw new Error('Authentication required');
     }
 
@@ -415,25 +447,64 @@ class AuthManager {
         await this.refreshAccessToken();
       } catch (err) {
         console.error('[AuthManager] Auto-refresh failed:', err);
-        this.clearTokens();
-        this.broadcastState();
+        if (err instanceof AuthTokenInvalidError) {
+          // Refresh token is definitively invalid
+          this.clearTokens();
+          this.broadcastState();
+        } else {
+          // Transient error — retry with exponential backoff
+          this.autoRefreshRetryCount++;
+          if (this.autoRefreshRetryCount <= MAX_AUTO_REFRESH_RETRIES) {
+            const retryDelayMs = Math.min(30000 * Math.pow(2, this.autoRefreshRetryCount - 1), 5 * 60 * 1000);
+            console.log(`[AuthManager] Scheduling auto-refresh retry ${this.autoRefreshRetryCount}/${MAX_AUTO_REFRESH_RETRIES} in ${retryDelayMs / 1000}s`);
+            this.refreshTimer = setTimeout(async () => {
+              try {
+                await this.refreshAccessToken();
+              } catch (retryErr) {
+                console.error('[AuthManager] Auto-refresh retry failed:', retryErr);
+                if (retryErr instanceof AuthTokenInvalidError) {
+                  this.clearTokens();
+                  this.broadcastState();
+                } else if (this.autoRefreshRetryCount < MAX_AUTO_REFRESH_RETRIES) {
+                  // Schedule another retry via recursive call
+                  this.scheduleTokenRefresh(retryDelayMs / 1000);
+                } else {
+                  console.error('[AuthManager] Max auto-refresh retries reached, keeping refresh token for next manual attempt');
+                }
+              }
+            }, retryDelayMs);
+          } else {
+            console.error('[AuthManager] Max auto-refresh retries reached, keeping refresh token for next manual attempt');
+          }
+        }
       }
     }, refreshInMs);
   }
 
   private async refreshAccessToken(): Promise<void> {
     if (!this.refreshToken) {
-      throw new Error('No refresh token available');
+      throw new AuthTokenInvalidError('No refresh token available');
     }
 
-    const res = await fetch(`${API_BASE_URL}/api/v1/auth/token/refresh`, {
-      method: 'POST',
-      headers: this.getDefaultHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ refresh_token: this.refreshToken }),
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE_URL}/api/v1/auth/token/refresh`, {
+        method: 'POST',
+        headers: this.getDefaultHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ refresh_token: this.refreshToken }),
+      });
+    } catch (err) {
+      // Network error (offline, DNS failure, etc.) — transient, don't invalidate refresh token
+      throw new Error(`Token refresh network error: ${err instanceof Error ? err.message : String(err)}`);
+    }
 
     if (!res.ok) {
-      throw new Error(`Token refresh failed: ${res.status}`);
+      // 401/403 means the refresh token itself is invalid or revoked
+      if (res.status === 401 || res.status === 403) {
+        throw new AuthTokenInvalidError(`Token refresh rejected: ${res.status}`);
+      }
+      // Other HTTP errors (500, 502, 503, etc.) are transient server errors
+      throw new Error(`Token refresh server error: ${res.status}`);
     }
 
     const responseJson: { success: boolean; data: TokenResponse } = await res.json();
@@ -441,6 +512,8 @@ class AuthManager {
       throw new Error('Token refresh failed: invalid response');
     }
     this.handleTokenResponse(responseJson.data);
+    // Reset retry count on successful refresh
+    this.autoRefreshRetryCount = 0;
   }
 
   private async fetchUserProfile(): Promise<void> {
@@ -510,6 +583,40 @@ class AuthManager {
     }
   }
 
+  /**
+   * Schedule a retry of initialization after a transient failure.
+   * The refresh token is still stored on disk, so we just need to try refreshing again.
+   */
+  private scheduleInitRetry(): void {
+    if (this.initRetryTimer) {
+      clearTimeout(this.initRetryTimer);
+    }
+
+    console.log(`[AuthManager] Scheduling init retry in ${INIT_RETRY_DELAY_MS / 1000}s`);
+    this.initRetryTimer = setTimeout(async () => {
+      this.initRetryTimer = null;
+      if (this.accessToken || !this.refreshToken) {
+        // Already recovered or token was cleared
+        return;
+      }
+
+      console.log('[AuthManager] Retrying session restoration...');
+      try {
+        await this.refreshAccessToken();
+        await this.fetchUserProfile();
+        console.log('[AuthManager] Session restored on retry');
+        this.broadcastState();
+      } catch (err) {
+        console.warn('[AuthManager] Init retry failed:', err);
+        if (err instanceof AuthTokenInvalidError) {
+          this.clearTokens();
+          this.broadcastState();
+        }
+        // For transient errors, user can still trigger refresh via any API call
+      }
+    }, INIT_RETRY_DELAY_MS);
+  }
+
   private clearTokens(): void {
     this.accessToken = null;
     this.accessTokenExpiresAt = 0;
@@ -520,10 +627,15 @@ class AuthManager {
     this.userCode = null;
     this.verificationUrl = null;
     this.deviceCode = null;
+    this.autoRefreshRetryCount = 0;
     this.stopPolling();
     if (this.refreshTimer) {
       clearTimeout(this.refreshTimer);
       this.refreshTimer = null;
+    }
+    if (this.initRetryTimer) {
+      clearTimeout(this.initRetryTimer);
+      this.initRetryTimer = null;
     }
     this.deleteRefreshToken();
   }

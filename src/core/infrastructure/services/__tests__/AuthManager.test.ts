@@ -169,7 +169,7 @@ describe('AuthManager', () => {
       expect(state.isAuthenticated).toBe(false);
     });
 
-    it('should clear tokens when profile fetch fails during restore', async () => {
+    it('should not be authenticated when profile fetch fails during restore but keep refresh token', async () => {
       setupStoredRefreshToken();
       mockTokenRefreshResponse();
 
