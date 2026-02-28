@@ -3,8 +3,8 @@ import {
   CheckCircleFilled,
   ClockCircleFilled,
   CloseCircleFilled,
+  DeleteOutlined,
   DownOutlined,
-  DownloadOutlined,
   FileMarkdownOutlined,
   LoadingOutlined,
   ReloadOutlined,
@@ -49,6 +49,7 @@ const CloudPreview: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
+  const [retryingFailed, setRetryingFailed] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageError, setImageError] = useState(false);
@@ -253,21 +254,6 @@ const CloudPreview: React.FC = () => {
     }
   };
 
-  // Download PDF
-  const handleDownloadPdf = async () => {
-    if (!id || !cloudContext) return;
-    try {
-      const result = await cloudContext.downloadResult(id);
-      if (result.success) {
-        message.success(t('download_success'));
-      } else if (result.error !== 'Cancelled') {
-        message.error(result.error || t('download_failed'));
-      }
-    } catch {
-      message.error(t('download_failed'));
-    }
-  };
-
   // Cancel task
   const handleCancel = async () => {
     if (!id || !cloudContext) return;
@@ -337,6 +323,71 @@ const CloudPreview: React.FC = () => {
     } finally {
       setRetrying(false);
     }
+  };
+
+  // Retry all failed pages
+  const handleRetryFailed = async () => {
+    if (!id || !cloudContext) return;
+
+    modal.confirm({
+      title: t('confirm_retry_failed'),
+      content: t('confirm_retry_failed_content'),
+      okText: tCommon('common.confirm'),
+      cancelText: tCommon('common.cancel'),
+      onOk: async () => {
+        setRetryingFailed(true);
+        try {
+          const failedPages = pages.filter(p => p.status === 3);
+          let retriedCount = 0;
+          for (const page of failedPages) {
+            const result = await cloudContext.retryPage(id, page.page);
+            if (result.success) {
+              retriedCount++;
+              setPages(prev => {
+                const idx = prev.findIndex(p => p.page === page.page);
+                if (idx >= 0) {
+                  const updated = [...prev];
+                  updated[idx] = { ...updated[idx], status: 1 };
+                  return updated;
+                }
+                return prev;
+              });
+            }
+          }
+          if (retriedCount > 0) {
+            message.success(t('retry_failed_success', { count: retriedCount }));
+          } else {
+            message.error(t('retry_failed'));
+          }
+        } catch {
+          message.error(t('retry_failed'));
+        } finally {
+          setRetryingFailed(false);
+        }
+      },
+    });
+  };
+
+  // Delete task
+  const handleDelete = async () => {
+    if (!id || !cloudContext) return;
+
+    modal.confirm({
+      title: t('confirm_delete'),
+      content: t('confirm_delete_content'),
+      okText: tCommon('common.confirm'),
+      cancelText: tCommon('common.cancel'),
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        const result = await cloudContext.deleteTask(id);
+        if (result.success) {
+          message.success(t('delete_success'));
+          navigate('/list');
+        } else {
+          message.error(result.error || t('delete_failed'));
+        }
+      },
+    });
   };
 
   // Page status info
@@ -435,31 +486,38 @@ const CloudPreview: React.FC = () => {
             {/* Action dropdown */}
             {(() => {
               const status = task?.status;
+              const failedCount = task?.pages_failed || 0;
+
               const menuItems: MenuProps['items'] = [];
 
-              // Download PDF
-              if (task?.pdf_url) {
+              // Retry failed pages: status === 8 && pages_failed > 0
+              if (status === 8 && failedCount > 0) {
                 menuItems.push({
-                  key: 'download_pdf',
-                  icon: <DownloadOutlined />,
-                  label: t('download_pdf'),
-                  onClick: handleDownloadPdf,
+                  key: 'retry_failed',
+                  icon: <ReloadOutlined />,
+                  label: t('retry_failed_pages'),
+                  onClick: handleRetryFailed,
+                  disabled: retryingFailed,
                 });
               }
 
-              // Retry: status === 0 (failed)
+              // Retry all: status === 0 (failed)
               if (status === 0) {
                 menuItems.push({
-                  key: 'retry',
+                  key: 'retry_all',
                   icon: <ReloadOutlined />,
                   label: t('retry_all'),
                   onClick: handleRetryTask,
                 });
               }
 
-              // Cancel: status 1-3
-              if (status !== undefined && status >= 1 && status <= 3) {
-                if (menuItems.length > 0) menuItems.push({ type: 'divider' });
+              // Divider
+              if (menuItems.length > 0 && ((status !== undefined && status > 0 && status < 6) || status === 0 || (status !== undefined && status >= 6))) {
+                menuItems.push({ type: 'divider' });
+              }
+
+              // Cancel: status > 0 && status < 6
+              if (status !== undefined && status > 0 && status < 6) {
                 menuItems.push({
                   key: 'cancel',
                   icon: <StopOutlined />,
@@ -468,16 +526,65 @@ const CloudPreview: React.FC = () => {
                 });
               }
 
+              // Delete: status === 0 || status >= 6 (terminal states)
+              if (status === 0 || (status !== undefined && status >= 6)) {
+                menuItems.push({
+                  key: 'delete',
+                  icon: <DeleteOutlined />,
+                  label: t('delete_task'),
+                  danger: true,
+                  onClick: handleDelete,
+                });
+              }
+
               if (menuItems.length === 0) return null;
 
-              return (
-                <Dropdown menu={{ items: menuItems }} trigger={['click']}>
-                  <Button>
-                    {t('more_actions')}
-                    <DownOutlined />
-                  </Button>
-                </Dropdown>
-              );
+              // Check for primary action (retry failed or retry all)
+              const hasRetryFailed = status === 8 && failedCount > 0;
+              const hasRetryAll = status === 0;
+              const hasPrimaryAction = hasRetryFailed || hasRetryAll;
+
+              if (hasPrimaryAction) {
+                const primaryLabel = hasRetryFailed ? t('retry_failed_pages') : t('retry_all');
+                const primaryAction = hasRetryFailed ? handleRetryFailed : handleRetryTask;
+                const primaryIcon = hasRetryFailed && retryingFailed ? <LoadingOutlined /> : <ReloadOutlined />;
+
+                // Filter out primary action from dropdown to avoid duplication
+                const filteredMenuItems = menuItems.filter(item => {
+                  if (!item || item.type === 'divider') return true;
+                  if (hasRetryFailed && (item as any).key === 'retry_failed') return false;
+                  if (hasRetryAll && (item as any).key === 'retry_all') return false;
+                  return true;
+                });
+
+                // Remove leading dividers
+                while (filteredMenuItems.length > 0 && filteredMenuItems[0]?.type === 'divider') {
+                  filteredMenuItems.shift();
+                }
+
+                return (
+                  <Dropdown.Button
+                    menu={{ items: filteredMenuItems }}
+                    onClick={primaryAction}
+                    icon={<DownOutlined />}
+                    disabled={hasRetryFailed && retryingFailed}
+                  >
+                    <Space>
+                      {primaryIcon}
+                      {primaryLabel}
+                    </Space>
+                  </Dropdown.Button>
+                );
+              } else {
+                return (
+                  <Dropdown menu={{ items: menuItems }} trigger={['click']}>
+                    <Button>
+                      {t('more_actions')}
+                      <DownOutlined />
+                    </Button>
+                  </Dropdown>
+                );
+              }
             })()}
           </Space>
         </div>
