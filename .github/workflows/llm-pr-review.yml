@@ -63,8 +63,10 @@ jobs:
               exit 1
             }
 
-          max_diff_chars=131072
-          pr_diff_trimmed=$(printf "%s" "$pr_diff" | head -c $max_diff_chars | sed '$d')
+          max_diff_chars=65536
+          pr_diff_trimmed=$(printf "%s" "$pr_diff" | head -c $max_diff_chars)
+          # Trim to last complete diff hunk to avoid cutting mid-line
+          pr_diff_trimmed=$(printf "%s" "$pr_diff_trimmed" | sed '$d')
 
           system_prompt=$(cat <<'SYSPROMPT'
           You are a senior software engineer reviewing a pull request for an Electron desktop application (React 18 + TypeScript + Vite + Prisma/SQLite + Ant Design). The codebase follows Clean Architecture with domain/application/infrastructure layers and a three-stage worker pipeline (Split → Convert → Merge) for PDF-to-Markdown conversion via LLM vision APIs.
@@ -133,15 +135,24 @@ jobs:
               ]
             }')
 
-          llm_response=$(curl -sf \
+          http_code=$(curl -s -o /tmp/llm_response.json -w "%{http_code}" \
+            --max-time 120 \
             -H "x-api-key: $API_KEY" \
             -H "Content-Type: application/json" \
             -H "anthropic-version: 2023-06-01" \
             "$API_BASE/v1/messages" \
             -d "$request_body") || {
-              echo "::error::LLM API request failed"
+              echo "::error::LLM API request failed (curl error)"
               exit 1
             }
+
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+            echo "::error::LLM API returned HTTP $http_code"
+            cat /tmp/llm_response.json
+            exit 1
+          fi
+
+          llm_response=$(cat /tmp/llm_response.json)
 
           review_text=$(printf "%s" "$llm_response" | jq -r '[.content[] | select(.type == "text")] | first? | .text // ""')
 
@@ -153,7 +164,7 @@ jobs:
 
           review_payload=$(jq -n --arg body "$review_text" '{body: $body, event: "COMMENT"}')
 
-          curl -sf \
+          curl -sf --max-time 30 \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER/reviews" \
