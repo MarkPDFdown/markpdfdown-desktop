@@ -50,7 +50,7 @@ const About: React.FC = () => {
           {t('about.subtitle')}
         </Text>
         <Space style={{ marginTop: 16 }}>
-          <Button onClick={() => handleOpenLink('https://github.com/MarkPDFdown/markpdfdown-desktop')}>
+          <Button onClick={() => handleOpenLink('https://markdown.fit')}>
             {t('about.buttons.website')}
           </Button>
           <Button onClick={() => handleOpenLink('https://github.com/MarkPDFdown/markpdfdown-desktop/blob/master/LICENSE')}>
