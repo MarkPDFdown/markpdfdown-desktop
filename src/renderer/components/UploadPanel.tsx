@@ -125,7 +125,6 @@ const UploadPanel: React.FC = () => {
         }
 
         // Inject Cloud Models (lite, pro, ultra tiers)
-        // Inject Cloud Models (lite, pro, ultra tiers)
         // Format: "Fit Lite (~10 credits/page)" with i18n
         const cloudGroup: ModelGroupType = {
           provider: CLOUD_PROVIDER_ID,

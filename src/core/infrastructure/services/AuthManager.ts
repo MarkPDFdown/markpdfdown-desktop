@@ -317,15 +317,33 @@ class AuthManager {
     // Determine timeout: explicit meta > auto-detect from body type > default 8s
     const isFormData = options.body instanceof FormData;
     const timeoutMs = meta?.timeoutMs !== undefined ? meta.timeoutMs : isFormData ? 120 * 1000 : 8000;
+    const callerSignal = options.signal;
 
-    // Create abort controller for timeout (skip if no timeout for downloads)
-    const controller = new AbortController();
-    const timeoutId = timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : null;
+    // Build composite signal: combine caller signal with timeout
+    const buildSignal = (): { signal: AbortSignal | undefined; timeoutId: ReturnType<typeof setTimeout> | null } => {
+      const signals: AbortSignal[] = [];
+      let tid: ReturnType<typeof setTimeout> | null = null;
+
+      if (callerSignal) signals.push(callerSignal);
+      if (timeoutMs > 0) {
+        const tc = new AbortController();
+        tid = setTimeout(() => tc.abort(), timeoutMs);
+        signals.push(tc.signal);
+      }
+
+      if (signals.length === 0) return { signal: undefined, timeoutId: null };
+      if (signals.length === 1) return { signal: signals[0], timeoutId: tid };
+      // Compose multiple signals
+      const combined = AbortSignal.any(signals);
+      return { signal: combined, timeoutId: tid };
+    };
+
+    const { signal, timeoutId } = buildSignal();
 
     try {
       const res = await fetch(url, {
         ...options,
-        signal: timeoutId ? controller.signal : undefined,
+        signal,
         headers: {
           ...this.getDefaultHeaders(),
           Authorization: `Bearer ${token}`,
@@ -354,14 +372,13 @@ class AuthManager {
         throw new Error('Authentication required');
       }
 
-      // Retry with new token (use same timeout strategy)
-      const retryController = new AbortController();
-      const retryTimeoutId = timeoutMs > 0 ? setTimeout(() => retryController.abort(), timeoutMs) : null;
+      // Retry with new token (rebuild signal for retry)
+      const { signal: retrySignal, timeoutId: retryTimeoutId } = buildSignal();
 
       try {
         return await fetch(url, {
           ...options,
-          signal: retryTimeoutId ? retryController.signal : undefined,
+          signal: retrySignal,
           headers: {
             ...this.getDefaultHeaders(),
             Authorization: `Bearer ${this.accessToken}`,
@@ -371,6 +388,15 @@ class AuthManager {
       } finally {
         if (retryTimeoutId) clearTimeout(retryTimeoutId);
       }
+    } catch (error: any) {
+      // Normalize timeout AbortError to a clear message
+      if (error?.name === 'AbortError' && callerSignal?.aborted) {
+        throw error; // Caller-initiated abort, re-throw as-is
+      }
+      if (error?.name === 'AbortError') {
+        throw new Error('Request timeout');
+      }
+      throw error;
     } finally {
       if (timeoutId) clearTimeout(timeoutId);
     }
