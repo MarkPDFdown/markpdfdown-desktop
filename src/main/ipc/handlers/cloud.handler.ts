@@ -27,7 +27,7 @@ export function registerCloudHandlers() {
       }
       if (fileData.path) {
         try {
-          const stat = fs.statSync(fileData.path);
+          const stat = await fs.promises.stat(fileData.path);
           if (stat.size > MAX_UPLOAD_SIZE_BYTES) {
             return { success: false, error: `File too large (max ${MAX_UPLOAD_SIZE_BYTES / 1024 / 1024}MB)` };
           }

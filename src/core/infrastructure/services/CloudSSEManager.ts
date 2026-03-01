@@ -172,7 +172,7 @@ class CloudSSEManager {
       const res = await authManager.fetchWithAuth(url, {
         headers,
         signal: this.abortController.signal,
-      });
+      }, { timeoutMs: 0 });
 
       if (isDev) {
         console.log(`[CloudSSE] Response status: ${res.status}, content-type: ${res.headers.get('content-type')}`);
@@ -180,6 +180,13 @@ class CloudSSEManager {
 
       if (!res.ok) {
         console.error(`[CloudSSE] HTTP error: ${res.status}`);
+        this.reconnect();
+        return;
+      }
+
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('text/event-stream')) {
+        console.error(`[CloudSSE] Unexpected content-type: ${contentType}, expected text/event-stream`);
         this.reconnect();
         return;
       }

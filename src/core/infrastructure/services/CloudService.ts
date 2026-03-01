@@ -1,4 +1,4 @@
-import fs from 'fs';
+import fs from 'fs/promises';
 import path from 'path';
 import { authManager } from './AuthManager.js';
 import { API_BASE_URL } from '../config.js';
@@ -62,7 +62,7 @@ class CloudService {
       if (fileData.content) {
         fileBuffer = fileData.content;
       } else if (fileData.path) {
-        const buffer = fs.readFileSync(fileData.path);
+        const buffer = await fs.readFile(fileData.path);
         fileBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
       } else {
         return { success: false, error: 'No file content or path provided' };
@@ -353,7 +353,7 @@ class CloudService {
     error?: string;
   }> {
     try {
-      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/tasks/${encodeURIComponent(id)}/result`);
+      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/tasks/${encodeURIComponent(id)}/result`, {}, { timeoutMs: 0 });
 
       if (!res.ok) {
         const errorBody = await res.json().catch(() => null);
@@ -387,7 +387,7 @@ class CloudService {
     error?: string;
   }> {
     try {
-      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/tasks/${encodeURIComponent(id)}/pdf`);
+      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/tasks/${encodeURIComponent(id)}/pdf`, {}, { timeoutMs: 0 });
 
       if (!res.ok) {
         const errorBody = await res.json().catch(() => null);
@@ -426,6 +426,8 @@ class CloudService {
     try {
       const res = await authManager.fetchWithAuth(
         `${API_BASE_URL}/api/v1/tasks/${encodeURIComponent(taskId)}/pages/${encodeURIComponent(String(pageNumber))}/image`,
+        {},
+        { timeoutMs: 0 },
       );
 
       if (!res.ok) {

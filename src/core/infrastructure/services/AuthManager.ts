@@ -305,20 +305,18 @@ class AuthManager {
   /**
    * Make an authenticated API request. Automatically retries once on 401 by refreshing the token.
    * @param url - Request URL
-   * @param options - Request options
-   * @param options.body - Request body. If body is FormData, uses 120s timeout for uploads.
-   *                       If method is GET, no timeout is set (for downloads).
+   * @param options - Fetch RequestInit options
+   * @param meta - Additional options: timeoutMs (0 = no timeout, default auto-detected from body type)
    */
-  public async fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
+  public async fetchWithAuth(url: string, options: RequestInit = {}, meta?: { timeoutMs?: number }): Promise<Response> {
     const token = await this.getAccessToken();
     if (!token) {
       throw new Error('Authentication required');
     }
 
-    // Determine timeout based on request type
+    // Determine timeout: explicit meta > auto-detect from body type > default 8s
     const isFormData = options.body instanceof FormData;
-    const isDownload = url.includes('/result') || url.includes('/download');
-    const timeoutMs = isFormData ? 120 * 1000 : isDownload ? 0 : 8000;
+    const timeoutMs = meta?.timeoutMs !== undefined ? meta.timeoutMs : isFormData ? 120 * 1000 : 8000;
 
     // Create abort controller for timeout (skip if no timeout for downloads)
     const controller = new AbortController();

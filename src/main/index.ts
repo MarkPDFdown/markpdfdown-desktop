@@ -125,11 +125,12 @@ function handleProtocolUrl(url: string) {
     return;
   }
 
-  // 解析并严格校验路径（规范化：小写、去重斜杠、解码）
+  // 解析并严格校验路径（规范化：小写、去重斜杠、安全解码）
   try {
     const parsed = new URL(url);
-    const host = decodeURIComponent(parsed.host).toLowerCase();
-    const pathname = decodeURIComponent(parsed.pathname).replace(/\/+/g, '/').replace(/\/+$/, '');
+    const safeDecode = (s: string) => { try { return decodeURIComponent(s); } catch { return s; } };
+    const host = safeDecode(parsed.host).toLowerCase();
+    const pathname = safeDecode(parsed.pathname).replace(/\/+/g, '/').replace(/\/+$/, '');
     const urlPath = `${host}${pathname}`;
 
     if (!ALLOWED_PROTOCOL_PATHS.has(urlPath)) {
