@@ -38,5 +38,9 @@
     "delete_failed": "Не удалось удалить задачу",
     "action_success": "{{action}} успешно выполнено",
     "action_failed": "Ошибка выполнения {{action}}"
+  },
+  "task_type": {
+    "cloud": "Облачная задача",
+    "local": "Локальная задача"
   }
 }

@@ -40,3 +40,5 @@ settings.local.json
 # Publish backup
 package.json.backup
 .npmrc.backup
+
+client-integration-guide.md

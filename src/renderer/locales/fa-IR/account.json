@@ -1,0 +1,47 @@
+{
+  "title": "مرکز حساب کاربری",
+  "sign_in_hint": "وارد شوید تا حساب ابری و اعتبار خود را مدیریت کنید.",
+  "sign_in_button": "ورود / ثبت‌نام",
+  "sign_out_button": "خروج",
+  "credit_balance": "موجودی اعتبار",
+  "credit_usage_hint": "Lite: حدود ۱۰ اعتبار/صفحه (A4); Pro و Ultra: ۲ برابر و ۶ برابر",
+  "monthly_free": {
+    "title": "اعتبار رایگان",
+    "monthly_label": "ماهانه",
+    "daily_label": "امروز",
+    "description": "۳٬۰۰۰ اعتبار رایگان در ماه، اول هر ماه ساعت ۰۰:۰۰ بازنشانی می‌شود (UTC+0)",
+    "daily_limit_tooltip": "سقف استفاده روزانه: {{limit}}"
+  },
+  "paid_credits": {
+    "title": "اعتبار پرداختی",
+    "description": "۱ دلار = ۱٬۵۰۰ اعتبار",
+    "recharge": "شارژ"
+  },
+  "device_flow": {
+    "browser_opened": "پنجره مرورگر برای احراز هویت باز شد",
+    "enter_code_hint": "کد زیر را در مرورگر خود وارد کنید تا ورود تکمیل شود",
+    "cancel": "لغو",
+    "try_again": "تلاش مجدد",
+    "expired": "کد احراز هویت منقضی شده است. لطفاً دوباره تلاش کنید.",
+    "waiting": "در انتظار احراز هویت از طریق مرورگر..."
+  },
+  "history": {
+    "title": "تاریخچه اعتبار",
+    "columns": {
+      "time": "زمان",
+      "type": "نوع",
+      "description": "توضیحات",
+      "credits": "اعتبار"
+    },
+    "types": {
+      "consume": "مصرف",
+      "pre_auth": "پیش‌مجوز",
+      "settle": "تسویه صفحه",
+      "pre_auth_release": "آزادسازی مسدودی",
+      "topup": "شارژ",
+      "refund": "بازپرداخت",
+      "bonus_grant": "جایزه",
+      "bonus_expire": "منقضی شده"
+    }
+  }
+}

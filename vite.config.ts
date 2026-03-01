@@ -1,25 +1,25 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { resolve } from 'path'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { resolve } from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: './',
+  base: "./",
   server: {
-    port: 5173
+    port: 15173,
   },
   build: {
     rollupOptions: {
-      external: ['electron'],
-    }
+      external: ["electron"],
+    },
   },
   optimizeDeps: {
-    exclude: ['electron']
+    exclude: ["electron"],
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src')
-    }
-  }
-})
+      "@": resolve(__dirname, "src"),
+    },
+  },
+});

@@ -72,7 +72,7 @@ interface WindowAPI {
     retryFailed: (taskId: string) => Promise<any>;
   };
   file: {
-    selectDialog: () => Promise<any>;
+    selectDialog: (allowOffice?: boolean) => Promise<any>;
     upload: (taskId: string, filePath: string) => Promise<any>;
     uploadFileContent: (taskId: string, fileName: string, fileBuffer: ArrayBuffer) => Promise<any>;
     getImagePath: (taskId: string, page: number) => Promise<any>;
@@ -81,6 +81,30 @@ interface WindowAPI {
   completion: {
     markImagedown: (providerId: number, modelId: string, url: string) => Promise<any>;
     testConnection: (providerId: number, modelId: string) => Promise<any>;
+  };
+  auth: {
+    login: () => Promise<any>;
+    cancelLogin: () => Promise<any>;
+    logout: () => Promise<any>;
+    getAuthState: () => Promise<any>;
+  };
+  cloud: {
+    convert: (fileData: { path?: string; content?: ArrayBuffer; name: string; model?: string; page_range?: string }) => Promise<any>;
+    getTasks: (params: { page: number; pageSize: number }) => Promise<any>;
+    getTaskById: (id: string) => Promise<any>;
+    getTaskPages: (params: { taskId: string; page?: number; pageSize?: number }) => Promise<any>;
+    cancelTask: (id: string) => Promise<any>;
+    retryTask: (id: string) => Promise<any>;
+    deleteTask: (id: string) => Promise<any>;
+    retryPage: (params: { taskId: string; pageNumber: number }) => Promise<any>;
+    getTaskResult: (id: string) => Promise<any>;
+    downloadPdf: (id: string) => Promise<any>;
+    getPageImage: (params: { taskId: string; pageNumber: number }) => Promise<any>;
+    getCredits: () => Promise<any>;
+    getCreditHistory: (params: { page: number; pageSize: number; type?: string }) => Promise<any>;
+    sseConnect: () => Promise<any>;
+    sseDisconnect: () => Promise<any>;
+    sseResetAndDisconnect: () => Promise<any>;
   };
   shell: {
     openExternal: (url: string) => void;
@@ -98,7 +122,9 @@ interface WindowAPI {
   events: {
     onTaskEvent: (callback: (event: TaskEventData) => void) => () => void;
     onTaskDetailEvent: (callback: (event: TaskDetailEventData) => void) => () => void;
+    onAuthStateChanged: (callback: (state: any) => void) => () => void;
     onUpdaterStatus: (callback: (data: any) => void) => () => void;
+    onCloudTaskEvent: (callback: (event: any) => void) => () => void;
   };
   platform: NodeJS.Platform;
   app: {

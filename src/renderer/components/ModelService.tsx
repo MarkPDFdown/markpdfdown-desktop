@@ -119,9 +119,11 @@ const ModelService: React.FC = () => {
       // 合并服务商选项卡和"添加服务商"选项卡
       setItems([...providerTabs, addProviderTab]);
 
-      // 只在初始加载时自动切换到第一个服务商，避免添加后跳转
-      if (isInitialLoad && providerTabs.length > 0 && activeKey === "add provider") {
-        setActiveKey(providerTabs[0].key);
+      // 只在初始加载时自动切换到第一个服务商
+      if (isInitialLoad && activeKey === "add provider") {
+        if (providers.length > 0) {
+           setActiveKey(providers[0].id.toString());
+        }
         setIsInitialLoad(false);
       }
     } catch (error) {

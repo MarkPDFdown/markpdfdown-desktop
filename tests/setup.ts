@@ -14,6 +14,7 @@ vi.mock('electron', () => ({
       }
       return paths[name] || '/mock/default'
     }),
+    getVersion: vi.fn(() => '0.0.0-test'),
     isPackaged: false
   },
   ipcMain: {
@@ -25,6 +26,17 @@ vi.mock('electron', () => ({
     showOpenDialog: vi.fn(),
     showSaveDialog: vi.fn(),
     showMessageBox: vi.fn()
+  },
+  safeStorage: {
+    isEncryptionAvailable: vi.fn(() => true),
+    encryptString: vi.fn((str: string) => Buffer.from(`encrypted:${str}`)),
+    decryptString: vi.fn((buf: Buffer) => {
+      const str = buf.toString('utf-8')
+      return str.startsWith('encrypted:') ? str.slice('encrypted:'.length) : str
+    })
+  },
+  shell: {
+    openExternal: vi.fn()
   },
   BrowserWindow: vi.fn()
 }))

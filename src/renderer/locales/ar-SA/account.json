@@ -1,0 +1,47 @@
+{
+  "title": "مركز الحساب",
+  "sign_in_hint": "سجّل الدخول لإدارة حسابك السحابي ورصيدك.",
+  "sign_in_button": "تسجيل الدخول / إنشاء حساب",
+  "sign_out_button": "تسجيل الخروج",
+  "credit_balance": "رصيد الاعتمادات",
+  "credit_usage_hint": "Lite: ١٠ اعتمادات/صفحة تقريباً (A4); Pro و Ultra: ضعف و 6 أضعاف",
+  "monthly_free": {
+    "title": "الاعتمادات المجانية",
+    "monthly_label": "الشهري",
+    "daily_label": "اليوم",
+    "description": "٣٬٠٠٠ اعتماد مجاني شهرياً، يُعاد تعيينه في الأول من كل شهر الساعة ٠٠:٠٠ (UTC+0)",
+    "daily_limit_tooltip": "الحد اليومي للاستخدام: {{limit}}"
+  },
+  "paid_credits": {
+    "title": "الاعتمادات المدفوعة",
+    "description": "١ دولار = ١٬٥٠٠ اعتماد",
+    "recharge": "إعادة الشحن"
+  },
+  "device_flow": {
+    "browser_opened": "تم فتح نافذة المتصفح للتفويض",
+    "enter_code_hint": "أدخل الرمز أدناه في متصفحك لإتمام تسجيل الدخول",
+    "cancel": "إلغاء",
+    "try_again": "إعادة المحاولة",
+    "expired": "انتهت صلاحية رمز التفويض. يرجى المحاولة مرة أخرى.",
+    "waiting": "في انتظار التفويض عبر المتصفح..."
+  },
+  "history": {
+    "title": "سجل الاعتمادات",
+    "columns": {
+      "time": "الوقت",
+      "type": "النوع",
+      "description": "الوصف",
+      "credits": "الاعتمادات"
+    },
+    "types": {
+      "consume": "استهلاك",
+      "pre_auth": "تفويض مسبق",
+      "settle": "تسوية صفحة",
+      "pre_auth_release": "إلغاء التجميد",
+      "topup": "شحن",
+      "refund": "استرداد",
+      "bonus_grant": "مكافأة",
+      "bonus_expire": "منتهي الصلاحية"
+    }
+  }
+}

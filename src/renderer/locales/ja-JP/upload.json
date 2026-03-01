@@ -2,6 +2,10 @@
   "dragger": {
     "text": "ここにファイルをドラッグするか、下のボタンでファイルを選択してください",
     "hint": "PDF/JPG/PNGファイルの単一または一括アップロードに対応",
+    "hint_local": "PDF/画像ファイルに対応。ログインすると無料変換とより多くのファイル形式がご利用いただけます",
+    "hint_logged_in_non_cloud": "現在はPDFまたは画像ファイルのみ対応しています。Markdown.Fitのクラウドモデルを選択するとOfficeファイルも対応します",
+    "hint_cloud_logged_in": "PDF・画像・Officeファイル（Word/Excel/PPT）に対応",
+    "login_hint": "ログインすると無料変換とより多くのファイル形式がご利用いただけます",
     "button": "ファイルを選択"
   },
   "form": {
@@ -22,7 +26,17 @@
     "update_status_failed": "タスクのステータス更新に失敗しました: {{filename}}",
     "tasks_created": "{{count}}件のタスクが作成されました",
     "upload_error": "アップロードに失敗しました",
-    "invalid_file_type": "ファイル {{filename}} は有効なPDFファイルではありません",
-    "invalid_file_path": "ファイル {{filename}} のパスを取得できません"
+    "invalid_file_type": "ファイル {{filename}} はサポートされていないファイル形式です",
+    "invalid_file_path": "ファイル {{filename}} のパスを取得できません",
+    "office_not_supported": "ファイル {{filename}} はOfficeファイルです。クラウドモデルを選択してログインしてください"
+  },
+  "cloud": {
+    "provider_name": "Markdown.Fit クラウド",
+    "sign_in_required": "クラウド変換を使用するにはログインしてください",
+    "tier_lite": "約10クレジット/ページ",
+    "tier_pro": "約20クレジット/ページ",
+    "tier_ultra": "約60クレジット/ページ",
+    "upload_failed": "{{filename}} のアップロードに失敗: {{error}}",
+    "upload_success": "{{count}} 件のファイルをクラウドにアップロードしました"
   }
 }

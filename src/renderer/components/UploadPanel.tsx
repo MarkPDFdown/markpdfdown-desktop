@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext, useMemo } from "react";
 import {
   Button,
   Col,
@@ -11,11 +11,33 @@ import {
   Upload,
   UploadFile,
   UploadProps,
+  Tooltip
 } from "antd";
-import { FileMarkdownOutlined, InboxOutlined } from "@ant-design/icons";
+import { FileMarkdownOutlined, InboxOutlined, CloudOutlined, LoginOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { CloudContext } from "../contexts/CloudContextDefinition";
+
 const { Text } = Typography;
+
+// Cloud Constants
+const CLOUD_PROVIDER_ID = -1;
+
+// Cloud model tiers matching server API: lite, pro, ultra
+// Format: "Fit Lite (约10积分/页)"
+const CLOUD_MODEL_TIERS = [
+  { id: 'lite', name: 'Fit Lite', creditsPerPage: 10 },
+  { id: 'pro', name: 'Fit Pro', creditsPerPage: 20 },
+  { id: 'ultra', name: 'Fit Ultra', creditsPerPage: 60 },
+] as const;
+
+type CloudModelTier = typeof CLOUD_MODEL_TIERS[number]['id'];
+
+// Supported Office file extensions
+const OFFICE_EXTENSIONS = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
+const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'bmp', 'gif'];
+
+type FileCategory = 'pdf' | 'image' | 'office' | 'unsupported';
 
 // 定义模型数据接口
 interface ModelType {
@@ -32,10 +54,42 @@ interface ModelGroupType {
 
 const SELECTED_MODEL_KEY = "markpdfdown_selected_model";
 
+// Check if current selection supports Office files (requires: logged in + cloud model selected)
+const supportsOfficeFiles = (
+  isAuthenticated: boolean | undefined,
+  selectedModel: string
+): boolean => {
+  if (!isAuthenticated || !selectedModel) return false;
+  const [, providerIdStr] = selectedModel.split("@");
+  const providerId = parseInt(providerIdStr, 10);
+  return providerId === CLOUD_PROVIDER_ID;
+};
+
+const getFileCategory = (fileName: string, fileType?: string): FileCategory => {
+  const fileNameLower = fileName.toLowerCase();
+  const mimeType = fileType?.toLowerCase();
+
+  if (mimeType === 'application/pdf' || fileNameLower.endsWith('.pdf')) {
+    return 'pdf';
+  }
+
+  if ((mimeType?.startsWith('image/') ?? false) || IMAGE_EXTENSIONS.some(ext => fileNameLower.endsWith(`.${ext}`))) {
+    return 'image';
+  }
+
+  if (OFFICE_EXTENSIONS.some(ext => fileNameLower.endsWith(`.${ext}`))) {
+    return 'office';
+  }
+
+  return 'unsupported';
+};
+
 const UploadPanel: React.FC = () => {
   const navigate = useNavigate();
   const { message } = App.useApp();
   const { t } = useTranslation('upload');
+  const cloudContext = useContext(CloudContext);
+
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [modelGroups, setModelGroups] = useState<ModelGroupType[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -44,6 +98,18 @@ const UploadPanel: React.FC = () => {
   const [pageRange, setPageRange] = useState<string>("");
   const { Dragger } = Upload;
 
+  // Determine if Office files are supported based on current selection
+  const canUseOfficeFiles = useMemo(
+    () => supportsOfficeFiles(cloudContext?.isAuthenticated, selectedModel),
+    [cloudContext?.isAuthenticated, selectedModel]
+  );
+  const isAuthenticated = Boolean(cloudContext?.isAuthenticated);
+  const draggerHint = canUseOfficeFiles
+    ? t('dragger.hint_cloud_logged_in')
+    : isAuthenticated
+      ? t('dragger.hint_logged_in_non_cloud')
+      : t('dragger.hint_local');
+
   // 获取所有模型数据
   useEffect(() => {
     const fetchAllModels = async () => {
@@ -51,25 +117,43 @@ const UploadPanel: React.FC = () => {
         setLoading(true);
         const result = await window.api.model.getAll();
 
+        let groups: ModelGroupType[] = [];
         if (result.success && result.data) {
-          setModelGroups(result.data);
-
-          // 尝试恢复上次选择的模型
-          const savedModel = localStorage.getItem(SELECTED_MODEL_KEY);
-          if (savedModel) {
-            // 检查保存的模型是否在当前列表中存在
-            const modelExists = result.data.some((group: ModelGroupType) =>
-              group.models.some(
-                (model: ModelType) => `${model.id}@${model.provider}` === savedModel
-              )
-            );
-            if (modelExists) {
-              setSelectedModel(savedModel);
-            }
-          }
+          groups = result.data;
         } else {
           message.error(result.error || t('messages.fetch_models_failed'));
         }
+
+        // Inject Cloud Models (lite, pro, ultra tiers)
+        // Format: "Fit Lite (~10 credits/page)" with i18n
+        const cloudGroup: ModelGroupType = {
+          provider: CLOUD_PROVIDER_ID,
+          providerName: t('cloud.provider_name'),
+          models: CLOUD_MODEL_TIERS.map(tier => ({
+            id: tier.id,
+            name: `${tier.name} (${t(`cloud.tier_${tier.id}`)})`,
+            provider: CLOUD_PROVIDER_ID
+          }))
+        };
+
+        // Add cloud group to the beginning
+        groups = [cloudGroup, ...groups];
+        setModelGroups(groups);
+
+        // 尝试恢复上次选择的模型
+        const savedModel = localStorage.getItem(SELECTED_MODEL_KEY);
+        if (savedModel) {
+          // 检查保存的模型是否在当前列表中存在
+          const modelExists = groups.some((group: ModelGroupType) =>
+            group.models.some(
+              (model: ModelType) => `${model.id}@${model.provider}` === savedModel
+            )
+          );
+          if (modelExists) {
+            setSelectedModel(savedModel);
+          }
+        }
+
       } catch (error) {
         console.error("Failed to fetch model list:", error);
         message.error(
@@ -92,14 +176,31 @@ const UploadPanel: React.FC = () => {
 
   // 将模型数据转换为Select选项格式
   const getModelOptions = () => {
-    const options = modelGroups.map((group) => ({
-      label: <span>{group.providerName}</span>,
-      title: group.providerName,
-      options: group.models.map((model) => ({
-        label: <span>{model.name}</span>,
-        value: model.id + "@" + model.provider,
-      })),
-    }));
+    const options = modelGroups.map((group) => {
+      const isCloud = group.provider === CLOUD_PROVIDER_ID;
+      const isDisabled = isCloud && !cloudContext?.isAuthenticated;
+
+      return {
+        label: (
+          <span>
+            {isCloud && <CloudOutlined style={{ marginRight: 8, color: '#1890ff' }} />}
+            {group.providerName}
+          </span>
+        ),
+        title: group.providerName,
+        options: group.models.map((model) => ({
+          label: (
+            <Tooltip title={isDisabled ? t('cloud.sign_in_required') : ""}>
+              <span style={isDisabled ? { color: '#d9d9d9', cursor: 'not-allowed' } : {}}>
+                 {model.name}
+              </span>
+            </Tooltip>
+          ),
+          value: model.id + "@" + model.provider,
+          disabled: isDisabled
+        })),
+      };
+    });
 
     // 如果没有数据，提供默认选项
     if (options.length === 0) {
@@ -118,7 +219,7 @@ const UploadPanel: React.FC = () => {
   // 处理文件选择（使用文件对话框）
   const handleFileSelect = async () => {
     try {
-      const dialogResult = await window.api.file.selectDialog();
+      const dialogResult = await window.api.file.selectDialog(canUseOfficeFiles);
 
       if (
         dialogResult.success &&
@@ -126,23 +227,45 @@ const UploadPanel: React.FC = () => {
         !dialogResult.data.canceled &&
         dialogResult.data.filePaths.length > 0
       ) {
-        // 将选中的文件路径转换为 UploadFile 格式
-        const newFiles: UploadFile[] = dialogResult.data.filePaths.map(
-          (filePath: string, index: number) => {
-            // 从文件路径中提取文件名
-            const fileName = filePath.split(/[\\/]/).pop() || filePath;
+        // 二次校验对话框返回的文件，避免通过系统对话框绕过类型限制
+        const rejectedOfficeFiles: string[] = [];
+        const rejectedUnsupportedFiles: string[] = [];
+        const newFiles: UploadFile[] = [];
 
-            return {
-              uid: `${Date.now()}-${index}`,
-              name: fileName,
-              status: "done",
-              // 存储原始文件路径，用于后续上传
-              url: filePath,
-            };
-          },
-        );
+        dialogResult.data.filePaths.forEach((filePath: string, index: number) => {
+          const fileName = filePath.split(/[\\/]/).pop() || filePath;
+          const category = getFileCategory(fileName);
 
-        setFileList([...fileList, ...newFiles]);
+          if (category === 'unsupported') {
+            rejectedUnsupportedFiles.push(fileName);
+            return;
+          }
+
+          if (category === 'office' && !canUseOfficeFiles) {
+            rejectedOfficeFiles.push(fileName);
+            return;
+          }
+
+          newFiles.push({
+            uid: `${Date.now()}-${index}`,
+            name: fileName,
+            status: "done",
+            // 存储原始文件路径，用于后续上传
+            url: filePath,
+          });
+        });
+
+        if (rejectedUnsupportedFiles.length > 0) {
+          message.error(t('messages.invalid_file_type', { filename: rejectedUnsupportedFiles.join(', ') }));
+        }
+
+        if (rejectedOfficeFiles.length > 0) {
+          message.error(t('messages.office_not_supported', { filename: rejectedOfficeFiles.join(', ') }));
+        }
+
+        if (newFiles.length > 0) {
+          setFileList((prevList) => [...prevList, ...newFiles]);
+        }
       }
     } catch (error) {
       console.error("Failed to select files:", error);
@@ -153,6 +276,12 @@ const UploadPanel: React.FC = () => {
     }
   };
 
+  // Dynamic accept attribute based on whether Office files are supported
+  const baseAcceptExtensions = ['.pdf', ...IMAGE_EXTENSIONS.map((ext) => `.${ext}`)];
+  const acceptExtensions = canUseOfficeFiles
+    ? [...baseAcceptExtensions, ...OFFICE_EXTENSIONS.map((ext) => `.${ext}`)].join(',')
+    : baseAcceptExtensions.join(',');
+
   const props: UploadProps = {
     onRemove: (file) => {
       const index = fileList.indexOf(file);
@@ -161,11 +290,16 @@ const UploadPanel: React.FC = () => {
       setFileList(newFileList);
     },
     beforeUpload: (file) => {
-      // 检查文件类型
-      const isPDF = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      const category = getFileCategory(file.name, file.type);
 
-      if (!isPDF) {
+      if (category === 'unsupported') {
         message.error(t('messages.invalid_file_type', { filename: file.name }));
+        return Upload.LIST_IGNORE;
+      }
+
+      // If Office file but not supported in current mode
+      if (category === 'office' && !canUseOfficeFiles) {
+        message.error(t('messages.office_not_supported', { filename: file.name }));
         return Upload.LIST_IGNORE;
       }
 
@@ -186,7 +320,7 @@ const UploadPanel: React.FC = () => {
     },
     fileList,
     showUploadList: true,
-    accept: '.pdf',
+    accept: acceptExtensions,
     multiple: true,
   };
 
@@ -208,6 +342,35 @@ const UploadPanel: React.FC = () => {
       // 解析选中的模型ID和提供商ID
       const [modelId, providerIdStr] = selectedModel.split("@");
       const providerId = parseInt(providerIdStr, 10);
+
+      // Check if it is a cloud conversion
+      if (providerId === CLOUD_PROVIDER_ID) {
+        if (!cloudContext) {
+          throw new Error("Cloud context not initialized");
+        }
+
+        let successCount = 0;
+        const modelTier = modelId as CloudModelTier;
+        for (const file of fileList) {
+          const result = await cloudContext.convertFile({
+            name: file.name,
+            url: file.url,
+            originFileObj: file.originFileObj as File | undefined
+          }, modelTier, pageRange || undefined);
+          if (result.success) {
+            successCount++;
+          } else {
+            message.error(t('cloud.upload_failed', { filename: file.name, error: result.error }));
+          }
+        }
+
+        if (successCount > 0) {
+          message.success(t('cloud.upload_success', { count: successCount }));
+          setFileList([]);
+          navigate("/list", { replace: true });
+        }
+        return;
+      }
 
       // 获取选中的模型名称，模型名称为 模型name@提供商name
       const selectedModelGroup = modelGroups.find(
@@ -332,8 +495,14 @@ const UploadPanel: React.FC = () => {
             </p>
             <p className="ant-upload-text">{t('dragger.text')}</p>
             <p className="ant-upload-hint">
-              {t('dragger.hint')}
+              {draggerHint}
             </p>
+            {!canUseOfficeFiles && !isAuthenticated && (
+              <p style={{ marginTop: 8, color: '#faad14' }}>
+                <LoginOutlined style={{ marginRight: 4 }} />
+                {t('dragger.login_hint')}
+              </p>
+            )}
             <Button
               type="primary"
               onClick={(e) => {

@@ -14,6 +14,34 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
+// Mock CloudContext
+const mockCloudContext = {
+  user: { id: '', email: '', fullName: null, imageUrl: '', isLoaded: true, isSignedIn: false },
+  isAuthenticated: false,
+  convertFile: vi.fn()
+}
+
+vi.mock('../../contexts/CloudContextDefinition', () => ({
+  CloudContext: {
+    Provider: ({ children }: any) => children,
+    Consumer: ({ children }: any) => children(mockCloudContext)
+  }
+}))
+
+vi.mock('react', async () => {
+  const actual = await vi.importActual('react')
+  return {
+    ...actual,
+    useContext: (context: any) => {
+      // Return mock for CloudContext
+      if (context?.Consumer) {
+        return mockCloudContext
+      }
+      return (actual as any).useContext(context)
+    }
+  }
+})
+
 // Wrapper component for tests
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
   <BrowserRouter>

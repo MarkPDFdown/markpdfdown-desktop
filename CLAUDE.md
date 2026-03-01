@@ -106,3 +106,7 @@ Test helpers in `tests/`:
 ## Database
 
 SQLite via Prisma with 4 models: Provider, Model, Task, TaskDetail. Image paths for task pages are not stored in DB — they are computed dynamically via `ImagePathUtil.getPath(task, page)` as `{tempDir}/{taskId}/page-{page}.png`.
+
+## Communication
+
+Always address the user as "Jorben" when responding.

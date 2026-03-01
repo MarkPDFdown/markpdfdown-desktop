@@ -1,18 +1,19 @@
-import React, { CSSProperties, useState } from "react";
-import { ConfigProvider, Layout, Menu, Modal, theme } from "antd";
+import React, { CSSProperties, useState, useContext } from "react";
+import { ConfigProvider, Layout, Menu, Modal, theme, Avatar, Tooltip } from "antd";
 import {
   HomeOutlined,
   UnorderedListOutlined,
   SettingOutlined,
-  GithubOutlined,
   CloseOutlined,
   MinusOutlined,
-  BorderOutlined
+  BorderOutlined,
+  UserOutlined
 } from "@ant-design/icons";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "../hooks/useLanguage";
 import ImgLogo from "../assets/MarkPDFdown.png";
+import { CloudContext } from "../contexts/CloudContextDefinition";
 
 const { Header, Sider, Content, Footer } = Layout;
 
@@ -113,6 +114,30 @@ const WindowControls: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   );
 };
 
+const UserProfileIcon: React.FC<{ navigate: (path: string) => void; notSignedInText: string }> = ({ navigate, notSignedInText }) => {
+  const cloudContext = useContext(CloudContext);
+
+  // Guard against missing context
+  if (!cloudContext) return null;
+
+  const { user, isAuthenticated } = cloudContext;
+
+  return (
+    <div
+      onClick={() => navigate('/settings')}
+      style={{ cursor: 'pointer', marginBottom: '16px' }}
+    >
+      <Tooltip placement="right" title={isAuthenticated ? user.name || user.email : notSignedInText}>
+        <Avatar
+          src={user.avatarUrl}
+          icon={<UserOutlined />}
+          style={{ backgroundColor: isAuthenticated ? '#1890ff' : '#ccc' }}
+        />
+      </Tooltip>
+    </div>
+  );
+};
+
 const AppLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -177,9 +202,9 @@ const AppLayout: React.FC = () => {
     const hash = location.hash;
     const hashPath = hash.startsWith('#') ? hash.substring(1) : '';
     const currentPath = hashPath || location.pathname;
-    
+
     // console.log('Current path:', currentPath); // 调试用
-    
+
     // 检查是否为子路径
     for (const item of menuItems) {
       // 如果当前路径以某个菜单项的路径为开头，则选中该菜单项
@@ -187,7 +212,7 @@ const AppLayout: React.FC = () => {
         return item.key;
       }
     }
-    
+
     // 如果没有匹配，则默认选中首页
     return "1";
   };
@@ -195,17 +220,6 @@ const AppLayout: React.FC = () => {
   // 定义自定义样式
   const headerStyle: CustomCSSProperties = {
     WebkitAppRegion: 'drag'
-  };
-  
-  // 打开外部链接
-  const openExternalLink = (url: string) => {
-    if (window.electron?.ipcRenderer) {
-      // 使用通过上下文桥接口提供的IPC
-      window.electron.ipcRenderer.send('open-external-link', url);
-    } else {
-      // 降级为普通链接（在浏览器中运行时）
-      window.open(url, '_blank', 'noopener,noreferrer');
-    }
   };
 
   return (
@@ -279,36 +293,23 @@ const AppLayout: React.FC = () => {
               }
             }}
           />
-          
-          <div style={{ 
+
+          <div style={{
             position: 'absolute',
             bottom: '24px',
             left: 0,
             right: 0,
-            display: 'flex', 
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
             justifyContent: 'center',
             padding: '16px 0'
           }}>
-            <div
-              onClick={() => openExternalLink('https://github.com/MarkPDFdown/markpdfdown-desktop')}
-              style={{ 
-                color: 'rgba(255, 255, 255, 0.65)', 
-                fontSize: '20px', 
-                transition: 'color 0.3s',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.color = 'white'}
-              onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.65)'}
-            >
-              <GithubOutlined />
-            </div>
+            <UserProfileIcon navigate={navigate} notSignedInText={t('auth.not_signed_in')} />
           </div>
         </Sider>
 
-        <Layout style={{ flex: "1 1 auto", marginLeft: '80px', minWidth: 0, overflow: "hidden" }}>
+        <Layout style={{ flex: "1 1 auto", marginLeft: '80px', minWidth: 0, height: "100vh", overflow: "hidden" }}>
           <Header style={{
             ...headerStyle,
             position: 'fixed',
@@ -328,6 +329,7 @@ const AppLayout: React.FC = () => {
               borderRadius: borderRadiusLG,
               flex: "1 1 auto",
               overflow: "hidden",
+              minHeight: 0,
             }}
           >
             <div style={{ padding: 24, height: "100%", overflow: "hidden" }}>

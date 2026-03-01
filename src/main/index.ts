@@ -83,7 +83,11 @@ import { registerIpcHandlers } from "./ipc/handlers.js";
 import { windowManager } from './WindowManager.js';
 import { eventBridge } from './ipc/eventBridge.js';
 import { updateService } from './services/UpdateService.js';
+import { authManager } from '../core/infrastructure/services/AuthManager.js';
 import fileLogic from "../core/infrastructure/services/FileService.js";
+
+// 自定义协议名称（用于 OAuth 回调）
+const PROTOCOL_NAME = 'markpdfdown';
 
 // 在 app ready 之前注册自定义协议的权限
 protocol.registerSchemesAsPrivileged([
@@ -97,6 +101,92 @@ protocol.registerSchemesAsPrivileged([
     }
   }
 ]);
+
+// 注册为默认协议客户端（处理 markpdfdown:// 链接）
+if (process.defaultApp) {
+  // 开发模式下需要传递额外参数
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient(PROTOCOL_NAME, process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  // 生产模式
+  app.setAsDefaultProtocolClient(PROTOCOL_NAME);
+}
+
+// 处理自定义协议 URL（用于 OAuth 回调）
+function handleProtocolUrl(url: string) {
+  console.log('[Main] Received protocol URL');
+
+  if (!url.startsWith(`${PROTOCOL_NAME}://`)) {
+    console.warn('[Main] Ignoring URL with unexpected scheme');
+    return;
+  }
+
+  // 解析并严格校验路径（直接使用 URL 结构化组件，不解码 host）
+  try {
+    const parsed = new URL(url);
+    const host = parsed.host.toLowerCase();
+    const pathname = parsed.pathname.replace(/\/+/g, '/').replace(/\/+$/, '');
+
+    // Reject percent-encoded slashes in host (bypass attempt)
+    if (parsed.host.includes('%')) {
+      console.warn('[Main] Ignoring protocol URL with encoded host');
+      return;
+    }
+
+    const isAllowed =
+      (host === 'auth' && pathname === '/callback') ||
+      (host === 'auth' && pathname === '');
+
+    if (!isAllowed) {
+      console.warn(`[Main] Ignoring protocol URL with unexpected path: ${host}${pathname}`);
+      return;
+    }
+  } catch {
+    console.warn('[Main] Ignoring malformed protocol URL');
+    return;
+  }
+
+  // 聚焦主窗口
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+    mainWindow.focus();
+  }
+
+  // 立即检查 token 状态，加速获取 token
+  authManager.checkDeviceTokenStatus();
+}
+
+// macOS: 通过 open-url 事件处理协议 URL
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  handleProtocolUrl(url);
+});
+
+// Windows/Linux: 处理单实例锁和协议 URL
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (_event, commandLine) => {
+    // 用户尝试启动第二个实例时，聚焦到主窗口
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore();
+      }
+      mainWindow.focus();
+    }
+
+    // Windows/Linux: 协议 URL 通过命令行参数传递
+    const url = commandLine.find(arg => arg.startsWith(`${PROTOCOL_NAME}://`));
+    if (url) {
+      handleProtocolUrl(url);
+    }
+  });
+}
 
 let mainWindow: BrowserWindow | null;
 
@@ -303,6 +393,15 @@ async function initializeBackgroundServices() {
     console.log("[Main] Initializing database in background...");
     await initDatabase();
     console.log(`[Main] Database initialized in ${Date.now() - startTime}ms`);
+
+    // 恢复认证会话
+    console.log("[Main] Restoring auth session...");
+    const authStartTime = Date.now();
+    await authManager.initialize();
+    console.log(`[Main] Auth session restored in ${Date.now() - authStartTime}ms`);
+
+    // SSE connection is managed by renderer's CloudContext via IPC (sseConnect/sseDisconnect)
+    // to avoid duplicate connections from both main process and renderer
 
     // 注入预设供应商
     console.log("[Main] Injecting preset providers...");

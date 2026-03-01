@@ -1,0 +1,47 @@
+{
+  "title": "账户中心",
+  "sign_in_hint": "登录以管理您的云端账户和积分。",
+  "sign_in_button": "登录 / 注册",
+  "sign_out_button": "退出登录",
+  "credit_balance": "积分余额",
+  "credit_usage_hint": "Lite模型每页约消耗10积分，Pro、Ultra分别为Lite的2倍和6倍",
+  "monthly_free": {
+    "title": "免费积分",
+    "monthly_label": "本月剩余",
+    "daily_label": "今日可用",
+    "description": "每月可享3000免费积分，每月1号0点刷新额度（UTC+0）",
+    "daily_limit_tooltip": "每日使用上限: {{limit}}"
+  },
+  "paid_credits": {
+    "title": "付费积分",
+    "description": "1美元可兑换1500积分",
+    "recharge": "充值"
+  },
+  "device_flow": {
+    "browser_opened": "已打开浏览器窗口进行授权",
+    "enter_code_hint": "请在浏览器中输入以下代码以完成登录",
+    "cancel": "取消",
+    "try_again": "重试",
+    "expired": "授权码已过期，请重试。",
+    "waiting": "等待浏览器授权..."
+  },
+  "history": {
+    "title": "积分记录",
+    "columns": {
+      "time": "时间",
+      "type": "类型",
+      "description": "描述",
+      "credits": "积分"
+    },
+    "types": {
+      "consume": "消费",
+      "pre_auth": "预授权冻结",
+      "settle": "逐页结算",
+      "pre_auth_release": "释放冻结",
+      "topup": "充值",
+      "refund": "退款",
+      "bonus_grant": "赠送",
+      "bonus_expire": "过期"
+    }
+  }
+}

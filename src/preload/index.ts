@@ -58,7 +58,7 @@ contextBridge.exposeInMainWorld("api", {
 
   // ==================== File APIs ====================
   file: {
-    selectDialog: () => ipcRenderer.invoke("file:selectDialog"),
+    selectDialog: (allowOffice?: boolean) => ipcRenderer.invoke("file:selectDialog", allowOffice),
     upload: (taskId: string, filePath: string) =>
       ipcRenderer.invoke("file:upload", taskId, filePath),
     uploadFileContent: (taskId: string, fileName: string, fileBuffer: ArrayBuffer) =>
@@ -75,6 +75,50 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("completion:markImagedown", providerId, modelId, url),
     testConnection: (providerId: number, modelId: string) =>
       ipcRenderer.invoke("completion:testConnection", providerId, modelId),
+  },
+
+  // ==================== Auth APIs ====================
+  auth: {
+    login: () => ipcRenderer.invoke("auth:login"),
+    cancelLogin: () => ipcRenderer.invoke("auth:cancelLogin"),
+    logout: () => ipcRenderer.invoke("auth:logout"),
+    getAuthState: () => ipcRenderer.invoke("auth:getAuthState"),
+  },
+
+  // ==================== Cloud APIs ====================
+  cloud: {
+    convert: (fileData: { path?: string; content?: ArrayBuffer; name: string; model?: string; page_range?: string }) =>
+      ipcRenderer.invoke("cloud:convert", fileData),
+    getTasks: (params: { page: number; pageSize: number }) =>
+      ipcRenderer.invoke("cloud:getTasks", params),
+    getTaskById: (id: string) =>
+      ipcRenderer.invoke("cloud:getTaskById", id),
+    getTaskPages: (params: { taskId: string; page?: number; pageSize?: number }) =>
+      ipcRenderer.invoke("cloud:getTaskPages", params),
+    cancelTask: (id: string) =>
+      ipcRenderer.invoke("cloud:cancelTask", id),
+    retryTask: (id: string) =>
+      ipcRenderer.invoke("cloud:retryTask", id),
+    deleteTask: (id: string) =>
+      ipcRenderer.invoke("cloud:deleteTask", id),
+    retryPage: (params: { taskId: string; pageNumber: number }) =>
+      ipcRenderer.invoke("cloud:retryPage", params),
+    getTaskResult: (id: string) =>
+      ipcRenderer.invoke("cloud:getTaskResult", id),
+    downloadPdf: (id: string) =>
+      ipcRenderer.invoke("cloud:downloadPdf", id),
+    getPageImage: (params: { taskId: string; pageNumber: number }) =>
+      ipcRenderer.invoke("cloud:getPageImage", params),
+    getCredits: () =>
+      ipcRenderer.invoke("cloud:getCredits"),
+    getCreditHistory: (params: { page: number; pageSize: number; type?: string }) =>
+      ipcRenderer.invoke("cloud:getCreditHistory", params),
+    sseConnect: () =>
+      ipcRenderer.invoke("cloud:sseConnect"),
+    sseDisconnect: () =>
+      ipcRenderer.invoke("cloud:sseDisconnect"),
+    sseResetAndDisconnect: () =>
+      ipcRenderer.invoke("cloud:sseResetAndDisconnect"),
   },
 
   // ==================== Shell APIs ====================
@@ -128,6 +172,21 @@ contextBridge.exposeInMainWorld("api", {
     },
 
     /**
+     * 监听认证状态变化事件
+     * @param callback 事件回调函数，接收认证状态
+     * @returns 清理函数
+     */
+    onAuthStateChanged: (callback: (state: any) => void) => {
+      const handler = (_event: any, state: any) => callback(state);
+      ipcRenderer.on('auth:stateChanged', handler);
+
+      // 返回清理函数
+      return () => {
+        ipcRenderer.removeListener('auth:stateChanged', handler);
+      };
+    },
+
+    /**
      * 监听更新状态事件
      * @param callback 事件回调函数
      * @returns 清理函数
@@ -138,6 +197,20 @@ contextBridge.exposeInMainWorld("api", {
 
       return () => {
         ipcRenderer.removeListener('updater:status', handler);
+      };
+    },
+
+    /**
+     * 监听云端任务 SSE 事件
+     * @param callback 事件回调函数
+     * @returns 清理函数
+     */
+    onCloudTaskEvent: (callback: (event: any) => void) => {
+      const handler = (_event: any, data: any) => callback(data);
+      ipcRenderer.on('cloud:taskEvent', handler);
+
+      return () => {
+        ipcRenderer.removeListener('cloud:taskEvent', handler);
       };
     },
   },

@@ -59,12 +59,40 @@ export const IPC_CHANNELS = {
     TEST_CONNECTION: 'completion:testConnection',
   },
 
+  // Auth channels
+  AUTH: {
+    LOGIN: 'auth:login',
+    CANCEL_LOGIN: 'auth:cancelLogin',
+    LOGOUT: 'auth:logout',
+    GET_AUTH_STATE: 'auth:getAuthState',
+  },
+
+  // Cloud channels
+  CLOUD: {
+    CONVERT: 'cloud:convert',
+    GET_TASKS: 'cloud:getTasks',
+    GET_TASK_BY_ID: 'cloud:getTaskById',
+    GET_TASK_PAGES: 'cloud:getTaskPages',
+    CANCEL_TASK: 'cloud:cancelTask',
+    RETRY_TASK: 'cloud:retryTask',
+    RETRY_PAGE: 'cloud:retryPage',
+    GET_TASK_RESULT: 'cloud:getTaskResult',
+    DOWNLOAD_PDF: 'cloud:downloadPdf',
+    GET_CREDITS: 'cloud:getCredits',
+    GET_CREDIT_HISTORY: 'cloud:getCreditHistory',
+    GET_PAGE_IMAGE: 'cloud:getPageImage',
+    SSE_CONNECT: 'cloud:sseConnect',
+    SSE_DISCONNECT: 'cloud:sseDisconnect',
+  },
+
   // Event channels (for event bridge)
   EVENTS: {
     TASK: 'task:event',
     TASK_DETAIL: 'taskDetail:event',
     APP_READY: 'app:ready',
     UPDATER_STATUS: 'updater:status',
+    AUTH_STATE_CHANGED: 'auth:stateChanged',
+    CLOUD_TASK_EVENT: 'cloud:taskEvent',
   },
 
   // Updater channels
@@ -89,6 +117,8 @@ export type IpcChannel =
   | typeof IPC_CHANNELS.TASK_DETAIL[keyof typeof IPC_CHANNELS.TASK_DETAIL]
   | typeof IPC_CHANNELS.FILE[keyof typeof IPC_CHANNELS.FILE]
   | typeof IPC_CHANNELS.COMPLETION[keyof typeof IPC_CHANNELS.COMPLETION]
+  | typeof IPC_CHANNELS.AUTH[keyof typeof IPC_CHANNELS.AUTH]
+  | typeof IPC_CHANNELS.CLOUD[keyof typeof IPC_CHANNELS.CLOUD]
   | typeof IPC_CHANNELS.UPDATER[keyof typeof IPC_CHANNELS.UPDATER]
   | typeof IPC_CHANNELS.EVENTS[keyof typeof IPC_CHANNELS.EVENTS]
   | typeof IPC_CHANNELS.WINDOW[keyof typeof IPC_CHANNELS.WINDOW];

@@ -48,9 +48,27 @@ const mockWindowApi = {
     maximize: vi.fn(),
     close: vi.fn()
   },
+  auth: {
+    login: vi.fn().mockResolvedValue({ success: true }),
+    cancelLogin: vi.fn().mockResolvedValue({ success: true }),
+    logout: vi.fn().mockResolvedValue({ success: true }),
+    getAuthState: vi.fn().mockResolvedValue({
+      success: true,
+      data: {
+        isAuthenticated: false,
+        isLoading: false,
+        user: null,
+        deviceFlowStatus: 'idle',
+        userCode: null,
+        verificationUrl: null,
+        error: null
+      }
+    })
+  },
   events: {
     onTaskEvent: vi.fn(() => () => {}),
-    onTaskDetailEvent: vi.fn(() => () => {})
+    onTaskDetailEvent: vi.fn(() => () => {}),
+    onAuthStateChanged: vi.fn(() => () => {})
   }
 }
 

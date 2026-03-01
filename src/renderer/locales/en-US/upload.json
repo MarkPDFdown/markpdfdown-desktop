@@ -2,6 +2,10 @@
   "dragger": {
     "text": "Drag files here or click button below to select files",
     "hint": "Supports single or batch upload of PDF/JPG/PNG files",
+    "hint_local": "Supports PDF and image files. Sign in to enjoy free conversion and support for more file types",
+    "hint_logged_in_non_cloud": "Currently only PDF or image files are supported. Select a Markdown.Fit cloud model to enable Office files",
+    "hint_cloud_logged_in": "Supports PDF, image, and Office files (Word/Excel/PPT)",
+    "login_hint": "Sign in to enjoy free conversion and support for more file types",
     "button": "Select Files"
   },
   "form": {
@@ -22,7 +26,17 @@
     "update_status_failed": "Failed to update task status: {{filename}}",
     "tasks_created": "{{count}} task(s) created",
     "upload_error": "Upload failed",
-    "invalid_file_type": "File {{filename}} is not a valid PDF file",
-    "invalid_file_path": "Cannot get file path for {{filename}}"
+    "invalid_file_type": "File {{filename}} is not a supported file type",
+    "invalid_file_path": "Cannot get file path for {{filename}}",
+    "office_not_supported": "File {{filename}} is an Office file. Please select cloud model and sign in to proceed"
+  },
+  "cloud": {
+    "provider_name": "Markdown.Fit Cloud",
+    "sign_in_required": "Please sign in to use cloud conversion",
+    "tier_lite": "~10 credits/page",
+    "tier_pro": "~20 credits/page",
+    "tier_ultra": "~60 credits/page",
+    "upload_failed": "Failed to upload {{filename}}: {{error}}",
+    "upload_success": "Successfully uploaded {{count}} files to cloud"
   }
 }

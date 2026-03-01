@@ -2,6 +2,10 @@
   "dragger": {
     "text": "اسحب الملفات هنا أو انقر على الزر أدناه لتحديد الملفات",
     "hint": "يدعم التحميل الفردي أو الدفعي لملفات PDF/JPG/PNG",
+    "hint_local": "يدعم ملفات PDF وملفات الصور. قم بتسجيل الدخول للتمتع بالتحويل المجاني ودعم المزيد من تنسيقات الملفات",
+    "hint_logged_in_non_cloud": "حاليًا يتم دعم ملفات PDF أو الصور فقط. اختر نموذج Markdown.Fit السحابي لتمكين ملفات Office",
+    "hint_cloud_logged_in": "يدعم ملفات PDF والصور وملفات Office (Word/Excel/PPT)",
+    "login_hint": "قم بتسجيل الدخول للتمتع بالتحويل المجاني ودعم المزيد من تنسيقات الملفات",
     "button": "تحديد الملفات"
   },
   "form": {
@@ -22,7 +26,17 @@
     "update_status_failed": "فشل في تحديث حالة المهمة: {{filename}}",
     "tasks_created": "تم إنشاء {{count}} مهمة(ات)",
     "upload_error": "فشل التحميل",
-    "invalid_file_type": "الملف {{filename}} ليس ملف PDF صالح",
-    "invalid_file_path": "تعذر الحصول على مسار الملف {{filename}}"
+    "invalid_file_type": "الملف {{filename}} ليس من نوع ملفات مدعوم",
+    "invalid_file_path": "تعذر الحصول على مسار الملف {{filename}}",
+    "office_not_supported": "الملف {{filename}} هو ملف Office. يرجى اختيار النموذج السحابي وتسجيل الدخول"
+  },
+  "cloud": {
+    "provider_name": "سحابة Markdown.Fit",
+    "sign_in_required": "يرجى تسجيل الدخول لاستخدام التحويل السحابي",
+    "tier_lite": "~10 نقاط/صفحة",
+    "tier_pro": "~20 نقاط/صفحة",
+    "tier_ultra": "~60 نقاط/صفحة",
+    "upload_failed": "فشل تحميل {{filename}}: {{error}}",
+    "upload_success": "تم تحميل {{count}} ملفات إلى السحابة بنجاح"
   }
 }

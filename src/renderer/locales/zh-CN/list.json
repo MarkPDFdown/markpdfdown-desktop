@@ -38,5 +38,9 @@
     "delete_failed": "删除任务失败",
     "action_success": "{{action}}成功",
     "action_failed": "{{action}}失败"
+  },
+  "task_type": {
+    "cloud": "云端任务",
+    "local": "本地任务"
   }
 }

@@ -2,6 +2,10 @@
   "dragger": {
     "text": "拖拽文件到此处或点击下方按钮选择文件",
     "hint": "支持单个或批量上传 PDF/JPG/PNG 文件",
+    "hint_local": "支持 PDF 及图片文件。登录后可享免费转换并且支持更多文件类型",
+    "hint_logged_in_non_cloud": "当前仅支持PDF或图片文件，选择Markdown.FIt的云端模型可支持Office类文件",
+    "hint_cloud_logged_in": "支持 PDF、图片及 Office 文件 (Word/Excel/PPT)",
+    "login_hint": "登录后可享免费转换并且支持更多文件类型",
     "button": "选择文件"
   },
   "form": {
@@ -22,7 +26,17 @@
     "update_status_failed": "更新任务状态失败: {{filename}}",
     "tasks_created": "已创建{{count}}个任务",
     "upload_error": "上传失败",
-    "invalid_file_type": "文件 {{filename}} 不是有效的PDF文件",
-    "invalid_file_path": "无法获取文件 {{filename}} 的路径"
+    "invalid_file_type": "文件 {{filename}} 不是支持的文件类型",
+    "invalid_file_path": "无法获取文件 {{filename}} 的路径",
+    "office_not_supported": "文件 {{filename}} 是 Office 文件，请选择云端模型并登录后再试"
+  },
+  "cloud": {
+    "provider_name": "Markdown.Fit",
+    "sign_in_required": "请登录后使用云端转换",
+    "tier_lite": "约10积分/页",
+    "tier_pro": "约20积分/页",
+    "tier_ultra": "约60积分/页",
+    "upload_failed": "上传 {{filename}} 失败: {{error}}",
+    "upload_success": "已成功上传 {{count}} 个文件到云端"
   }
 }

@@ -109,6 +109,31 @@
   }
 }
 
+/* Settings Tabs - tab栏固定，内容区域滚动 */
+.settings-tabs .ant-tabs-content-holder {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.settings-tabs .ant-tabs-content-holder::-webkit-scrollbar {
+  width: 6px;
+}
+
+.settings-tabs .ant-tabs-content-holder::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 3px;
+}
+
+.settings-tabs .ant-tabs-content-holder:hover::-webkit-scrollbar-thumb,
+.settings-tabs .ant-tabs-content-holder:active::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.settings-tabs .ant-tabs-content-holder::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 /* Markdown 预览面板滚动 */
 .ant-splitter-panel:last-child {
   overflow: auto !important;

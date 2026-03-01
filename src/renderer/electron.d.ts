@@ -208,6 +208,7 @@ interface ElectronAPI {
     getById: (id: string) => Promise<IpcResponse<Task>>;
     update: (id: string, data: UpdateTaskDTO) => Promise<IpcResponse<Task>>;
     delete: (id: string) => Promise<IpcResponse<Task>>;
+    hasRunningTasks: () => Promise<IpcResponse<{ hasRunning: boolean; count: number }>>;
   };
 
   taskDetail: {
@@ -218,7 +219,7 @@ interface ElectronAPI {
   };
 
   file: {
-    selectDialog: () => Promise<IpcResponse<FileDialogResult>>;
+    selectDialog: (allowOffice?: boolean) => Promise<IpcResponse<FileDialogResult>>;
     upload: (
       taskId: string,
       filePath: string,
@@ -244,8 +245,40 @@ interface ElectronAPI {
     ) => Promise<IpcResponse<string>>;
   };
 
+  auth: {
+    login: () => Promise<IpcResponse<void>>;
+    cancelLogin: () => Promise<IpcResponse<void>>;
+    logout: () => Promise<IpcResponse<void>>;
+    getAuthState: () => Promise<IpcResponse<import('../shared/types/cloud-api').AuthState>>;
+  };
+
+  cloud: {
+    convert: (fileData: { path?: string; content?: ArrayBuffer; name: string; model?: string; page_range?: string }) => Promise<IpcResponse<any>>;
+    getTasks: (params: { page: number; pageSize: number }) => Promise<IpcResponse<any>>;
+    getTaskById: (id: string) => Promise<IpcResponse<import('../shared/types/cloud-api').CloudTaskResponse>>;
+    getTaskPages: (params: { taskId: string; page?: number; pageSize?: number }) => Promise<IpcResponse<any>>;
+    cancelTask: (id: string) => Promise<IpcResponse<import('../shared/types/cloud-api').CloudCancelTaskResponse>>;
+    retryTask: (id: string) => Promise<IpcResponse<import('../shared/types/cloud-api').CreateTaskResponse>>;
+    deleteTask: (id: string) => Promise<IpcResponse<{ id: string; message: string }>>;
+    retryPage: (params: { taskId: string; pageNumber: number }) => Promise<IpcResponse<import('../shared/types/cloud-api').CloudRetryPageResponse>>;
+    getTaskResult: (id: string) => Promise<IpcResponse<import('../shared/types/cloud-api').CloudTaskResult>>;
+    downloadPdf: (id: string) => Promise<IpcResponse<{ filePath: string }>>;
+    getPageImage: (params: { taskId: string; pageNumber: number }) => Promise<IpcResponse<{ dataUrl: string }>>;
+    getCredits: () => Promise<IpcResponse<import('../shared/types/cloud-api').CreditsApiResponse>>;
+    getCreditHistory: (params: { page: number; pageSize: number; type?: string }) => Promise<IpcResponse<any>>;
+    sseConnect: () => Promise<IpcResponse<void>>;
+    sseDisconnect: () => Promise<IpcResponse<void>>;
+    sseResetAndDisconnect: () => Promise<IpcResponse<void>>;
+  };
+
   shell: {
     openExternal: (url: string) => void;
+  };
+
+  window: {
+    minimize: () => void;
+    maximize: () => void;
+    close: () => void;
   };
 
   updater: {
@@ -256,7 +289,15 @@ interface ElectronAPI {
   events: {
     onTaskEvent: (callback: (event: TaskEvent) => void) => () => void;
     onTaskDetailEvent: (callback: (event: TaskDetailEvent) => void) => () => void;
+    onAuthStateChanged: (callback: (state: import('../shared/types/cloud-api').AuthState) => void) => () => void;
     onUpdaterStatus: (callback: (data: UpdateStatusData) => void) => () => void;
+    onCloudTaskEvent: (callback: (event: import('../shared/types/cloud-api').CloudSSEEvent) => void) => () => void;
+  };
+
+  platform: string;
+
+  app: {
+    getVersion: () => Promise<IpcResponse<string>>;
   };
 }
 

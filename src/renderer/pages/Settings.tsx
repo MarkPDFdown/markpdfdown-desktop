@@ -3,12 +3,20 @@ import { Tabs } from "antd";
 import type { TabsProps } from "antd";
 import { useTranslation } from "react-i18next";
 import ModelService from "../components/ModelService";
-import { ApiOutlined, MailOutlined } from "@ant-design/icons";
+import { ApiOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
 import About from "../components/About";
+import AccountCenter from "../components/AccountCenter";
+
 const Settings: React.FC = () => {
   const { t } = useTranslation('settings');
 
   const items: TabsProps["items"] = [
+    {
+      key: "3",
+      label: t('tabs.account'),
+      icon: <UserOutlined />,
+      children: <AccountCenter />,
+    },
     {
       key: "1",
       label: t('tabs.model_service'),
@@ -22,7 +30,14 @@ const Settings: React.FC = () => {
       children: <About />,
     },
   ];
-  return <Tabs defaultActiveKey="1" items={items} />;
+  return (
+    <Tabs
+      defaultActiveKey="3"
+      items={items}
+      style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+      className="settings-tabs"
+    />
+  );
 };
 
 export default Settings;
