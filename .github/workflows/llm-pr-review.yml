@@ -63,7 +63,7 @@ jobs:
               exit 1
             }
 
-          max_diff_chars=65536
+          max_diff_chars=131072
           pr_diff_trimmed="${pr_diff:0:$max_diff_chars}"
           # Trim to last complete line to avoid cutting mid-line
           pr_diff_trimmed="${pr_diff_trimmed%$'\n'*}"
