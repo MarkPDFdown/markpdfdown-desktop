@@ -64,9 +64,9 @@ jobs:
             }
 
           max_diff_chars=65536
-          pr_diff_trimmed=$(printf "%s" "$pr_diff" | head -c $max_diff_chars)
-          # Trim to last complete diff hunk to avoid cutting mid-line
-          pr_diff_trimmed=$(printf "%s" "$pr_diff_trimmed" | sed '$d')
+          pr_diff_trimmed="${pr_diff:0:$max_diff_chars}"
+          # Trim to last complete line to avoid cutting mid-line
+          pr_diff_trimmed="${pr_diff_trimmed%$'\n'*}"
 
           system_prompt=$(cat <<'SYSPROMPT'
           You are a senior software engineer reviewing a pull request for an Electron desktop application (React 18 + TypeScript + Vite + Prisma/SQLite + Ant Design). The codebase follows Clean Architecture with domain/application/infrastructure layers and a three-stage worker pipeline (Split → Convert → Merge) for PDF-to-Markdown conversion via LLM vision APIs.
