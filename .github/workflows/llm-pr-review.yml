@@ -139,13 +139,15 @@ jobs:
               ]
             }')
 
+          printf "%s" "$request_body" > /tmp/llm_request.json
+
           http_code=$(curl -s -o /tmp/llm_response.json -w "%{http_code}" \
             --max-time 120 \
             -H "x-api-key: $API_KEY" \
             -H "Content-Type: application/json" \
             -H "anthropic-version: 2023-06-01" \
             "$API_BASE/v1/messages" \
-            -d "$request_body") || {
+            -d @/tmp/llm_request.json) || {
               echo "::error::LLM API request failed (curl error)"
               exit 1
             }
