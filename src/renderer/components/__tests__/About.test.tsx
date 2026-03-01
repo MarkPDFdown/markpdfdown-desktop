@@ -127,7 +127,7 @@ describe('About', () => {
       const websiteButton = screen.getByText('Website')
       fireEvent.click(websiteButton)
 
-      expect(mockWindowOpen).toHaveBeenCalledWith('https://github.com/MarkPDFdown/markpdfdown-desktop', '_blank')
+      expect(mockWindowOpen).toHaveBeenCalledWith('https://markdown.fit', '_blank')
     })
 
     it('should open license link when License button is clicked', () => {
