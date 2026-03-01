@@ -163,7 +163,7 @@ class CloudService {
     error?: string;
   }> {
     try {
-      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/tasks/${id}`);
+      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/tasks/${encodeURIComponent(id)}`);
 
       if (!res.ok) {
         const errorBody = await res.json().catch(() => null);
@@ -204,7 +204,7 @@ class CloudService {
       });
 
       const res = await authManager.fetchWithAuth(
-        `${API_BASE_URL}/api/v1/tasks/${id}/pages?${params.toString()}`,
+        `${API_BASE_URL}/api/v1/tasks/${encodeURIComponent(id)}/pages?${params.toString()}`,
       );
 
       if (!res.ok) {
@@ -243,7 +243,7 @@ class CloudService {
     error?: string;
   }> {
     try {
-      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/tasks/${id}/cancel`, {
+      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/tasks/${encodeURIComponent(id)}/cancel`, {
         method: 'POST',
       });
 
@@ -279,7 +279,7 @@ class CloudService {
     error?: string;
   }> {
     try {
-      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/tasks/${id}/retry`, {
+      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/tasks/${encodeURIComponent(id)}/retry`, {
         method: 'POST',
       });
 
@@ -316,7 +316,7 @@ class CloudService {
   }> {
     try {
       const res = await authManager.fetchWithAuth(
-        `${API_BASE_URL}/api/v1/tasks/${taskId}/pages/${pageNumber}/retry`,
+        `${API_BASE_URL}/api/v1/tasks/${encodeURIComponent(taskId)}/pages/${encodeURIComponent(String(pageNumber))}/retry`,
         { method: 'POST' },
       );
 
@@ -352,7 +352,7 @@ class CloudService {
     error?: string;
   }> {
     try {
-      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/tasks/${id}/result`);
+      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/tasks/${encodeURIComponent(id)}/result`);
 
       if (!res.ok) {
         const errorBody = await res.json().catch(() => null);
@@ -386,7 +386,7 @@ class CloudService {
     error?: string;
   }> {
     try {
-      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/tasks/${id}/pdf`);
+      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/tasks/${encodeURIComponent(id)}/pdf`);
 
       if (!res.ok) {
         const errorBody = await res.json().catch(() => null);
@@ -421,7 +421,7 @@ class CloudService {
   }> {
     try {
       const res = await authManager.fetchWithAuth(
-        `${API_BASE_URL}/api/v1/tasks/${taskId}/pages/${pageNumber}/image`,
+        `${API_BASE_URL}/api/v1/tasks/${encodeURIComponent(taskId)}/pages/${encodeURIComponent(String(pageNumber))}/image`,
       );
 
       if (!res.ok) {
@@ -543,7 +543,7 @@ class CloudService {
     error?: string;
   }> {
     try {
-      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/tasks/${id}`, {
+      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/tasks/${encodeURIComponent(id)}`, {
         method: 'DELETE',
       });
 

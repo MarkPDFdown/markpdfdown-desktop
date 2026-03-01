@@ -113,21 +113,42 @@ if (process.defaultApp) {
   app.setAsDefaultProtocolClient(PROTOCOL_NAME);
 }
 
+// 允许的协议回调路径
+const ALLOWED_PROTOCOL_PATHS = new Set(['auth/callback', 'auth']);
+
 // 处理自定义协议 URL（用于 OAuth 回调）
 function handleProtocolUrl(url: string) {
-  console.log('[Main] Received protocol URL:', url);
-  if (url.startsWith(`${PROTOCOL_NAME}://`)) {
-    // 聚焦主窗口
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) {
-        mainWindow.restore();
-      }
-      mainWindow.focus();
-    }
+  console.log('[Main] Received protocol URL');
 
-    // 立即检查 token 状态，加速获取 token
-    authManager.checkDeviceTokenStatus();
+  if (!url.startsWith(`${PROTOCOL_NAME}://`)) {
+    console.warn('[Main] Ignoring URL with unexpected scheme');
+    return;
   }
+
+  // 解析并严格校验路径
+  try {
+    const parsed = new URL(url);
+    const urlPath = `${parsed.host}${parsed.pathname}`.replace(/\/+$/, '');
+
+    if (!ALLOWED_PROTOCOL_PATHS.has(urlPath)) {
+      console.warn(`[Main] Ignoring protocol URL with unexpected path: ${urlPath}`);
+      return;
+    }
+  } catch {
+    console.warn('[Main] Ignoring malformed protocol URL');
+    return;
+  }
+
+  // 聚焦主窗口
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+    mainWindow.focus();
+  }
+
+  // 立即检查 token 状态，加速获取 token
+  authManager.checkDeviceTokenStatus();
 }
 
 // macOS: 通过 open-url 事件处理协议 URL

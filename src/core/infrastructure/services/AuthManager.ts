@@ -560,19 +560,18 @@ class AuthManager {
 
   private persistRefreshToken(token: string): void {
     try {
+      if (!safeStorage.isEncryptionAvailable()) {
+        console.warn('[AuthManager] Encryption not available, refresh token will only be kept in memory (not persisted to disk)');
+        return;
+      }
+
       const dir = path.join(app.getPath('userData'), REFRESH_TOKEN_DIR);
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
       const filePath = path.join(dir, REFRESH_TOKEN_FILE);
-
-      if (safeStorage.isEncryptionAvailable()) {
-        const encrypted = safeStorage.encryptString(token);
-        fs.writeFileSync(filePath, encrypted);
-      } else {
-        // Fallback: store as plain text (not ideal but functional)
-        fs.writeFileSync(filePath, token, 'utf-8');
-      }
+      const encrypted = safeStorage.encryptString(token);
+      fs.writeFileSync(filePath, encrypted);
     } catch (err) {
       console.warn('[AuthManager] Failed to persist refresh token:', err);
     }
@@ -580,18 +579,18 @@ class AuthManager {
 
   private loadRefreshToken(): string | null {
     try {
+      if (!safeStorage.isEncryptionAvailable()) {
+        console.warn('[AuthManager] Encryption not available, cannot load persisted refresh token');
+        return null;
+      }
+
       const filePath = path.join(app.getPath('userData'), REFRESH_TOKEN_DIR, REFRESH_TOKEN_FILE);
       if (!fs.existsSync(filePath)) {
         return null;
       }
 
       const data = fs.readFileSync(filePath);
-
-      if (safeStorage.isEncryptionAvailable()) {
-        return safeStorage.decryptString(data);
-      } else {
-        return data.toString('utf-8');
-      }
+      return safeStorage.decryptString(data);
     } catch (err) {
       console.warn('[AuthManager] Failed to load refresh token:', err);
       return null;

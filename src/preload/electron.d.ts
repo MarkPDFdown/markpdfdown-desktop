@@ -89,7 +89,7 @@ interface WindowAPI {
     getAuthState: () => Promise<any>;
   };
   cloud: {
-    convert: (fileData: { path?: string; content?: ArrayBuffer; name: string; model?: string }) => Promise<any>;
+    convert: (fileData: { path?: string; content?: ArrayBuffer; name: string; model?: string; page_range?: string }) => Promise<any>;
     getTasks: (params: { page: number; pageSize: number }) => Promise<any>;
     getTaskById: (id: string) => Promise<any>;
     getTaskPages: (params: { taskId: string; page?: number; pageSize?: number }) => Promise<any>;

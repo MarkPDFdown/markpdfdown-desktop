@@ -1,3 +1,4 @@
+import isDev from 'electron-is-dev';
 import { authManager } from './AuthManager.js';
 import { API_BASE_URL } from '../config.js';
 import { windowManager } from '../../../main/WindowManager.js';
@@ -165,13 +166,17 @@ class CloudSSEManager {
     }
 
     try {
-      console.log(`[CloudSSE] Connecting to ${url} (Last-Event-ID=${this.lastEventId})`);
+      if (isDev) {
+        console.log(`[CloudSSE] Connecting to ${url} (Last-Event-ID=${this.lastEventId})`);
+      }
       const res = await authManager.fetchWithAuth(url, {
         headers,
         signal: this.abortController.signal,
       });
 
-      console.log(`[CloudSSE] Response status: ${res.status}, content-type: ${res.headers.get('content-type')}`);
+      if (isDev) {
+        console.log(`[CloudSSE] Response status: ${res.status}, content-type: ${res.headers.get('content-type')}`);
+      }
 
       if (!res.ok) {
         console.error(`[CloudSSE] HTTP error: ${res.status}`);
@@ -218,7 +223,9 @@ class CloudSSEManager {
 
         chunkCount++;
         const chunk = decoder.decode(value, { stream: true });
-        console.log(`[CloudSSE] Chunk #${chunkCount} (${value.byteLength} bytes)`);
+        if (isDev) {
+          console.log(`[CloudSSE] Chunk #${chunkCount} (${value.byteLength} bytes)`);
+        }
         buffer += chunk;
 
         // Process complete SSE messages (separated by double newline)
@@ -274,8 +281,8 @@ class CloudSSEManager {
     // Reset heartbeat on any event
     this.resetHeartbeatTimer();
 
-    // Log non-heartbeat events for debugging
-    if (eventType !== 'heartbeat') {
+    // Log non-heartbeat events for debugging (dev only)
+    if (isDev && eventType !== 'heartbeat') {
       console.log(`[CloudSSE] Event: type=${eventType}, id=${id || 'none'}, data=${data.substring(0, 200)}`);
     }
 
@@ -297,7 +304,9 @@ class CloudSSEManager {
         data: parsedData,
       } as CloudSSEEvent;
 
-      console.log(`[CloudSSE] Forwarding to renderer: type=${eventType}, task_id=${parsedData.task_id || 'none'}`);
+      if (isDev) {
+        console.log(`[CloudSSE] Forwarding to renderer: type=${eventType}, task_id=${parsedData.task_id || 'none'}`);
+      }
       windowManager.sendToRenderer('cloud:taskEvent', event);
     } catch (error) {
       console.error('[CloudSSE] Failed to parse event data:', error, data);
