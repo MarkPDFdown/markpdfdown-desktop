@@ -4,6 +4,9 @@ import fs from 'fs';
 import cloudService from '../../../core/infrastructure/services/CloudService.js';
 import { cloudSSEManager } from '../../../core/infrastructure/services/CloudSSEManager.js';
 
+// Max upload size: 100MB
+const MAX_UPLOAD_SIZE_BYTES = 100 * 1024 * 1024;
+
 /**
  * Register Cloud IPC handlers
  */
@@ -13,6 +16,26 @@ export function registerCloudHandlers() {
    */
   ipcMain.handle('cloud:convert', async (_, fileData: { path?: string; content?: ArrayBuffer; name: string; model?: string; page_range?: string }) => {
     try {
+      // Validate: require either path or content, not both
+      if (!fileData.path && !fileData.content) {
+        return { success: false, error: 'No file content or path provided' };
+      }
+
+      // Validate file size
+      if (fileData.content && fileData.content.byteLength > MAX_UPLOAD_SIZE_BYTES) {
+        return { success: false, error: `File too large (max ${MAX_UPLOAD_SIZE_BYTES / 1024 / 1024}MB)` };
+      }
+      if (fileData.path) {
+        try {
+          const stat = fs.statSync(fileData.path);
+          if (stat.size > MAX_UPLOAD_SIZE_BYTES) {
+            return { success: false, error: `File too large (max ${MAX_UPLOAD_SIZE_BYTES / 1024 / 1024}MB)` };
+          }
+        } catch {
+          return { success: false, error: 'File not found or not accessible' };
+        }
+      }
+
       const result = await cloudService.convert(fileData);
       return result;
     } catch (error) {

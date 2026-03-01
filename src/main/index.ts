@@ -125,10 +125,12 @@ function handleProtocolUrl(url: string) {
     return;
   }
 
-  // 解析并严格校验路径
+  // 解析并严格校验路径（规范化：小写、去重斜杠、解码）
   try {
     const parsed = new URL(url);
-    const urlPath = `${parsed.host}${parsed.pathname}`.replace(/\/+$/, '');
+    const host = decodeURIComponent(parsed.host).toLowerCase();
+    const pathname = decodeURIComponent(parsed.pathname).replace(/\/+/g, '/').replace(/\/+$/, '');
+    const urlPath = `${host}${pathname}`;
 
     if (!ALLOWED_PROTOCOL_PATHS.has(urlPath)) {
       console.warn(`[Main] Ignoring protocol URL with unexpected path: ${urlPath}`);

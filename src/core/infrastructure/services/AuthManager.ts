@@ -59,6 +59,7 @@ class AuthManager {
   private pollExpiresAt: number = 0;
 
   private userAgent: string = '';
+  private refreshInFlight: Promise<void> | null = null;
 
   private constructor() {}
 
@@ -147,7 +148,15 @@ class AuthManager {
       this.pollExpiresAt = Date.now() + data.expires_in * 1000;
 
       // Open browser for user authorization
-      shell.openExternal(data.verification_url);
+      try {
+        await shell.openExternal(data.verification_url);
+      } catch (browserErr) {
+        console.error('[AuthManager] Failed to open browser:', browserErr);
+        this.deviceFlowStatus = 'error';
+        this.error = 'Failed to open browser for authorization';
+        this.broadcastState();
+        return { success: false, error: this.error };
+      }
 
       // Start polling
       this.deviceFlowStatus = 'polling';
@@ -508,6 +517,20 @@ class AuthManager {
   }
 
   private async refreshAccessToken(): Promise<void> {
+    // Deduplicate concurrent refresh calls
+    if (this.refreshInFlight) {
+      return this.refreshInFlight;
+    }
+
+    this.refreshInFlight = this.doRefreshAccessToken();
+    try {
+      await this.refreshInFlight;
+    } finally {
+      this.refreshInFlight = null;
+    }
+  }
+
+  private async doRefreshAccessToken(): Promise<void> {
     if (!this.refreshToken) {
       throw new AuthTokenInvalidError('No refresh token available');
     }

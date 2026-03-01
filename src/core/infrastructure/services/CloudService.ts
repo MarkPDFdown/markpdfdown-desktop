@@ -1,4 +1,5 @@
 import fs from 'fs';
+import path from 'path';
 import { authManager } from './AuthManager.js';
 import { API_BASE_URL } from '../config.js';
 import type {
@@ -398,7 +399,10 @@ class CloudService {
 
       const contentDisposition = res.headers.get('Content-Disposition') || '';
       const match = contentDisposition.match(/filename="?([^";\n]+)"?/);
-      const fileName = match ? match[1] : `task-${id}.pdf`;
+      const rawName = match ? match[1] : `task-${id}.pdf`;
+      // Sanitize: extract basename and strip control/reserved characters
+      // eslint-disable-next-line no-control-regex
+      const fileName = path.basename(rawName).replace(/[\u0000-\u001f<>:"|?*]/g, '_') || `task-${id}.pdf`;
 
       const buffer = await res.arrayBuffer();
       return { success: true, data: { buffer, fileName } };

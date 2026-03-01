@@ -228,6 +228,9 @@ class CloudSSEManager {
         }
         buffer += chunk;
 
+        // Normalize CRLF to LF for SSE compatibility
+        buffer = buffer.replace(/\r\n/g, '\n');
+
         // Process complete SSE messages (separated by double newline)
         const messages = buffer.split('\n\n');
         // Keep the last incomplete chunk in buffer
