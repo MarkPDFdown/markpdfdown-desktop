@@ -120,12 +120,16 @@ jobs:
           SYSPROMPT
           )
 
+          # Write large variables to temp files to avoid ARG_MAX limit
+          printf "%s" "$system_prompt" > /tmp/system_prompt.txt
+          printf "%s" "$pr_diff_trimmed" > /tmp/pr_diff.txt
+
           request_body=$(jq -n \
             --arg model "$MODEL_ID" \
-            --arg system "$system_prompt" \
+            --rawfile system /tmp/system_prompt.txt \
             --arg title "$pr_title" \
             --arg body "$pr_body" \
-            --arg diff "$pr_diff_trimmed" \
+            --rawfile diff /tmp/pr_diff.txt \
             '{
               model: $model,
               max_tokens: 8192,
