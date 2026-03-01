@@ -274,14 +274,16 @@ const AccountCenter: React.FC = () => {
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
               <Text type="secondary" style={{ fontSize: '12px' }}>{t('paid_credits.description')}</Text>
-              <Button
-                type="primary"
-                size="small"
-                style={{ backgroundColor: '#722ed1' }}
-                onClick={() => window.open('https://markpdfdown.com/pricing', '_blank')}
-              >
-                {t('paid_credits.recharge')}
-              </Button>
+              <Tooltip title="Coming soon">
+                <Button
+                  type="primary"
+                  size="small"
+                  style={{ backgroundColor: '#722ed1' }}
+                  disabled
+                >
+                  {t('paid_credits.recharge')}
+                </Button>
+              </Tooltip>
             </div>
           </Card>
         </Col>
