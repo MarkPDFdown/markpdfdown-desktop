@@ -67,7 +67,12 @@ class CloudSSEManager {
     }
 
     this.reconnectDelay = INITIAL_RECONNECT_DELAY_MS;
-    await this.startStream();
+    try {
+      await this.startStream();
+    } catch (error) {
+      console.error('[CloudSSE] startStream failed during connect:', error);
+      this.connected = false;
+    }
   }
 
   /**

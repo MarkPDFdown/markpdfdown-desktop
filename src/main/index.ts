@@ -113,9 +113,6 @@ if (process.defaultApp) {
   app.setAsDefaultProtocolClient(PROTOCOL_NAME);
 }
 
-// 允许的协议回调路径
-const ALLOWED_PROTOCOL_PATHS = new Set(['auth/callback', 'auth']);
-
 // 处理自定义协议 URL（用于 OAuth 回调）
 function handleProtocolUrl(url: string) {
   console.log('[Main] Received protocol URL');
@@ -125,16 +122,24 @@ function handleProtocolUrl(url: string) {
     return;
   }
 
-  // 解析并严格校验路径（规范化：小写、去重斜杠、安全解码）
+  // 解析并严格校验路径（直接使用 URL 结构化组件，不解码 host）
   try {
     const parsed = new URL(url);
-    const safeDecode = (s: string) => { try { return decodeURIComponent(s); } catch { return s; } };
-    const host = safeDecode(parsed.host).toLowerCase();
-    const pathname = safeDecode(parsed.pathname).replace(/\/+/g, '/').replace(/\/+$/, '');
-    const urlPath = `${host}${pathname}`;
+    const host = parsed.host.toLowerCase();
+    const pathname = parsed.pathname.replace(/\/+/g, '/').replace(/\/+$/, '');
 
-    if (!ALLOWED_PROTOCOL_PATHS.has(urlPath)) {
-      console.warn(`[Main] Ignoring protocol URL with unexpected path: ${urlPath}`);
+    // Reject percent-encoded slashes in host (bypass attempt)
+    if (parsed.host.includes('%')) {
+      console.warn('[Main] Ignoring protocol URL with encoded host');
+      return;
+    }
+
+    const isAllowed =
+      (host === 'auth' && pathname === '/callback') ||
+      (host === 'auth' && pathname === '');
+
+    if (!isAllowed) {
+      console.warn(`[Main] Ignoring protocol URL with unexpected path: ${host}${pathname}`);
       return;
     }
   } catch {

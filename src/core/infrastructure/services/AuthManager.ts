@@ -333,9 +333,17 @@ class AuthManager {
 
       if (signals.length === 0) return { signal: undefined, timeoutId: null };
       if (signals.length === 1) return { signal: signals[0], timeoutId: tid };
-      // Compose multiple signals
-      const combined = AbortSignal.any(signals);
-      return { signal: combined, timeoutId: tid };
+      // Compose multiple signals (with fallback for older runtimes)
+      if (typeof AbortSignal.any === 'function') {
+        return { signal: AbortSignal.any(signals), timeoutId: tid };
+      }
+      // Fallback: wire signals to a shared AbortController
+      const fc = new AbortController();
+      for (const s of signals) {
+        if (s.aborted) { fc.abort(s.reason); break; }
+        s.addEventListener('abort', () => fc.abort(s.reason), { once: true });
+      }
+      return { signal: fc.signal, timeoutId: tid };
     };
 
     const { signal, timeoutId } = buildSignal();
