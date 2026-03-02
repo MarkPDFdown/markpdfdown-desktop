@@ -530,11 +530,6 @@ const List: React.FC = () => {
               }
             })()}
           </Tooltip>
-          {record.provider === -1 && (
-             <Tooltip title={t('task_type.cloud')}>
-               <CloudOutlined style={{ color: '#1890ff' }} />
-             </Tooltip>
-          )}
         </Space>
       ),
     },
@@ -542,17 +537,34 @@ const List: React.FC = () => {
       title: t('columns.model'),
       dataIndex: "model_name",
       width: 240,
-      render: (text: string) => (
-        <Text
+      render: (text: string, record: Task) => (
+        <div
           style={{
             maxWidth: "240px",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
           }}
         >
-          {text}
-        </Text>
+          <Text
+            style={{
+              maxWidth: record.provider === -1 ? "216px" : "240px",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              display: "inline-block",
+            }}
+          >
+            {text}
+          </Text>
+          {record.provider === -1 && (
+            <Tooltip title={t('task_type.cloud')}>
+              <span style={{ display: "inline-flex", alignItems: "center" }}>
+                <CloudOutlined style={{ color: "#1890ff" }} />
+              </span>
+            </Tooltip>
+          )}
+        </div>
       ),
     },
     {

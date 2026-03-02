@@ -38,7 +38,8 @@ vi.mock('react-i18next', () => ({
         'actions.view': 'View',
         'actions.cancel': 'Cancel',
         'actions.retry': 'Retry',
-        'actions.delete': 'Delete'
+        'actions.delete': 'Delete',
+        'task_type.cloud': 'Cloud Task'
       }
       return translations[key] || key
     },
@@ -409,6 +410,46 @@ describe('List', () => {
         const imageIcons = document.querySelectorAll('[aria-label="file-image"]')
         expect(imageIcons.length).toBeGreaterThan(0)
       })
+    })
+  })
+
+  describe('Cloud Task Indicator', () => {
+    it('should render cloud icon in model column instead of file column', async () => {
+      vi.mocked(window.api.task.getAll).mockResolvedValue({
+        success: true,
+        data: {
+          list: [
+            {
+              id: 'cloud-task-1',
+              filename: 'very-long-cloud-filename-that-should-not-cover-cloud-icon.pdf',
+              type: 'pdf',
+              pages: 3,
+              model_name: 'Markdown.Fit Pro',
+              progress: 60,
+              status: 3,
+              provider: -1
+            }
+          ],
+          total: 1
+        }
+      })
+
+      render(
+        <Wrapper>
+          <List />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        const row = document.querySelector('.ant-table-tbody tr')
+        expect(row).toBeInTheDocument()
+      })
+
+      const row = document.querySelector('.ant-table-tbody tr') as HTMLTableRowElement
+      const cells = row.querySelectorAll('td')
+
+      expect(cells[0].querySelector('[aria-label="cloud"]')).toBeNull()
+      expect(cells[1].querySelector('[aria-label="cloud"]')).toBeInTheDocument()
     })
   })
 
