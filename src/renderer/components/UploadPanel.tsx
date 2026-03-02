@@ -486,7 +486,7 @@ const UploadPanel: React.FC = () => {
   };
 
   return (
-    <>
+    <div className="home-upload-panel">
       <Row style={{ display: "block", marginTop: "32px" }}>
         <Col span={24}>
           <Dragger {...props} style={{ minWidth: "760px" }}>
@@ -547,7 +547,7 @@ const UploadPanel: React.FC = () => {
           </Space>
         </Col>
       </Row>
-    </>
+    </div>
   );
 };
 

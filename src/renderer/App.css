@@ -46,6 +46,13 @@
   overflow-y: auto;
 }
 
+/* Home upload list: keep action controls visible when many files are selected */
+.home-upload-panel .ant-upload-list {
+  max-height: 120px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
 /* Splitter Panel 溢出控制 */
 .ant-splitter {
   overflow: hidden !important;
