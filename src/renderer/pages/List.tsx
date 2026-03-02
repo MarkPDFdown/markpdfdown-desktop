@@ -583,11 +583,15 @@ const List: React.FC = () => {
       title: t('columns.status'),
       dataIndex: "status",
       width: 100,
-      render: (status: number, record: Task) => {
+      render: (status: number, record: Task | CloudTask) => {
         const tag = <Tag color={getStatusColor(status)}>{getStatusText(status)}</Tag>;
-        // Show error tooltip for failed status
-        if (status === 0 && record.error) {
-          return <Tooltip title={record.error}>{tag}</Tooltip>;
+        const failedReason =
+          record.error ||
+          ('error_message' in record ? record.error_message : undefined) ||
+          ('description' in record ? record.description : undefined);
+        // Show tooltip for failed/partial-failed tasks if backend provides reason
+        if ((status === 0 || status === 8) && failedReason) {
+          return <Tooltip title={failedReason}>{tag}</Tooltip>;
         }
         return tag;
       },
