@@ -264,6 +264,7 @@ interface ElectronAPI {
     getTaskResult: (id: string) => Promise<IpcResponse<import('../shared/types/cloud-api').CloudTaskResult>>;
     downloadPdf: (id: string) => Promise<IpcResponse<{ filePath: string }>>;
     getPageImage: (params: { taskId: string; pageNumber: number }) => Promise<IpcResponse<{ dataUrl: string }>>;
+    createCheckout: (params: { amountUsd: number }) => Promise<IpcResponse<import('../shared/types/cloud-api').PaymentCheckoutApiResponse>>;
     getCredits: () => Promise<IpcResponse<import('../shared/types/cloud-api').CreditsApiResponse>>;
     getCreditHistory: (params: { page: number; pageSize: number; type?: string }) => Promise<IpcResponse<any>>;
     sseConnect: () => Promise<IpcResponse<void>>;
@@ -292,6 +293,7 @@ interface ElectronAPI {
     onAuthStateChanged: (callback: (state: import('../shared/types/cloud-api').AuthState) => void) => () => void;
     onUpdaterStatus: (callback: (data: UpdateStatusData) => void) => () => void;
     onCloudTaskEvent: (callback: (event: import('../shared/types/cloud-api').CloudSSEEvent) => void) => () => void;
+    onPaymentCallback: (callback: (event: import('../shared/types/cloud-api').PaymentCallbackEvent) => void) => () => void;
   };
 
   platform: string;

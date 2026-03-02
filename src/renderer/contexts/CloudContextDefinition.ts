@@ -52,6 +52,13 @@ export interface CloudFileInput {
   originFileObj?: File;  // File object from drag and drop
 }
 
+export interface CheckoutSession {
+  checkoutUrl: string;
+  sessionId: string;
+  amountUsd: number;
+  creditsToAdd: number;
+}
+
 export interface CloudContextType {
   user: UserProfile;
   credits: Credits;
@@ -89,6 +96,7 @@ export interface CloudContextType {
   retryPage: (taskId: string, pageNumber: number) => Promise<{ success: boolean; error?: string }>;
   getTaskResult: (id: string) => Promise<{ success: boolean; data?: CloudTaskResult; error?: string }>;
   downloadResult: (id: string) => Promise<{ success: boolean; error?: string }>;
+  createCheckout: (amountUsd: number) => Promise<{ success: boolean; data?: CheckoutSession; error?: string }>;
   getCreditHistory: (page?: number, pageSize?: number, type?: string) => Promise<{
     success: boolean;
     data?: CreditHistoryItem[];

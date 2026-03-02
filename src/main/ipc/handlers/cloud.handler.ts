@@ -216,6 +216,21 @@ export function registerCloudHandlers() {
   });
 
   /**
+   * Create payment checkout session
+   */
+  ipcMain.handle('cloud:createCheckout', async (_, params: { amountUsd: number }) => {
+    try {
+      return await cloudService.createCheckout(params.amountUsd);
+    } catch (error) {
+      console.error('[IPC] cloud:createCheckout error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
    * Get credits info
    */
   ipcMain.handle('cloud:getCredits', async () => {

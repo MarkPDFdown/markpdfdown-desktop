@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Card, Button, Avatar, Typography, Divider, Row, Col, Statistic, Table, Tag, Tooltip, Space, Alert, Flex } from 'antd';
+import { Card, Button, Avatar, Typography, Divider, Row, Col, Statistic, Table, Tag, Tooltip, Space, Alert, Flex, message } from 'antd';
 import { UserOutlined, LogoutOutlined, CrownOutlined, SafetyCertificateOutlined, InfoCircleOutlined, LoadingOutlined, CopyOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { CloudContext, CreditHistoryItem } from '../contexts/CloudContextDefinition';
@@ -13,6 +13,14 @@ const AccountCenter: React.FC = () => {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 5, total: 0 });
   const [codeCopied, setCodeCopied] = useState(false);
+  const [selectedTopupAmount, setSelectedTopupAmount] = useState(20);
+  const [topupLoading, setTopupLoading] = useState(false);
+
+  const topupOptions = [
+    { amount: 5, credits: 7500 },
+    { amount: 20, credits: 30000 },
+    { amount: 100, credits: 150000 },
+  ];
 
   const fetchHistory = async (page: number = 1) => {
     if (!context || !context.isAuthenticated) return;
@@ -38,7 +46,51 @@ const AccountCenter: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [context?.isAuthenticated]);
 
+  useEffect(() => {
+    if (!window.api?.events?.onPaymentCallback) return;
+
+    const cleanup = window.api.events.onPaymentCallback((event) => {
+      if (!context?.isAuthenticated) return;
+
+      const status = (event?.status || '').toLowerCase();
+      if (status === 'success' || status === 'completed' || status === 'paid') {
+        message.success(t('paid_credits.payment_success'));
+      } else if (status === 'cancelled' || status === 'canceled') {
+        message.warning(t('paid_credits.payment_cancelled'));
+      } else if (status === 'failed' || status === 'error') {
+        message.error(t('paid_credits.payment_failed'));
+      } else {
+        message.info(t('paid_credits.payment_callback_received'));
+      }
+
+      context.refreshCredits();
+      fetchHistory(pagination.current);
+    });
+
+    return cleanup;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [context?.isAuthenticated, pagination.current, t]);
+
   if (!context) return null;
+
+  const handleTopupClick = async () => {
+    setTopupLoading(true);
+    try {
+      const result = await context.createCheckout(selectedTopupAmount);
+      if (!result.success || !result.data) {
+        message.error(result.error || t('paid_credits.checkout_failed'));
+        return;
+      }
+
+      window.api.shell.openExternal(result.data.checkoutUrl);
+      message.success(t('paid_credits.checkout_opened'));
+    } catch (error) {
+      console.error('Failed to create checkout:', error);
+      message.error(t('paid_credits.checkout_failed'));
+    } finally {
+      setTopupLoading(false);
+    }
+  };
 
   const { user, credits, isAuthenticated, login, logout, isLoading, deviceFlowStatus, userCode, authError, cancelLogin } = context;
 
@@ -266,25 +318,55 @@ const AccountCenter: React.FC = () => {
         </Col>
         <Col span={12}>
           <Card variant="borderless" style={{ background: '#f9f0ff', position: 'relative', height: '100%' }}>
-            <Statistic
-              title={t('paid_credits.title')}
-              value={credits.paid}
-              prefix={<CrownOutlined style={{ color: '#722ed1' }} />}
-              valueStyle={{ color: '#722ed1' }}
-            />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-              <Text type="secondary" style={{ fontSize: '12px' }}>{t('paid_credits.description')}</Text>
-              <Tooltip title="Coming soon">
-                <Button
-                  type="primary"
-                  size="small"
-                  style={{ backgroundColor: '#722ed1' }}
-                  disabled
-                >
-                  {t('paid_credits.recharge')}
-                </Button>
-              </Tooltip>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+              <Statistic
+                title={t('paid_credits.title')}
+                value={credits.paid}
+                prefix={<CrownOutlined style={{ color: '#722ed1' }} />}
+                valueStyle={{ color: '#722ed1' }}
+              />
+              <Button
+                type="primary"
+                size="middle"
+                style={{ backgroundColor: '#722ed1', marginTop: 4 }}
+                onClick={handleTopupClick}
+                loading={topupLoading}
+              >
+                {t('paid_credits.recharge')} ${selectedTopupAmount}
+              </Button>
             </div>
+            <Row gutter={[8, 8]} style={{ marginTop: 6 }}>
+              {topupOptions.map((option) => {
+                const selected = selectedTopupAmount === option.amount;
+                return (
+                  <Col span={8} key={option.amount}>
+                    <Button
+                      block
+                      onClick={() => setSelectedTopupAmount(option.amount)}
+                      style={{
+                        height: 68,
+                        borderRadius: 10,
+                        borderColor: selected ? '#722ed1' : '#d9d9d9',
+                        background: selected ? '#f4e8ff' : '#ffffff',
+                        boxShadow: selected ? '0 2px 8px rgba(114, 46, 209, 0.16)' : 'none',
+                        padding: '8px 10px',
+                      }}
+                    >
+                      <div style={{ textAlign: 'left', width: '100%', lineHeight: 1.15 }}>
+                        <Text strong style={{ fontSize: 18, color: selected ? '#531dab' : 'rgba(0,0,0,0.88)' }}>
+                          ${option.amount}
+                        </Text>
+                        <div style={{ marginTop: 2 }}>
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            {option.credits.toLocaleString()} {t('history.columns.credits')}
+                          </Text>
+                        </div>
+                      </div>
+                    </Button>
+                  </Col>
+                );
+              })}
+            </Row>
           </Card>
         </Col>
       </Row>

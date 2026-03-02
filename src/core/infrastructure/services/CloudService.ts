@@ -12,6 +12,7 @@ import type {
   CloudCancelTaskResponse,
   CloudRetryPageResponse,
   CloudApiPagination,
+  PaymentCheckoutApiResponse,
 } from '../../../shared/types/cloud-api.js';
 
 /**
@@ -445,6 +446,55 @@ class CloudService {
       return { success: true, data: { dataUrl } };
     } catch (error) {
       console.error('[CloudService] getPageImage error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * Create payment checkout session
+   */
+  public async createCheckout(amountUsd: number): Promise<{
+    success: boolean;
+    data?: PaymentCheckoutApiResponse;
+    error?: string;
+  }> {
+    try {
+      if (!Number.isFinite(amountUsd) || amountUsd <= 0) {
+        return { success: false, error: 'Invalid top-up amount' };
+      }
+
+      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/payment/checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount_usd: amountUsd }),
+      });
+
+      const responseJson = await res.json().catch(() => null);
+      if (!res.ok || !responseJson?.success) {
+        const serverMessage = responseJson?.error?.message;
+        const allowedAmounts = responseJson?.error?.details?.allowed_amounts_usd;
+        const allowedSuffix = Array.isArray(allowedAmounts) && allowedAmounts.length > 0
+          ? ` (allowed: ${allowedAmounts.join(', ')})`
+          : '';
+
+        return {
+          success: false,
+          error: serverMessage
+            ? `${serverMessage}${allowedSuffix}`
+            : `Failed to create checkout session: ${res.status}`,
+        };
+      }
+
+      if (!responseJson.data?.checkout_url || !responseJson.data?.session_id) {
+        return { success: false, error: 'Invalid checkout response' };
+      }
+
+      return { success: true, data: responseJson.data };
+    } catch (error) {
+      console.error('[CloudService] createCheckout error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),

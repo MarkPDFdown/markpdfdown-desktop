@@ -181,6 +181,25 @@ export interface CloudApiPagination {
   total_pages: number;
 }
 
+// ============ Payment API Types ============
+
+export interface PaymentCheckoutApiResponse {
+  checkout_url: string;
+  session_id: string;
+  amount_usd: number;
+  credits_to_add: number;
+}
+
+export interface PaymentCallbackEvent {
+  url: string;
+  status: string | null;
+  sessionId: string | null;
+  amountUsd: number | null;
+  creditsToAdd: number | null;
+  query: Record<string, string>;
+  receivedAt: string;
+}
+
 // ============ SSE Event Types ============
 
 export type CloudSSEEventType =

@@ -15,7 +15,14 @@
   "paid_credits": {
     "title": "Paid Credits",
     "description": "$1 USD = 1,500 credits",
-    "recharge": "Recharge"
+    "recharge": "Recharge",
+    "coming_soon": "Top-up will be available soon",
+    "checkout_opened": "Checkout opened in your browser. Please complete payment there.",
+    "checkout_failed": "Failed to create checkout session. Please try again.",
+    "payment_success": "Payment succeeded. Credits have been updated.",
+    "payment_cancelled": "Payment was cancelled.",
+    "payment_failed": "Payment failed. Please try again later.",
+    "payment_callback_received": "Payment callback received. Syncing credits."
   },
   "device_flow": {
     "browser_opened": "A browser window has been opened for authorization",

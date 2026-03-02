@@ -32,6 +32,16 @@ interface TaskDetailEventData {
   timestamp: number;
 }
 
+interface PaymentCallbackEventData {
+  url: string;
+  status: string | null;
+  sessionId: string | null;
+  amountUsd: number | null;
+  creditsToAdd: number | null;
+  query: Record<string, string>;
+  receivedAt: string;
+}
+
 interface ElectronAPI {
   ipcRenderer: {
     send: (channel: string, data: any) => void;
@@ -100,6 +110,7 @@ interface WindowAPI {
     getTaskResult: (id: string) => Promise<any>;
     downloadPdf: (id: string) => Promise<any>;
     getPageImage: (params: { taskId: string; pageNumber: number }) => Promise<any>;
+    createCheckout: (params: { amountUsd: number }) => Promise<any>;
     getCredits: () => Promise<any>;
     getCreditHistory: (params: { page: number; pageSize: number; type?: string }) => Promise<any>;
     sseConnect: () => Promise<any>;
@@ -125,6 +136,7 @@ interface WindowAPI {
     onAuthStateChanged: (callback: (state: any) => void) => () => void;
     onUpdaterStatus: (callback: (data: any) => void) => () => void;
     onCloudTaskEvent: (callback: (event: any) => void) => () => void;
+    onPaymentCallback: (callback: (event: PaymentCallbackEventData) => void) => () => void;
   };
   platform: NodeJS.Platform;
   app: {

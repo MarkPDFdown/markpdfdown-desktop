@@ -264,6 +264,39 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
     }
   }, [isAuthenticated]);
 
+  const createCheckout = useCallback(async (amountUsd: number) => {
+    if (!isAuthenticated) {
+      return { success: false, error: 'User not signed in' };
+    }
+
+    try {
+      if (!window.api?.cloud?.createCheckout) {
+        return { success: false, error: 'Cloud API not available' };
+      }
+
+      const result = await window.api.cloud.createCheckout({ amountUsd });
+      if (result.success && result.data) {
+        return {
+          success: true,
+          data: {
+            checkoutUrl: result.data.checkout_url,
+            sessionId: result.data.session_id,
+            amountUsd: result.data.amount_usd,
+            creditsToAdd: result.data.credits_to_add,
+          },
+        };
+      }
+
+      return { success: false, error: result.error || 'Failed to create checkout session' };
+    } catch (error) {
+      console.error('Failed to create checkout session:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }, [isAuthenticated]);
+
   // Fetch credit history
   const getCreditHistory = useCallback(async (page: number = 1, pageSize: number = 10, type?: string) => {
     if (!isAuthenticated) {
@@ -332,6 +365,20 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
     };
   }, [isAuthenticated]);
 
+  // Payment callback lifecycle: refresh credits when checkout flow returns
+  useEffect(() => {
+    if (!window.api?.events?.onPaymentCallback) return;
+
+    const cleanup = window.api.events.onPaymentCallback((event) => {
+      console.log('[CloudContext] Payment callback received:', event);
+      if (isAuthenticated) {
+        refreshCredits();
+      }
+    });
+
+    return cleanup;
+  }, [isAuthenticated, refreshCredits]);
+
   return (
     <CloudContext.Provider
       value={{
@@ -357,6 +404,7 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
         retryPage,
         getTaskResult,
         downloadResult,
+        createCheckout,
         getCreditHistory
       }}
     >

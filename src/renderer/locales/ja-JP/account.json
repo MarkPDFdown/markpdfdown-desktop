@@ -15,7 +15,14 @@
   "paid_credits": {
     "title": "有料クレジット",
     "description": "1ドル = 1,500クレジット",
-    "recharge": "チャージ"
+    "recharge": "チャージ",
+    "coming_soon": "チャージ機能は近日公開予定です",
+    "checkout_opened": "決済ページをブラウザで開きました。支払いを完了してください。",
+    "checkout_failed": "決済セッションの作成に失敗しました。後でもう一度お試しください。",
+    "payment_success": "決済が完了し、クレジットを更新しました。",
+    "payment_cancelled": "決済はキャンセルされました。",
+    "payment_failed": "決済に失敗しました。しばらくしてから再試行してください。",
+    "payment_callback_received": "決済コールバックを受信しました。クレジットを同期中です。"
   },
   "device_flow": {
     "browser_opened": "認証のためにブラウザウィンドウが開きました",

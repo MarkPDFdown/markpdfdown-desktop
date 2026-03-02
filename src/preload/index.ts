@@ -109,6 +109,8 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("cloud:downloadPdf", id),
     getPageImage: (params: { taskId: string; pageNumber: number }) =>
       ipcRenderer.invoke("cloud:getPageImage", params),
+    createCheckout: (params: { amountUsd: number }) =>
+      ipcRenderer.invoke("cloud:createCheckout", params),
     getCredits: () =>
       ipcRenderer.invoke("cloud:getCredits"),
     getCreditHistory: (params: { page: number; pageSize: number; type?: string }) =>
@@ -211,6 +213,20 @@ contextBridge.exposeInMainWorld("api", {
 
       return () => {
         ipcRenderer.removeListener('cloud:taskEvent', handler);
+      };
+    },
+
+    /**
+     * 监听支付回跳事件
+     * @param callback 事件回调函数
+     * @returns 清理函数
+     */
+    onPaymentCallback: (callback: (event: any) => void) => {
+      const handler = (_event: any, data: any) => callback(data);
+      ipcRenderer.on('payment:callback', handler);
+
+      return () => {
+        ipcRenderer.removeListener('payment:callback', handler);
       };
     },
   },
