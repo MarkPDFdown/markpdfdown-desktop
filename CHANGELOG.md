@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [`f3389c2`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/f3389c2c904397910630b6e2c898787d1b359a47) - **upload**: 🐛 prevent action bar overlap on long file lists *(PR [#53](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/53) by [@jorben](https://github.com/jorben))*
 
 
+## [0.3.2] - 2026-03-02
+### :bug: Bug Fixes
+- [`9ae48af`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/9ae48afd6bb281bbfb9fa3a1458e8e7c41e0f118) - **list**: 🐛 move cloud icon to model column *(PR [#51](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/51) by [@jorben](https://github.com/jorben))*
+
+
 ## [0.3.1] - 2026-03-01
 ### :boom: BREAKING CHANGES
 - due to [`7cd348f`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/7cd348f62bfcf372b7584b0734d71e9c4e27b381) - ✨ Add cloud API integration with authentication and credits *(PR [#48](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/48) by [@jorben](https://github.com/jorben))*:
@@ -148,3 +153,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.2.2]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.2.1...0.2.2
 [0.3.1]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.2.2...0.3.1
 [0.3.3]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.3.2...0.3.3
+[0.3.2]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.3.1...0.3.2
