@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] - 2026-03-02
+### :bug: Bug Fixes
+- [`f3389c2`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/f3389c2c904397910630b6e2c898787d1b359a47) - **upload**: 🐛 prevent action bar overlap on long file lists *(PR [#53](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/53) by [@jorben](https://github.com/jorben))*
+
+
 ## [0.3.1] - 2026-03-01
 ### :boom: BREAKING CHANGES
 - due to [`7cd348f`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/7cd348f62bfcf372b7584b0734d71e9c4e27b381) - ✨ Add cloud API integration with authentication and credits *(PR [#48](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/48) by [@jorben](https://github.com/jorben))*:
@@ -142,3 +147,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.2.1]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.2.0...0.2.1
 [0.2.2]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.2.1...0.2.2
 [0.3.1]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.2.2...0.3.1
+[0.3.3]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.3.2...0.3.3
