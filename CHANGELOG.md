@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-03-01
+### :boom: BREAKING CHANGES
+- due to [`7cd348f`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/7cd348f62bfcf372b7584b0734d71e9c4e27b381) - ✨ Add cloud API integration with authentication and credits *(PR [#48](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/48) by [@jorben](https://github.com/jorben))*:
+  - Default settings landing tab changed from `Model Service` to `Account`.
+  - Cloud conversion architecture introduces account/device-flow auth and credits-based usage.
+  - IPC channels and cloud task workflow contracts changed to support the new cloud pipeline.
+  - Full implementation details: PR [#48](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/48).
+
+
+### :sparkles: New Features
+- [`7cd348f`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/7cd348f62bfcf372b7584b0734d71e9c4e27b381) - **cloud**: ✨ Add cloud API integration with authentication and credits *(PR [#48](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/48) by [@jorben](https://github.com/jorben))*
+
+### :bug: Bug Fixes
+- [`fabfd3e`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/fabfd3e797a47f3bd6cf350c5991f4ce1dfc1f3a) - **llm**: 🐛 修复 max_tokens 为 undefined 时导致的请求问题 *(PR [#44](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/44) by [@jorben](https://github.com/jorben))*
+- [`fd45101`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/fd45101a70626c5658fc83fc96acb2aee9f53e54) - **llm**: 🐛 修复 max_tokens 为无效值时导致的 API 错误 *(PR [#45](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/45) by [@jorben](https://github.com/jorben))*
+- [`10e3a9d`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/10e3a9ddaf17f740daaecf2a92a3709a1976760e) - **llm**: 🐛 修复 max_tokens 为无效值时导致的 API 错误 *(PR [#46](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/46) by [@jorben](https://github.com/jorben))*
+
+### :wrench: Chores
+- [`aeba963`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/aeba963cb0491e543dab3e6d22a1af4474228dcd) - **about**: 🔗 更新官方网址为 https://markdown.fit *(PR [#49](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/49) by [@jorben](https://github.com/jorben))*
+
+
 ## [0.2.2] - 2026-02-14
 ### :bug: Bug Fixes
 - [`6c29cf0`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/6c29cf03472035d5ba3d5e559d67a009f610dc8b) - **build**: 📦 disable code signature verification for Windows updates *(PR [#42](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/42) by [@jorben](https://github.com/jorben))*
@@ -120,3 +141,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.2.0]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.1.8...0.2.0
 [0.2.1]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.2.0...0.2.1
 [0.2.2]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.2.1...0.2.2
+[0.3.1]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.2.2...0.3.1
