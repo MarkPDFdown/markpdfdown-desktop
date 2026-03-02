@@ -1,5 +1,13 @@
 import React, { useState, useEffect, ReactNode, useCallback } from 'react';
-import { CloudContext, UserProfile, Credits, CreditHistoryItem, CloudFileInput } from './CloudContextDefinition';
+import {
+  CloudContext,
+  UserProfile,
+  Credits,
+  CreditHistoryItem,
+  PaymentHistoryItem,
+  CloudFileInput,
+  CheckoutStatus,
+} from './CloudContextDefinition';
 import type { AuthState, DeviceFlowStatus } from '../../shared/types/cloud-api';
 
 interface CloudProviderProps {
@@ -297,6 +305,74 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
     }
   }, [isAuthenticated]);
 
+  const mapCheckoutStatus = useCallback((data: any): CheckoutStatus => ({
+    sessionId: data.session_id,
+    orderId: data.order_id,
+    status: data.status,
+    providerStatus: data.provider_status,
+    isFinal: data.is_final,
+    changed: data.changed,
+    amountUsd: data.amount_usd,
+    creditsAdded: data.credits_added,
+    createdAt: data.created_at,
+  }), []);
+
+  const getCheckoutStatus = useCallback(async (sessionId: string, waitSeconds: number = 10) => {
+    if (!isAuthenticated) {
+      return { success: false, error: 'User not signed in' };
+    }
+
+    try {
+      if (!window.api?.cloud?.getCheckoutStatus) {
+        return { success: false, error: 'Cloud API not available' };
+      }
+
+      const result = await window.api.cloud.getCheckoutStatus({ sessionId, waitSeconds });
+      if (!result.success || !result.data) {
+        return { success: false, error: result.error || 'Failed to get checkout status' };
+      }
+
+      return {
+        success: true,
+        data: mapCheckoutStatus(result.data),
+      };
+    } catch (error) {
+      console.error('Failed to get checkout status:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }, [isAuthenticated, mapCheckoutStatus]);
+
+  const reconcileCheckout = useCallback(async (sessionId: string) => {
+    if (!isAuthenticated) {
+      return { success: false, error: 'User not signed in' };
+    }
+
+    try {
+      if (!window.api?.cloud?.reconcileCheckout) {
+        return { success: false, error: 'Cloud API not available' };
+      }
+
+      const result = await window.api.cloud.reconcileCheckout({ sessionId });
+      if (!result.success || !result.data) {
+        return { success: false, error: result.error || 'Failed to reconcile checkout' };
+      }
+
+      return {
+        success: true,
+        data: mapCheckoutStatus(result.data),
+      };
+    } catch (error) {
+      console.error('Failed to reconcile checkout:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }, [isAuthenticated, mapCheckoutStatus]);
+
   // Fetch credit history
   const getCreditHistory = useCallback(async (page: number = 1, pageSize: number = 10, type?: string) => {
     if (!isAuthenticated) {
@@ -337,6 +413,46 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
       }
     } catch (error) {
       console.error('Failed to fetch credit history:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }, [isAuthenticated]);
+
+  const getPaymentHistory = useCallback(async (page: number = 1, pageSize: number = 10) => {
+    if (!isAuthenticated) {
+      return { success: false, error: 'User not signed in' };
+    }
+
+    try {
+      if (window.api?.cloud) {
+        const result = await window.api.cloud.getPaymentHistory({ page, pageSize });
+        if (result.success) {
+          const transformedData: PaymentHistoryItem[] = (result.data || []).map((item: any) => ({
+            id: item.id,
+            amountUsd: item.amount_usd,
+            creditsAdded: item.credits_added,
+            status: item.status,
+            providerStatus: item.provider_status,
+            createdAt: item.created_at,
+          }));
+
+          const pagination = result.pagination ? {
+            page: result.pagination.page,
+            pageSize: result.pagination.page_size,
+            total: result.pagination.total,
+            totalPages: result.pagination.total_pages,
+          } : undefined;
+
+          return { success: true, data: transformedData, pagination };
+        }
+        return { success: false, error: result.error };
+      } else {
+        return { success: false, error: 'Cloud API not available' };
+      }
+    } catch (error) {
+      console.error('Failed to fetch payment history:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error)
@@ -405,7 +521,10 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
         getTaskResult,
         downloadResult,
         createCheckout,
-        getCreditHistory
+        getCheckoutStatus,
+        reconcileCheckout,
+        getCreditHistory,
+        getPaymentHistory
       }}
     >
       {children}

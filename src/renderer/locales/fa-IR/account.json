@@ -19,10 +19,44 @@
     "coming_soon": "قابلیت شارژ به‌زودی فعال می‌شود",
     "checkout_opened": "صفحه پرداخت در مرورگر باز شد. لطفاً پرداخت را تکمیل کنید.",
     "checkout_failed": "ایجاد نشست پرداخت ناموفق بود. لطفاً دوباره تلاش کنید.",
+    "checkout_invalid_url": "آدرس پرداخت بازگشتی از سرور نامعتبر است.",
     "payment_success": "پرداخت با موفقیت انجام شد و اعتبار به‌روزرسانی شد.",
     "payment_cancelled": "پرداخت لغو شد.",
     "payment_failed": "پرداخت ناموفق بود. لطفاً بعداً دوباره تلاش کنید.",
-    "payment_callback_received": "بازگشت پرداخت دریافت شد. در حال همگام‌سازی اعتبار."
+    "payment_callback_received": "بازگشت پرداخت دریافت شد. در حال همگام‌سازی اعتبار.",
+    "payment_processing": "در انتظار تایید پرداخت",
+    "payment_result": "نتیجه پرداخت",
+    "waiting_for_confirmation": "در حال انتظار برای تایید وضعیت پرداخت از سرور...",
+    "cancel_waiting": "لغو",
+    "confirm_paid": "پرداخت را انجام دادم",
+    "close_dialog": "بستن",
+    "reconcile_failed": "تطبیق وضعیت پرداخت ناموفق بود. لطفاً دوباره تلاش کنید.",
+    "still_pending": "پرداخت هنوز در حالت انتظار است. این پنجره را باز نگه دارید.",
+    "polling_failed": "دریافت وضعیت پرداخت ناموفق بود. تلاش مجدد...",
+    "session_id_label": "شناسه نشست",
+    "order_id_label": "شناسه سفارش",
+    "order_status_label": "وضعیت سفارش",
+    "provider_status_label": "وضعیت ارائه‌دهنده",
+    "amount_label": "مبلغ",
+    "credits_added_label": "اعتبار افزوده",
+    "result_success": "پرداخت با موفقیت تکمیل شد.",
+    "result_failed": "پرداخت ناموفق بود یا تکمیل نشد.",
+    "order_status_values": {
+      "pending": "در انتظار",
+      "completed": "تکمیل‌شده",
+      "failed": "ناموفق",
+      "refunded": "بازپرداخت‌شده"
+    },
+    "provider_status_values": {
+      "pending": "در انتظار",
+      "processing": "در حال پردازش",
+      "completed": "تکمیل‌شده",
+      "failed": "ناموفق",
+      "canceled": "لغو شده",
+      "expired": "منقضی شده",
+      "refunded": "بازپرداخت‌شده",
+      "unknown": "نامشخص"
+    }
   },
   "device_flow": {
     "browser_opened": "پنجره مرورگر برای احراز هویت باز شد",
@@ -34,11 +68,22 @@
   },
   "history": {
     "title": "تاریخچه اعتبار",
+    "tabs": {
+      "credits": "تراکنش‌های اعتبار",
+      "payments": "سفارش‌های پرداخت"
+    },
     "columns": {
       "time": "زمان",
       "type": "نوع",
       "description": "توضیحات",
       "credits": "اعتبار"
+    },
+    "payment_columns": {
+      "time": "زمان",
+      "amount_usd": "مبلغ (USD)",
+      "credits_added": "اعتبار افزوده",
+      "status": "وضعیت سفارش",
+      "provider_status": "وضعیت ارائه‌دهنده"
     },
     "types": {
       "consume": "مصرف",

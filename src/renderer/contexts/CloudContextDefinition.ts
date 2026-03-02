@@ -1,5 +1,13 @@
 import { createContext } from 'react';
-import type { DeviceFlowStatus, CloudTaskResponse, CloudTaskPageResponse, CloudApiPagination, CloudTaskResult } from '../../shared/types/cloud-api';
+import type {
+  DeviceFlowStatus,
+  CloudTaskResponse,
+  CloudTaskPageResponse,
+  CloudApiPagination,
+  CloudTaskResult,
+  PaymentProviderStatus,
+  PaymentStatus,
+} from '../../shared/types/cloud-api';
 
 export interface UserProfile {
   id: number;
@@ -59,6 +67,27 @@ export interface CheckoutSession {
   creditsToAdd: number;
 }
 
+export interface CheckoutStatus {
+  sessionId: string;
+  orderId?: string;
+  status: PaymentStatus;
+  providerStatus: PaymentProviderStatus;
+  isFinal: boolean;
+  changed: boolean;
+  amountUsd: number;
+  creditsAdded: number;
+  createdAt: string;
+}
+
+export interface PaymentHistoryItem {
+  id: number;
+  amountUsd: number;
+  creditsAdded: number;
+  status: PaymentStatus;
+  providerStatus: PaymentProviderStatus;
+  createdAt: string;
+}
+
 export interface CloudContextType {
   user: UserProfile;
   credits: Credits;
@@ -97,9 +126,17 @@ export interface CloudContextType {
   getTaskResult: (id: string) => Promise<{ success: boolean; data?: CloudTaskResult; error?: string }>;
   downloadResult: (id: string) => Promise<{ success: boolean; error?: string }>;
   createCheckout: (amountUsd: number) => Promise<{ success: boolean; data?: CheckoutSession; error?: string }>;
+  getCheckoutStatus: (sessionId: string, waitSeconds?: number) => Promise<{ success: boolean; data?: CheckoutStatus; error?: string }>;
+  reconcileCheckout: (sessionId: string) => Promise<{ success: boolean; data?: CheckoutStatus; error?: string }>;
   getCreditHistory: (page?: number, pageSize?: number, type?: string) => Promise<{
     success: boolean;
     data?: CreditHistoryItem[];
+    pagination?: { page: number; pageSize: number; total: number; totalPages: number };
+    error?: string;
+  }>;
+  getPaymentHistory: (page?: number, pageSize?: number) => Promise<{
+    success: boolean;
+    data?: PaymentHistoryItem[];
     pagination?: { page: number; pageSize: number; total: number; totalPages: number };
     error?: string;
   }>;

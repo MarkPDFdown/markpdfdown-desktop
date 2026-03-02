@@ -220,9 +220,57 @@ export function registerCloudHandlers() {
    */
   ipcMain.handle('cloud:createCheckout', async (_, params: { amountUsd: number }) => {
     try {
+      if (!params || typeof params.amountUsd !== 'number' || !Number.isFinite(params.amountUsd) || params.amountUsd <= 0) {
+        return { success: false, error: 'Invalid amountUsd' };
+      }
       return await cloudService.createCheckout(params.amountUsd);
     } catch (error) {
       console.error('[IPC] cloud:createCheckout error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Query checkout order status by session_id (supports long polling)
+   */
+  ipcMain.handle('cloud:getCheckoutStatus', async (_, params: { sessionId: string; waitSeconds?: number }) => {
+    try {
+      const sessionId = typeof params?.sessionId === 'string' ? params.sessionId.trim() : '';
+      if (!sessionId) {
+        return { success: false, error: 'Invalid sessionId' };
+      }
+
+      const waitSeconds = params?.waitSeconds ?? 10;
+      if (typeof waitSeconds !== 'number' || !Number.isFinite(waitSeconds)) {
+        return { success: false, error: 'Invalid waitSeconds' };
+      }
+
+      return await cloudService.getCheckoutStatus(sessionId, waitSeconds);
+    } catch (error) {
+      console.error('[IPC] cloud:getCheckoutStatus error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Trigger proactive checkout reconciliation by session_id
+   */
+  ipcMain.handle('cloud:reconcileCheckout', async (_, params: { sessionId: string }) => {
+    try {
+      const sessionId = typeof params?.sessionId === 'string' ? params.sessionId.trim() : '';
+      if (!sessionId) {
+        return { success: false, error: 'Invalid sessionId' };
+      }
+
+      return await cloudService.reconcileCheckout(sessionId);
+    } catch (error) {
+      console.error('[IPC] cloud:reconcileCheckout error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error)
@@ -253,6 +301,28 @@ export function registerCloudHandlers() {
       return await cloudService.getCreditHistory(params.page, params.pageSize, params.type);
     } catch (error) {
       console.error('[IPC] cloud:getCreditHistory error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Get payment history
+   */
+  ipcMain.handle('cloud:getPaymentHistory', async (_, params: { page: number; pageSize: number }) => {
+    try {
+      if (!params || typeof params.page !== 'number' || !Number.isFinite(params.page) || params.page < 1) {
+        return { success: false, error: 'Invalid page' };
+      }
+      if (!params || typeof params.pageSize !== 'number' || !Number.isFinite(params.pageSize) || params.pageSize < 1) {
+        return { success: false, error: 'Invalid pageSize' };
+      }
+
+      return await cloudService.getPaymentHistory(params.page, params.pageSize);
+    } catch (error) {
+      console.error('[IPC] cloud:getPaymentHistory error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error)

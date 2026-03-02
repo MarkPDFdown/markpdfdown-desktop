@@ -111,10 +111,16 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("cloud:getPageImage", params),
     createCheckout: (params: { amountUsd: number }) =>
       ipcRenderer.invoke("cloud:createCheckout", params),
+    getCheckoutStatus: (params: { sessionId: string; waitSeconds?: number }) =>
+      ipcRenderer.invoke("cloud:getCheckoutStatus", params),
+    reconcileCheckout: (params: { sessionId: string }) =>
+      ipcRenderer.invoke("cloud:reconcileCheckout", params),
     getCredits: () =>
       ipcRenderer.invoke("cloud:getCredits"),
     getCreditHistory: (params: { page: number; pageSize: number; type?: string }) =>
       ipcRenderer.invoke("cloud:getCreditHistory", params),
+    getPaymentHistory: (params: { page: number; pageSize: number }) =>
+      ipcRenderer.invoke("cloud:getPaymentHistory", params),
     sseConnect: () =>
       ipcRenderer.invoke("cloud:sseConnect"),
     sseDisconnect: () =>

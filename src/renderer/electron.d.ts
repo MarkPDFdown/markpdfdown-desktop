@@ -265,8 +265,11 @@ interface ElectronAPI {
     downloadPdf: (id: string) => Promise<IpcResponse<{ filePath: string }>>;
     getPageImage: (params: { taskId: string; pageNumber: number }) => Promise<IpcResponse<{ dataUrl: string }>>;
     createCheckout: (params: { amountUsd: number }) => Promise<IpcResponse<import('../shared/types/cloud-api').PaymentCheckoutApiResponse>>;
+    getCheckoutStatus: (params: { sessionId: string; waitSeconds?: number }) => Promise<IpcResponse<import('../shared/types/cloud-api').PaymentCheckoutStatusApiResponse>>;
+    reconcileCheckout: (params: { sessionId: string }) => Promise<IpcResponse<import('../shared/types/cloud-api').PaymentCheckoutStatusApiResponse>>;
     getCredits: () => Promise<IpcResponse<import('../shared/types/cloud-api').CreditsApiResponse>>;
     getCreditHistory: (params: { page: number; pageSize: number; type?: string }) => Promise<IpcResponse<any>>;
+    getPaymentHistory: (params: { page: number; pageSize: number }) => Promise<IpcResponse<import('../shared/types/cloud-api').PaymentHistoryApiItem[]>>;
     sseConnect: () => Promise<IpcResponse<void>>;
     sseDisconnect: () => Promise<IpcResponse<void>>;
     sseResetAndDisconnect: () => Promise<IpcResponse<void>>;

@@ -13,7 +13,21 @@ import type {
   CloudRetryPageResponse,
   CloudApiPagination,
   PaymentCheckoutApiResponse,
+  PaymentCheckoutStatusApiResponse,
+  PaymentHistoryApiItem,
 } from '../../../shared/types/cloud-api.js';
+
+const PAYMENT_STATUSES = new Set(['pending', 'completed', 'failed', 'refunded']);
+const PAYMENT_PROVIDER_STATUSES = new Set([
+  'pending',
+  'processing',
+  'completed',
+  'failed',
+  'canceled',
+  'expired',
+  'refunded',
+  'unknown',
+]);
 
 /**
  * CloudService handles interaction with the MarkPDFDown Cloud API
@@ -22,6 +36,47 @@ class CloudService {
   private static instance: CloudService;
 
   private constructor() {}
+
+  private normalizeCheckoutStatus(data: any): PaymentCheckoutStatusApiResponse | null {
+    if (!data || typeof data !== 'object') {
+      return null;
+    }
+
+    const sessionId = typeof data.session_id === 'string' ? data.session_id.trim() : '';
+    const status = typeof data.status === 'string' ? data.status : '';
+    const providerStatus = typeof data.provider_status === 'string' ? data.provider_status : '';
+    const amountUsd = Number(data.amount_usd);
+    const creditsAdded = Number(data.credits_added);
+    const createdAt = typeof data.created_at === 'string' ? data.created_at : '';
+
+    if (!sessionId || !PAYMENT_STATUSES.has(status)) {
+      return null;
+    }
+    if (!providerStatus || !PAYMENT_PROVIDER_STATUSES.has(providerStatus)) {
+      return null;
+    }
+    if (!Number.isFinite(amountUsd) || !Number.isFinite(creditsAdded)) {
+      return null;
+    }
+    if (typeof data.is_final !== 'boolean' || typeof data.changed !== 'boolean') {
+      return null;
+    }
+    if (!createdAt) {
+      return null;
+    }
+
+    return {
+      session_id: sessionId,
+      order_id: typeof data.order_id === 'string' ? data.order_id : undefined,
+      status,
+      provider_status: providerStatus,
+      is_final: data.is_final,
+      changed: data.changed,
+      amount_usd: amountUsd,
+      credits_added: creditsAdded,
+      created_at: createdAt,
+    };
+  }
 
   public static getInstance(): CloudService {
     if (!CloudService.instance) {
@@ -503,6 +558,104 @@ class CloudService {
   }
 
   /**
+   * Query checkout order status by session_id (supports long polling)
+   */
+  public async getCheckoutStatus(sessionId: string, waitSeconds: number = 10): Promise<{
+    success: boolean;
+    data?: PaymentCheckoutStatusApiResponse;
+    error?: string;
+  }> {
+    try {
+      const normalizedSessionId = typeof sessionId === 'string' ? sessionId.trim() : '';
+      if (!normalizedSessionId) {
+        return { success: false, error: 'Invalid checkout session id' };
+      }
+
+      if (!Number.isFinite(waitSeconds)) {
+        return { success: false, error: 'Invalid wait_seconds' };
+      }
+      const normalizedWaitSeconds = Math.min(30, Math.max(0, Math.floor(waitSeconds)));
+
+      const params = new URLSearchParams({
+        wait_seconds: String(normalizedWaitSeconds),
+      });
+
+      // Long-polling endpoint can hold the connection up to wait_seconds.
+      // Leave enough headroom for network jitter/proxy buffering to avoid local abort.
+      const requestTimeoutMs = Math.max((normalizedWaitSeconds + 20) * 1000, 30000);
+
+      const res = await authManager.fetchWithAuth(
+        `${API_BASE_URL}/api/v1/payment/checkout/${encodeURIComponent(normalizedSessionId)}/status?${params.toString()}`,
+        {},
+        { timeoutMs: requestTimeoutMs },
+      );
+
+      const responseJson = await res.json().catch(() => null);
+      if (!res.ok || !responseJson?.success) {
+        return {
+          success: false,
+          error: responseJson?.error?.message || `Failed to query checkout status: ${res.status}`,
+        };
+      }
+
+      const data = this.normalizeCheckoutStatus(responseJson.data);
+      if (!data) {
+        return { success: false, error: 'Invalid checkout status response' };
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      console.error('[CloudService] getCheckoutStatus error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * Trigger proactive reconciliation for a checkout session
+   */
+  public async reconcileCheckout(sessionId: string): Promise<{
+    success: boolean;
+    data?: PaymentCheckoutStatusApiResponse;
+    error?: string;
+  }> {
+    try {
+      const normalizedSessionId = typeof sessionId === 'string' ? sessionId.trim() : '';
+      if (!normalizedSessionId) {
+        return { success: false, error: 'Invalid checkout session id' };
+      }
+
+      const res = await authManager.fetchWithAuth(
+        `${API_BASE_URL}/api/v1/payment/checkout/${encodeURIComponent(normalizedSessionId)}/reconcile`,
+        { method: 'POST' },
+      );
+
+      const responseJson = await res.json().catch(() => null);
+      if (!res.ok || !responseJson?.success) {
+        return {
+          success: false,
+          error: responseJson?.error?.message || `Failed to reconcile checkout: ${res.status}`,
+        };
+      }
+
+      const data = this.normalizeCheckoutStatus(responseJson.data);
+      if (!data) {
+        return { success: false, error: 'Invalid checkout reconcile response' };
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      console.error('[CloudService] reconcileCheckout error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
    * Get credits info from the cloud API
    */
   public async getCredits(): Promise<{
@@ -582,6 +735,55 @@ class CloudService {
       };
     } catch (error) {
       console.error('[CloudService] getCreditHistory error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * Get payment history from the cloud API
+   */
+  public async getPaymentHistory(
+    page: number = 1,
+    pageSize: number = 20,
+  ): Promise<{
+    success: boolean;
+    data?: PaymentHistoryApiItem[];
+    pagination?: { page: number; page_size: number; total: number; total_pages: number };
+    error?: string;
+  }> {
+    try {
+      const params = new URLSearchParams({
+        page: String(page),
+        page_size: String(pageSize),
+      });
+
+      const res = await authManager.fetchWithAuth(
+        `${API_BASE_URL}/api/v1/payment/history?${params.toString()}`,
+      );
+
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => null);
+        return {
+          success: false,
+          error: errorBody?.error?.message || `Failed to fetch payment history: ${res.status}`,
+        };
+      }
+
+      const responseJson = await res.json();
+      if (!responseJson.success) {
+        return { success: false, error: responseJson.error?.message || 'Invalid payment history response' };
+      }
+
+      return {
+        success: true,
+        data: responseJson.data,
+        pagination: responseJson.pagination,
+      };
+    } catch (error) {
+      console.error('[CloudService] getPaymentHistory error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
