@@ -122,6 +122,8 @@ export interface CloudTaskResponse {
   file_name: string;
   status: number;
   status_name: string;
+  description?: string;
+  error_message?: string;
   page_count: number;
   pages_completed: number;
   pages_failed: number;

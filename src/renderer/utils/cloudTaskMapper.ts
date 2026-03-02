@@ -9,6 +9,8 @@ export interface CloudTask extends Task {
   isCloud: boolean;
   /** Unix timestamp in ms for sorting */
   sortTimestamp: number;
+  description?: string;
+  error_message?: string;
 }
 
 /**
@@ -63,6 +65,9 @@ export function mapCloudTaskToTask(ct: CloudTaskResponse): CloudTask {
     status: ct.status,
     completed_count: pagesCompleted,
     failed_count: ct.pages_failed || 0,
+    error: ct.error_message || ct.description || null,
+    description: ct.description,
+    error_message: ct.error_message,
     isCloud: true,
     sortTimestamp,
   };

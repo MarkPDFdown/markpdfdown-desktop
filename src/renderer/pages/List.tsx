@@ -530,11 +530,6 @@ const List: React.FC = () => {
               }
             })()}
           </Tooltip>
-          {record.provider === -1 && (
-             <Tooltip title={t('task_type.cloud')}>
-               <CloudOutlined style={{ color: '#1890ff' }} />
-             </Tooltip>
-          )}
         </Space>
       ),
     },
@@ -542,17 +537,34 @@ const List: React.FC = () => {
       title: t('columns.model'),
       dataIndex: "model_name",
       width: 240,
-      render: (text: string) => (
-        <Text
+      render: (text: string, record: Task) => (
+        <div
           style={{
             maxWidth: "240px",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
           }}
         >
-          {text}
-        </Text>
+          <Text
+            style={{
+              maxWidth: record.provider === -1 ? "216px" : "240px",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              display: "inline-block",
+            }}
+          >
+            {text}
+          </Text>
+          {record.provider === -1 && (
+            <Tooltip title={t('task_type.cloud')}>
+              <span style={{ display: "inline-flex", alignItems: "center" }}>
+                <CloudOutlined style={{ color: "#1890ff" }} />
+              </span>
+            </Tooltip>
+          )}
+        </div>
       ),
     },
     {
@@ -571,11 +583,15 @@ const List: React.FC = () => {
       title: t('columns.status'),
       dataIndex: "status",
       width: 100,
-      render: (status: number, record: Task) => {
+      render: (status: number, record: Task | CloudTask) => {
         const tag = <Tag color={getStatusColor(status)}>{getStatusText(status)}</Tag>;
-        // Show error tooltip for failed status
-        if (status === 0 && record.error) {
-          return <Tooltip title={record.error}>{tag}</Tooltip>;
+        const failedReason =
+          record.error ||
+          ('error_message' in record ? record.error_message : undefined) ||
+          ('description' in record ? record.description : undefined);
+        // Show tooltip for failed/partial-failed tasks if backend provides reason
+        if ((status === 0 || status === 8) && failedReason) {
+          return <Tooltip title={failedReason}>{tag}</Tooltip>;
         }
         return tag;
       },
