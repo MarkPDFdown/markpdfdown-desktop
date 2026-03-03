@@ -120,6 +120,30 @@ jobs:
           SYSPROMPT
           )
 
+          # Optional repository instruction file (priority: AGENTS.md > AGENT.md > CLAUDE.md)
+          instruction_file=""
+          if [ -f "AGENTS.md" ]; then
+            instruction_file="AGENTS.md"
+          elif [ -f "AGENT.md" ]; then
+            instruction_file="AGENT.md"
+          elif [ -f "CLAUDE.md" ]; then
+            instruction_file="CLAUDE.md"
+          fi
+
+          if [ -n "$instruction_file" ]; then
+            max_instruction_chars=32768
+            instruction_content=$(cat "$instruction_file")
+            instruction_content_trimmed="${instruction_content:0:$max_instruction_chars}"
+            {
+              printf "Repository instruction file: %s\n\n" "$instruction_file"
+              printf "%s" "$instruction_content_trimmed"
+            } >/tmp/repo_instruction_prompt.txt
+            echo "::notice::Loaded repository instruction file: $instruction_file"
+          else
+            : >/tmp/repo_instruction_prompt.txt
+            echo "::notice::No repository instruction file found (AGENTS.md/AGENT.md/CLAUDE.md)"
+          fi
+
           # Write large variables to temp files to avoid ARG_MAX limit
           printf "%s" "$system_prompt" > /tmp/system_prompt.txt
           printf "%s" "$pr_diff_trimmed" > /tmp/pr_diff.txt
@@ -127,13 +151,20 @@ jobs:
           request_body=$(jq -n \
             --arg model "$MODEL_ID" \
             --rawfile system /tmp/system_prompt.txt \
+            --rawfile repo_instruction /tmp/repo_instruction_prompt.txt \
             --arg title "$pr_title" \
             --arg body "$pr_body" \
             --rawfile diff /tmp/pr_diff.txt \
             '{
               model: $model,
               max_tokens: 8192,
-              system: [{ type: "text", text: $system }],
+              system: (
+                [{ type: "text", text: $system }] +
+                (if ($repo_instruction | length) > 0
+                 then [{ type: "text", text: $repo_instruction }]
+                 else []
+                 end)
+              ),
               messages: [
                 { role: "user", content: ("Review the following pull request.\n\n## Title\n" + $title + "\n\n## Description\n" + $body + "\n\n## Diff\n```diff\n" + $diff + "\n```") }
               ]
