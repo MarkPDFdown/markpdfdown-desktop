@@ -44,29 +44,51 @@ jobs:
           set -euo pipefail
           IFS=$'\n\t'
 
-          pr_json=$(curl -sf \
+          curl -sf \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER") || {
+            "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER" > /tmp/pr_meta.json || {
               echo "::error::Failed to fetch PR metadata"
               exit 1
             }
 
-          pr_title=$(printf "%s" "$pr_json" | jq -r '.title // ""')
-          pr_body=$(printf "%s" "$pr_json" | jq -r '.body // ""')
+          pr_title=$(jq -r '.title // ""' /tmp/pr_meta.json)
+          pr_body=$(jq -r '.body // ""' /tmp/pr_meta.json)
 
-          pr_diff=$(curl -sf \
+          max_title_chars=1024
+          max_body_chars=32768
+          pr_title_size=$(printf "%s" "$pr_title" | wc -c | tr -d '[:space:]')
+          pr_body_size=$(printf "%s" "$pr_body" | wc -c | tr -d '[:space:]')
+          if [ "$pr_title_size" -gt "$max_title_chars" ]; then
+            echo "::notice::PR title truncated from $pr_title_size to $max_title_chars bytes"
+          fi
+          if [ "$pr_body_size" -gt "$max_body_chars" ]; then
+            echo "::notice::PR body truncated from $pr_body_size to $max_body_chars bytes"
+          fi
+          pr_title=$(printf "%s" "$pr_title" | head -c "$max_title_chars")
+          pr_body=$(printf "%s" "$pr_body" | head -c "$max_body_chars")
+          printf "%s" "$pr_title" > /tmp/pr_title.txt
+          printf "%s" "$pr_body" > /tmp/pr_body.txt
+
+          curl -sf \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github.v3.diff" \
-            "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER") || {
+            "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER" > /tmp/pr_diff_full.txt || {
               echo "::error::Failed to fetch PR diff"
               exit 1
             }
 
           max_diff_chars=131072
-          pr_diff_trimmed="${pr_diff:0:$max_diff_chars}"
-          # Trim to last complete line to avoid cutting mid-line
-          pr_diff_trimmed="${pr_diff_trimmed%$'\n'*}"
+          pr_diff_size=$(wc -c < /tmp/pr_diff_full.txt 2>/dev/null || echo 0)
+          if [ "$pr_diff_size" -gt "$max_diff_chars" ]; then
+            echo "::notice::PR diff truncated from $pr_diff_size to $max_diff_chars bytes"
+          fi
+          head -c "$max_diff_chars" /tmp/pr_diff_full.txt > /tmp/pr_diff.txt
+          # If diff was truncated, remove the potentially incomplete last line.
+          if [ "$pr_diff_size" -gt "$max_diff_chars" ]; then
+            sed '$d' /tmp/pr_diff.txt > /tmp/pr_diff_trimmed.txt
+            mv /tmp/pr_diff_trimmed.txt /tmp/pr_diff.txt
+          fi
 
           system_prompt=$(cat <<'SYSPROMPT'
           You are a senior software engineer reviewing a pull request for an Electron desktop application (React 18 + TypeScript + Vite + Prisma/SQLite + Ant Design). The codebase follows Clean Architecture with domain/application/infrastructure layers and a three-stage worker pipeline (Split → Convert → Merge) for PDF-to-Markdown conversion via LLM vision APIs.
@@ -122,38 +144,42 @@ jobs:
 
           # Optional repository instruction file (priority: AGENTS.md > AGENT.md > CLAUDE.md)
           instruction_file=""
-          if [ -f "AGENTS.md" ]; then
-            instruction_file="AGENTS.md"
-          elif [ -f "AGENT.md" ]; then
-            instruction_file="AGENT.md"
-          elif [ -f "CLAUDE.md" ]; then
-            instruction_file="CLAUDE.md"
-          fi
+          for candidate in AGENTS.md AGENT.md CLAUDE.md; do
+            if [ -f "$candidate" ]; then
+              instruction_file="$candidate"
+              break
+            fi
+          done
 
+          : > /tmp/repo_instruction_prompt.txt
           if [ -n "$instruction_file" ]; then
-            max_instruction_chars=32768
-            instruction_content=$(cat "$instruction_file")
-            instruction_content_trimmed="${instruction_content:0:$max_instruction_chars}"
-            {
-              printf "Repository instruction file: %s\n\n" "$instruction_file"
-              printf "%s" "$instruction_content_trimmed"
-            } >/tmp/repo_instruction_prompt.txt
-            echo "::notice::Loaded repository instruction file: $instruction_file"
+            if [ ! -r "$instruction_file" ]; then
+              echo "::warning::Repository instruction file is not readable: $instruction_file"
+            else
+              max_instruction_chars=65536
+              instruction_size=$(wc -c < "$instruction_file" 2>/dev/null || echo 0)
+              if [ "$instruction_size" -gt "$max_instruction_chars" ]; then
+                echo "::notice::Repository instruction file truncated from $instruction_size to $max_instruction_chars bytes"
+              fi
+              {
+                printf "Repository instruction file (%s):\n\n" "$instruction_file"
+                head -c "$max_instruction_chars" "$instruction_file"
+              } > /tmp/repo_instruction_prompt.txt
+              echo "::notice::Loaded repository instruction file: $instruction_file"
+            fi
           else
-            : >/tmp/repo_instruction_prompt.txt
             echo "::notice::No repository instruction file found (AGENTS.md/AGENT.md/CLAUDE.md)"
           fi
 
           # Write large variables to temp files to avoid ARG_MAX limit
           printf "%s" "$system_prompt" > /tmp/system_prompt.txt
-          printf "%s" "$pr_diff_trimmed" > /tmp/pr_diff.txt
 
           request_body=$(jq -n \
             --arg model "$MODEL_ID" \
             --rawfile system /tmp/system_prompt.txt \
             --rawfile repo_instruction /tmp/repo_instruction_prompt.txt \
-            --arg title "$pr_title" \
-            --arg body "$pr_body" \
+            --rawfile title /tmp/pr_title.txt \
+            --rawfile body /tmp/pr_body.txt \
             --rawfile diff /tmp/pr_diff.txt \
             '{
               model: $model,
@@ -189,17 +215,24 @@ jobs:
             exit 1
           fi
 
-          llm_response=$(cat /tmp/llm_response.json)
-
-          review_text=$(printf "%s" "$llm_response" | jq -r '[.content[] | select(.type == "text")] | first? | .text // ""')
+          review_text=$(jq -r '[.content[] | select(.type == "text")] | first? | .text // ""' /tmp/llm_response.json)
 
           if [ -z "$review_text" ]; then
             echo "::error::LLM response missing content. Raw response:"
-            printf "%s" "$llm_response" | jq .
+            jq . /tmp/llm_response.json
             exit 1
           fi
 
-          review_payload=$(jq -n --arg body "$review_text" '{body: $body, event: "COMMENT"}')
+          max_review_chars=58000
+          review_text_size=$(printf "%s" "$review_text" | wc -c | tr -d '[:space:]')
+          if [ "$review_text_size" -gt "$max_review_chars" ]; then
+            echo "::notice::Review comment truncated from $review_text_size to $max_review_chars bytes"
+            review_text="$(printf "%s" "$review_text" | head -c "$max_review_chars")"
+            review_text="${review_text}"$'\n\n[Truncated by workflow: review content exceeded GitHub comment size limits.]'
+          fi
+          printf "%s" "$review_text" > /tmp/review_text.txt
+
+          review_payload=$(jq -n --rawfile body /tmp/review_text.txt '{body: $body, event: "COMMENT"}')
 
           curl -sf --max-time 30 \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
