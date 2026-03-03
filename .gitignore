@@ -42,3 +42,7 @@ package.json.backup
 .npmrc.backup
 
 client-integration-guide.md
+
+# Local agent/dev artifacts
+.claude/
+.husky/_/

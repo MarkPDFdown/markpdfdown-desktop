@@ -79,5 +79,11 @@ jobs:
       - name: Run tests
         run: npm run test:unit
 
+      - name: Run renderer tests
+        run: npm run test:renderer
+
+      - name: Generate merged coverage report
+        run: npm run test:coverage:all
+
       - name: Build
         run: npm run build
