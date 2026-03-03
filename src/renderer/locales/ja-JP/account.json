@@ -15,7 +15,48 @@
   "paid_credits": {
     "title": "有料クレジット",
     "description": "1ドル = 1,500クレジット",
-    "recharge": "チャージ"
+    "recharge": "チャージ",
+    "coming_soon": "チャージ機能は近日公開予定です",
+    "checkout_opened": "決済ページをブラウザで開きました。支払いを完了してください。",
+    "checkout_failed": "決済セッションの作成に失敗しました。後でもう一度お試しください。",
+    "checkout_invalid_url": "サーバーから返された決済URLが無効です。",
+    "payment_success": "決済が完了し、クレジットを更新しました。",
+    "payment_cancelled": "決済はキャンセルされました。",
+    "payment_failed": "決済に失敗しました。しばらくしてから再試行してください。",
+    "payment_callback_received": "決済コールバックを受信しました。クレジットを同期中です。",
+    "payment_processing": "支払い確認待ち",
+    "payment_result": "支払い結果",
+    "waiting_for_confirmation": "サーバーからの支払い確認を待機しています...",
+    "cancel_waiting": "キャンセル",
+    "confirm_paid": "支払い完了",
+    "close_dialog": "閉じる",
+    "reconcile_failed": "支払い照合に失敗しました。もう一度お試しください。",
+    "still_pending": "支払いはまだ保留中です。このダイアログを開いたままにしてください。",
+    "polling_failed": "支払いステータスの取得に失敗しました。再試行します...",
+    "session_id_label": "セッションID",
+    "order_id_label": "注文ID",
+    "order_status_label": "注文ステータス",
+    "provider_status_label": "決済プロバイダーステータス",
+    "amount_label": "金額",
+    "credits_added_label": "追加クレジット",
+    "result_success": "支払いが完了しました。",
+    "result_failed": "支払いに失敗したか、完了していません。",
+    "order_status_values": {
+      "pending": "保留中",
+      "completed": "完了",
+      "failed": "失敗",
+      "refunded": "返金済み"
+    },
+    "provider_status_values": {
+      "pending": "保留中",
+      "processing": "処理中",
+      "completed": "完了",
+      "failed": "失敗",
+      "canceled": "キャンセル済み",
+      "expired": "期限切れ",
+      "refunded": "返金済み",
+      "unknown": "不明"
+    }
   },
   "device_flow": {
     "browser_opened": "認証のためにブラウザウィンドウが開きました",
@@ -27,11 +68,22 @@
   },
   "history": {
     "title": "クレジット履歴",
+    "tabs": {
+      "credits": "クレジット取引",
+      "payments": "支払い注文"
+    },
     "columns": {
       "time": "日時",
       "type": "種類",
       "description": "説明",
       "credits": "クレジット"
+    },
+    "payment_columns": {
+      "time": "日時",
+      "amount_usd": "金額 (USD)",
+      "credits_added": "追加クレジット",
+      "status": "注文ステータス",
+      "provider_status": "決済プロバイダーステータス"
     },
     "types": {
       "consume": "消費",

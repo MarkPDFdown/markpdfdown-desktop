@@ -15,7 +15,48 @@
   "paid_credits": {
     "title": "الاعتمادات المدفوعة",
     "description": "١ دولار = ١٬٥٠٠ اعتماد",
-    "recharge": "إعادة الشحن"
+    "recharge": "إعادة الشحن",
+    "coming_soon": "ستتوفر ميزة الشحن قريباً",
+    "checkout_opened": "تم فتح صفحة الدفع في المتصفح. يرجى إكمال الدفع هناك.",
+    "checkout_failed": "فشل إنشاء جلسة الدفع. يرجى المحاولة مرة أخرى لاحقاً.",
+    "checkout_invalid_url": "رابط الدفع المُعاد من الخادم غير صالح.",
+    "payment_success": "تم الدفع بنجاح وتم تحديث الرصيد.",
+    "payment_cancelled": "تم إلغاء الدفع.",
+    "payment_failed": "فشل الدفع. يرجى المحاولة مرة أخرى لاحقاً.",
+    "payment_callback_received": "تم استلام رد الدفع. جارٍ مزامنة الرصيد.",
+    "payment_processing": "بانتظار تأكيد الدفع",
+    "payment_result": "نتيجة الدفع",
+    "waiting_for_confirmation": "بانتظار تأكيد حالة الدفع من الخادم...",
+    "cancel_waiting": "إلغاء",
+    "confirm_paid": "أكملت الدفع",
+    "close_dialog": "إغلاق",
+    "reconcile_failed": "فشلت مطابقة حالة الدفع. يرجى المحاولة مرة أخرى.",
+    "still_pending": "لا يزال الدفع قيد الانتظار. أبقِ هذه النافذة مفتوحة.",
+    "polling_failed": "تعذر الاستعلام عن حالة الدفع. تتم إعادة المحاولة...",
+    "session_id_label": "معرّف الجلسة",
+    "order_id_label": "معرّف الطلب",
+    "order_status_label": "حالة الطلب",
+    "provider_status_label": "حالة المزود",
+    "amount_label": "المبلغ",
+    "credits_added_label": "الاعتمادات المضافة",
+    "result_success": "اكتمل الدفع بنجاح.",
+    "result_failed": "فشل الدفع أو لم يكتمل.",
+    "order_status_values": {
+      "pending": "قيد الانتظار",
+      "completed": "مكتمل",
+      "failed": "فشل",
+      "refunded": "تم الاسترداد"
+    },
+    "provider_status_values": {
+      "pending": "قيد الانتظار",
+      "processing": "جارٍ المعالجة",
+      "completed": "مكتمل",
+      "failed": "فشل",
+      "canceled": "تم الإلغاء",
+      "expired": "منتهي الصلاحية",
+      "refunded": "تم الاسترداد",
+      "unknown": "غير معروف"
+    }
   },
   "device_flow": {
     "browser_opened": "تم فتح نافذة المتصفح للتفويض",
@@ -27,11 +68,22 @@
   },
   "history": {
     "title": "سجل الاعتمادات",
+    "tabs": {
+      "credits": "سجل الاعتمادات",
+      "payments": "طلبات الدفع"
+    },
     "columns": {
       "time": "الوقت",
       "type": "النوع",
       "description": "الوصف",
       "credits": "الاعتمادات"
+    },
+    "payment_columns": {
+      "time": "الوقت",
+      "amount_usd": "المبلغ (USD)",
+      "credits_added": "الاعتمادات المضافة",
+      "status": "حالة الطلب",
+      "provider_status": "حالة المزود"
     },
     "types": {
       "consume": "استهلاك",

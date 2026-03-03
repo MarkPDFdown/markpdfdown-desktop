@@ -15,7 +15,48 @@
   "paid_credits": {
     "title": "Платные кредиты",
     "description": "1 доллар = 1 500 кредитов",
-    "recharge": "Пополнить"
+    "recharge": "Пополнить",
+    "coming_soon": "Пополнение скоро будет доступно",
+    "checkout_opened": "Страница оплаты открыта в браузере. Завершите оплату там.",
+    "checkout_failed": "Не удалось создать сессию оплаты. Попробуйте позже.",
+    "checkout_invalid_url": "Сервер вернул некорректную ссылку оплаты.",
+    "payment_success": "Оплата успешна. Баланс кредитов обновлён.",
+    "payment_cancelled": "Оплата отменена.",
+    "payment_failed": "Оплата не удалась. Попробуйте позже.",
+    "payment_callback_received": "Получен callback оплаты. Синхронизируем кредиты.",
+    "payment_processing": "Ожидание подтверждения оплаты",
+    "payment_result": "Результат оплаты",
+    "waiting_for_confirmation": "Ожидание подтверждения статуса оплаты от сервера...",
+    "cancel_waiting": "Отменить",
+    "confirm_paid": "Я уже оплатил",
+    "close_dialog": "Закрыть",
+    "reconcile_failed": "Не удалось выполнить сверку платежа. Попробуйте снова.",
+    "still_pending": "Платеж все еще в ожидании. Оставьте это окно открытым.",
+    "polling_failed": "Не удалось получить статус платежа. Повторяем попытку...",
+    "session_id_label": "ID сессии",
+    "order_id_label": "ID заказа",
+    "order_status_label": "Статус заказа",
+    "provider_status_label": "Статус провайдера",
+    "amount_label": "Сумма",
+    "credits_added_label": "Начисляемые кредиты",
+    "result_success": "Оплата успешно завершена.",
+    "result_failed": "Оплата не выполнена или завершилась ошибкой.",
+    "order_status_values": {
+      "pending": "В ожидании",
+      "completed": "Завершен",
+      "failed": "Ошибка",
+      "refunded": "Возврат"
+    },
+    "provider_status_values": {
+      "pending": "В ожидании",
+      "processing": "Обработка",
+      "completed": "Завершен",
+      "failed": "Ошибка",
+      "canceled": "Отменен",
+      "expired": "Истек",
+      "refunded": "Возврат",
+      "unknown": "Неизвестно"
+    }
   },
   "device_flow": {
     "browser_opened": "Окно браузера открыто для авторизации",
@@ -27,11 +68,22 @@
   },
   "history": {
     "title": "История кредитов",
+    "tabs": {
+      "credits": "Транзакции кредитов",
+      "payments": "Платежные заказы"
+    },
     "columns": {
       "time": "Время",
       "type": "Тип",
       "description": "Описание",
       "credits": "Кредиты"
+    },
+    "payment_columns": {
+      "time": "Время",
+      "amount_usd": "Сумма (USD)",
+      "credits_added": "Начислено кредитов",
+      "status": "Статус заказа",
+      "provider_status": "Статус провайдера"
     },
     "types": {
       "consume": "Расход",

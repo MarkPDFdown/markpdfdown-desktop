@@ -1,0 +1,46 @@
+.payment-celebration-overlay {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2100;
+}
+
+.payment-celebration-particle {
+  position: absolute;
+  width: 10px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--color);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.7);
+  animation: payment-celebration-burst var(--duration) cubic-bezier(0.2, 0.75, 0.25, 1) var(--delay) forwards;
+}
+
+.payment-celebration-particle::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: -6px;
+  width: 10px;
+  height: 6px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+@keyframes payment-celebration-burst {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(0deg) scale(0.5);
+  }
+
+  12% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) rotate(var(--rotate)) scale(0.9);
+  }
+}

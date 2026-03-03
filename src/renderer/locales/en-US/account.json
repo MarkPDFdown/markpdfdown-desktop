@@ -15,7 +15,48 @@
   "paid_credits": {
     "title": "Paid Credits",
     "description": "$1 USD = 1,500 credits",
-    "recharge": "Recharge"
+    "recharge": "Recharge",
+    "coming_soon": "Top-up will be available soon",
+    "checkout_opened": "Checkout opened in your browser. Please complete payment there.",
+    "checkout_failed": "Failed to create checkout session. Please try again.",
+    "checkout_invalid_url": "Invalid checkout URL returned by server.",
+    "payment_success": "Payment succeeded. Credits have been updated.",
+    "payment_cancelled": "Payment was cancelled.",
+    "payment_failed": "Payment failed. Please try again later.",
+    "payment_callback_received": "Payment callback received. Syncing credits.",
+    "payment_processing": "Waiting For Payment",
+    "payment_result": "Payment Result",
+    "waiting_for_confirmation": "Waiting for payment confirmation from server...",
+    "cancel_waiting": "Cancel",
+    "confirm_paid": "I've Completed Payment",
+    "close_dialog": "Close",
+    "reconcile_failed": "Failed to reconcile payment status. Please try again.",
+    "still_pending": "Payment is still pending. Keep this dialog open.",
+    "polling_failed": "Unable to query payment status. Retrying...",
+    "session_id_label": "Session ID",
+    "order_id_label": "Order ID",
+    "order_status_label": "Order Status",
+    "provider_status_label": "Provider Status",
+    "amount_label": "Amount",
+    "credits_added_label": "Credits To Add",
+    "result_success": "Payment completed successfully.",
+    "result_failed": "Payment failed or was not completed.",
+    "order_status_values": {
+      "pending": "Pending",
+      "completed": "Completed",
+      "failed": "Failed",
+      "refunded": "Refunded"
+    },
+    "provider_status_values": {
+      "pending": "Pending",
+      "processing": "Processing",
+      "completed": "Completed",
+      "failed": "Failed",
+      "canceled": "Canceled",
+      "expired": "Expired",
+      "refunded": "Refunded",
+      "unknown": "Unknown"
+    }
   },
   "device_flow": {
     "browser_opened": "A browser window has been opened for authorization",
@@ -27,11 +68,22 @@
   },
   "history": {
     "title": "Credit History",
+    "tabs": {
+      "credits": "Credit Transactions",
+      "payments": "Payment Orders"
+    },
     "columns": {
       "time": "Time",
       "type": "Type",
       "description": "Description",
       "credits": "Credits"
+    },
+    "payment_columns": {
+      "time": "Time",
+      "amount_usd": "Amount (USD)",
+      "credits_added": "Credits Added",
+      "status": "Status",
+      "provider_status": "Provider Status"
     },
     "types": {
       "consume": "Consumption",

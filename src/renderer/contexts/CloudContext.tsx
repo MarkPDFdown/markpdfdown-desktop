@@ -1,5 +1,13 @@
 import React, { useState, useEffect, ReactNode, useCallback } from 'react';
-import { CloudContext, UserProfile, Credits, CreditHistoryItem, CloudFileInput } from './CloudContextDefinition';
+import {
+  CloudContext,
+  UserProfile,
+  Credits,
+  CreditHistoryItem,
+  PaymentHistoryItem,
+  CloudFileInput,
+  CheckoutStatus,
+} from './CloudContextDefinition';
 import type { AuthState, DeviceFlowStatus } from '../../shared/types/cloud-api';
 
 interface CloudProviderProps {
@@ -264,6 +272,107 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
     }
   }, [isAuthenticated]);
 
+  const createCheckout = useCallback(async (amountUsd: number) => {
+    if (!isAuthenticated) {
+      return { success: false, error: 'User not signed in' };
+    }
+
+    try {
+      if (!window.api?.cloud?.createCheckout) {
+        return { success: false, error: 'Cloud API not available' };
+      }
+
+      const result = await window.api.cloud.createCheckout({ amountUsd });
+      if (result.success && result.data) {
+        return {
+          success: true,
+          data: {
+            checkoutUrl: result.data.checkout_url,
+            sessionId: result.data.session_id,
+            amountUsd: result.data.amount_usd,
+            creditsToAdd: result.data.credits_to_add,
+          },
+        };
+      }
+
+      return { success: false, error: result.error || 'Failed to create checkout session' };
+    } catch (error) {
+      console.error('Failed to create checkout session:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }, [isAuthenticated]);
+
+  const mapCheckoutStatus = useCallback((data: any): CheckoutStatus => ({
+    sessionId: data.session_id,
+    orderId: data.order_id,
+    status: data.status,
+    providerStatus: data.provider_status,
+    isFinal: data.is_final,
+    changed: data.changed,
+    amountUsd: data.amount_usd,
+    creditsAdded: data.credits_added,
+    createdAt: data.created_at,
+  }), []);
+
+  const getCheckoutStatus = useCallback(async (sessionId: string, waitSeconds: number = 10) => {
+    if (!isAuthenticated) {
+      return { success: false, error: 'User not signed in' };
+    }
+
+    try {
+      if (!window.api?.cloud?.getCheckoutStatus) {
+        return { success: false, error: 'Cloud API not available' };
+      }
+
+      const result = await window.api.cloud.getCheckoutStatus({ sessionId, waitSeconds });
+      if (!result.success || !result.data) {
+        return { success: false, error: result.error || 'Failed to get checkout status' };
+      }
+
+      return {
+        success: true,
+        data: mapCheckoutStatus(result.data),
+      };
+    } catch (error) {
+      console.error('Failed to get checkout status:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }, [isAuthenticated, mapCheckoutStatus]);
+
+  const reconcileCheckout = useCallback(async (sessionId: string) => {
+    if (!isAuthenticated) {
+      return { success: false, error: 'User not signed in' };
+    }
+
+    try {
+      if (!window.api?.cloud?.reconcileCheckout) {
+        return { success: false, error: 'Cloud API not available' };
+      }
+
+      const result = await window.api.cloud.reconcileCheckout({ sessionId });
+      if (!result.success || !result.data) {
+        return { success: false, error: result.error || 'Failed to reconcile checkout' };
+      }
+
+      return {
+        success: true,
+        data: mapCheckoutStatus(result.data),
+      };
+    } catch (error) {
+      console.error('Failed to reconcile checkout:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }, [isAuthenticated, mapCheckoutStatus]);
+
   // Fetch credit history
   const getCreditHistory = useCallback(async (page: number = 1, pageSize: number = 10, type?: string) => {
     if (!isAuthenticated) {
@@ -311,6 +420,46 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
     }
   }, [isAuthenticated]);
 
+  const getPaymentHistory = useCallback(async (page: number = 1, pageSize: number = 10) => {
+    if (!isAuthenticated) {
+      return { success: false, error: 'User not signed in' };
+    }
+
+    try {
+      if (window.api?.cloud) {
+        const result = await window.api.cloud.getPaymentHistory({ page, pageSize });
+        if (result.success) {
+          const transformedData: PaymentHistoryItem[] = (result.data || []).map((item: any) => ({
+            id: item.id,
+            amountUsd: item.amount_usd,
+            creditsAdded: item.credits_added,
+            status: item.status,
+            providerStatus: item.provider_status,
+            createdAt: item.created_at,
+          }));
+
+          const pagination = result.pagination ? {
+            page: result.pagination.page,
+            pageSize: result.pagination.page_size,
+            total: result.pagination.total,
+            totalPages: result.pagination.total_pages,
+          } : undefined;
+
+          return { success: true, data: transformedData, pagination };
+        }
+        return { success: false, error: result.error };
+      } else {
+        return { success: false, error: 'Cloud API not available' };
+      }
+    } catch (error) {
+      console.error('Failed to fetch payment history:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }, [isAuthenticated]);
+
   // Refresh credits when authenticated
   useEffect(() => {
     if (isAuthenticated) {
@@ -331,6 +480,20 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
       window.api?.cloud?.sseDisconnect?.();
     };
   }, [isAuthenticated]);
+
+  // Payment callback lifecycle: refresh credits when checkout flow returns
+  useEffect(() => {
+    if (!window.api?.events?.onPaymentCallback) return;
+
+    const cleanup = window.api.events.onPaymentCallback((event) => {
+      console.log('[CloudContext] Payment callback received:', event);
+      if (isAuthenticated) {
+        refreshCredits();
+      }
+    });
+
+    return cleanup;
+  }, [isAuthenticated, refreshCredits]);
 
   return (
     <CloudContext.Provider
@@ -357,7 +520,11 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
         retryPage,
         getTaskResult,
         downloadResult,
-        getCreditHistory
+        createCheckout,
+        getCheckoutStatus,
+        reconcileCheckout,
+        getCreditHistory,
+        getPaymentHistory
       }}
     >
       {children}

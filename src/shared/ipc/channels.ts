@@ -78,8 +78,12 @@ export const IPC_CHANNELS = {
     RETRY_PAGE: 'cloud:retryPage',
     GET_TASK_RESULT: 'cloud:getTaskResult',
     DOWNLOAD_PDF: 'cloud:downloadPdf',
+    CREATE_CHECKOUT: 'cloud:createCheckout',
+    GET_CHECKOUT_STATUS: 'cloud:getCheckoutStatus',
+    RECONCILE_CHECKOUT: 'cloud:reconcileCheckout',
     GET_CREDITS: 'cloud:getCredits',
     GET_CREDIT_HISTORY: 'cloud:getCreditHistory',
+    GET_PAYMENT_HISTORY: 'cloud:getPaymentHistory',
     GET_PAGE_IMAGE: 'cloud:getPageImage',
     SSE_CONNECT: 'cloud:sseConnect',
     SSE_DISCONNECT: 'cloud:sseDisconnect',
@@ -93,6 +97,7 @@ export const IPC_CHANNELS = {
     UPDATER_STATUS: 'updater:status',
     AUTH_STATE_CHANGED: 'auth:stateChanged',
     CLOUD_TASK_EVENT: 'cloud:taskEvent',
+    PAYMENT_CALLBACK: 'payment:callback',
   },
 
   // Updater channels

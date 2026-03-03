@@ -181,6 +181,58 @@ export interface CloudApiPagination {
   total_pages: number;
 }
 
+// ============ Payment API Types ============
+
+export interface PaymentCheckoutApiResponse {
+  checkout_url: string;
+  session_id: string;
+  amount_usd: number;
+  credits_to_add: number;
+}
+
+export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
+
+export type PaymentProviderStatus =
+  | 'pending'
+  | 'processing'
+  | 'completed'
+  | 'failed'
+  | 'canceled'
+  | 'expired'
+  | 'refunded'
+  | 'unknown';
+
+export interface PaymentCheckoutStatusApiResponse {
+  session_id: string;
+  order_id?: string;
+  status: PaymentStatus;
+  provider_status: PaymentProviderStatus;
+  is_final: boolean;
+  changed: boolean;
+  amount_usd: number;
+  credits_added: number;
+  created_at: string;
+}
+
+export interface PaymentHistoryApiItem {
+  id: number;
+  amount_usd: number;
+  credits_added: number;
+  status: PaymentStatus;
+  provider_status: PaymentProviderStatus;
+  created_at: string;
+}
+
+export interface PaymentCallbackEvent {
+  url: string;
+  status: string | null;
+  sessionId: string | null;
+  amountUsd: number | null;
+  creditsToAdd: number | null;
+  query: Record<string, string>;
+  receivedAt: string;
+}
+
 // ============ SSE Event Types ============
 
 export type CloudSSEEventType =

@@ -32,6 +32,28 @@ interface TaskDetailEventData {
   timestamp: number;
 }
 
+interface PaymentCallbackEventData {
+  url: string;
+  status: string | null;
+  sessionId: string | null;
+  amountUsd: number | null;
+  creditsToAdd: number | null;
+  query: Record<string, string>;
+  receivedAt: string;
+}
+
+interface CheckoutStatusData {
+  session_id: string;
+  order_id?: string;
+  status: 'pending' | 'completed' | 'failed' | 'refunded';
+  provider_status: 'pending' | 'processing' | 'completed' | 'failed' | 'canceled' | 'expired' | 'refunded' | 'unknown';
+  is_final: boolean;
+  changed: boolean;
+  amount_usd: number;
+  credits_added: number;
+  created_at: string;
+}
+
 interface ElectronAPI {
   ipcRenderer: {
     send: (channel: string, data: any) => void;
@@ -100,8 +122,12 @@ interface WindowAPI {
     getTaskResult: (id: string) => Promise<any>;
     downloadPdf: (id: string) => Promise<any>;
     getPageImage: (params: { taskId: string; pageNumber: number }) => Promise<any>;
+    createCheckout: (params: { amountUsd: number }) => Promise<any>;
+    getCheckoutStatus: (params: { sessionId: string; waitSeconds?: number }) => Promise<{ success: boolean; data?: CheckoutStatusData; error?: string }>;
+    reconcileCheckout: (params: { sessionId: string }) => Promise<{ success: boolean; data?: CheckoutStatusData; error?: string }>;
     getCredits: () => Promise<any>;
     getCreditHistory: (params: { page: number; pageSize: number; type?: string }) => Promise<any>;
+    getPaymentHistory: (params: { page: number; pageSize: number }) => Promise<any>;
     sseConnect: () => Promise<any>;
     sseDisconnect: () => Promise<any>;
     sseResetAndDisconnect: () => Promise<any>;
@@ -125,6 +151,7 @@ interface WindowAPI {
     onAuthStateChanged: (callback: (state: any) => void) => () => void;
     onUpdaterStatus: (callback: (data: any) => void) => () => void;
     onCloudTaskEvent: (callback: (event: any) => void) => () => void;
+    onPaymentCallback: (callback: (event: PaymentCallbackEventData) => void) => () => void;
   };
   platform: NodeJS.Platform;
   app: {

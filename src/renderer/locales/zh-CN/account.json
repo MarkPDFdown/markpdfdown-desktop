@@ -15,7 +15,48 @@
   "paid_credits": {
     "title": "付费积分",
     "description": "1美元可兑换1500积分",
-    "recharge": "充值"
+    "recharge": "充值",
+    "coming_soon": "充值功能即将上线",
+    "checkout_opened": "支付页面已在浏览器打开，请完成支付。",
+    "checkout_failed": "创建支付会话失败，请稍后重试。",
+    "checkout_invalid_url": "服务端返回的支付链接无效。",
+    "payment_success": "支付成功，积分已更新。",
+    "payment_cancelled": "支付已取消。",
+    "payment_failed": "支付失败，请稍后重试。",
+    "payment_callback_received": "已收到支付回调，正在同步积分。",
+    "payment_processing": "等待支付确认",
+    "payment_result": "支付结果",
+    "waiting_for_confirmation": "正在等待服务端确认支付状态...",
+    "cancel_waiting": "取消",
+    "confirm_paid": "我已完成支付",
+    "close_dialog": "关闭",
+    "reconcile_failed": "主动对账失败，请稍后重试。",
+    "still_pending": "订单仍在处理中，请保持此窗口打开。",
+    "polling_failed": "查询支付状态失败，正在重试...",
+    "session_id_label": "会话ID",
+    "order_id_label": "订单ID",
+    "order_status_label": "订单状态",
+    "provider_status_label": "支付通道状态",
+    "amount_label": "金额",
+    "credits_added_label": "预计到账积分",
+    "result_success": "支付已完成。",
+    "result_failed": "支付失败或未完成。",
+    "order_status_values": {
+      "pending": "待处理",
+      "completed": "已完成",
+      "failed": "失败",
+      "refunded": "已退款"
+    },
+    "provider_status_values": {
+      "pending": "待处理",
+      "processing": "处理中",
+      "completed": "已完成",
+      "failed": "失败",
+      "canceled": "已取消",
+      "expired": "已过期",
+      "refunded": "已退款",
+      "unknown": "未知"
+    }
   },
   "device_flow": {
     "browser_opened": "已打开浏览器窗口进行授权",
@@ -27,11 +68,22 @@
   },
   "history": {
     "title": "积分记录",
+    "tabs": {
+      "credits": "积分流水",
+      "payments": "支付订单"
+    },
     "columns": {
       "time": "时间",
       "type": "类型",
       "description": "描述",
       "credits": "积分"
+    },
+    "payment_columns": {
+      "time": "时间",
+      "amount_usd": "金额（USD）",
+      "credits_added": "到账积分",
+      "status": "订单状态",
+      "provider_status": "支付通道状态"
     },
     "types": {
       "consume": "消费",

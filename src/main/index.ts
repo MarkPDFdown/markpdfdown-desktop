@@ -88,6 +88,45 @@ import fileLogic from "../core/infrastructure/services/FileService.js";
 
 // 自定义协议名称（用于 OAuth 回调）
 const PROTOCOL_NAME = 'markpdfdown';
+const PAYMENT_CALLBACK_EVENT = 'payment:callback';
+
+interface PaymentCallbackPayload {
+  url: string;
+  status: string | null;
+  sessionId: string | null;
+  amountUsd: number | null;
+  creditsToAdd: number | null;
+  query: Record<string, string>;
+  receivedAt: string;
+}
+
+let pendingPaymentCallback: PaymentCallbackPayload | null = null;
+
+function toNullableNumber(value: string | null): number | null {
+  if (value === null || value.trim() === '') {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function dispatchPaymentCallback(payload: PaymentCallbackPayload) {
+  if (!mainWindow) {
+    pendingPaymentCallback = payload;
+    return;
+  }
+
+  const sendPayload = () => {
+    mainWindow?.webContents.send(PAYMENT_CALLBACK_EVENT, payload);
+  };
+
+  if (mainWindow.webContents.isLoadingMainFrame()) {
+    mainWindow.webContents.once('did-finish-load', sendPayload);
+    return;
+  }
+
+  sendPayload();
+}
 
 // 在 app ready 之前注册自定义协议的权限
 protocol.registerSchemesAsPrivileged([
@@ -123,10 +162,13 @@ function handleProtocolUrl(url: string) {
   }
 
   // 解析并严格校验路径（直接使用 URL 结构化组件，不解码 host）
+  let parsed: URL;
+  let host: string;
+  let pathname: string;
   try {
-    const parsed = new URL(url);
-    const host = parsed.host.toLowerCase();
-    const pathname = parsed.pathname.replace(/\/+/g, '/').replace(/\/+$/, '');
+    parsed = new URL(url);
+    host = parsed.host.toLowerCase();
+    pathname = parsed.pathname.replace(/\/+/g, '/').replace(/\/+$/, '');
 
     // Reject percent-encoded slashes in host (bypass attempt)
     if (parsed.host.includes('%')) {
@@ -136,7 +178,8 @@ function handleProtocolUrl(url: string) {
 
     const isAllowed =
       (host === 'auth' && pathname === '/callback') ||
-      (host === 'auth' && pathname === '');
+      (host === 'auth' && pathname === '') ||
+      (host === 'payment' && pathname === '/callback');
 
     if (!isAllowed) {
       console.warn(`[Main] Ignoring protocol URL with unexpected path: ${host}${pathname}`);
@@ -156,7 +199,25 @@ function handleProtocolUrl(url: string) {
   }
 
   // 立即检查 token 状态，加速获取 token
-  authManager.checkDeviceTokenStatus();
+  if (host === 'auth') {
+    authManager.checkDeviceTokenStatus();
+    return;
+  }
+
+  if (host === 'payment' && pathname === '/callback') {
+    const payload: PaymentCallbackPayload = {
+      url,
+      status: parsed.searchParams.get('status'),
+      sessionId: parsed.searchParams.get('session_id'),
+      amountUsd: toNullableNumber(parsed.searchParams.get('amount_usd')),
+      creditsToAdd: toNullableNumber(parsed.searchParams.get('credits_to_add')),
+      query: Object.fromEntries(parsed.searchParams.entries()),
+      receivedAt: new Date().toISOString(),
+    };
+
+    console.log('[Main] Payment callback received:', payload.status || 'unknown');
+    dispatchPaymentCallback(payload);
+  }
 }
 
 // macOS: 通过 open-url 事件处理协议 URL
@@ -351,6 +412,11 @@ function createWindow() {
     mainWindow = null;
     windowManager.setMainWindow(null);
   });
+
+  if (pendingPaymentCallback) {
+    dispatchPaymentCallback(pendingPaymentCallback);
+    pendingPaymentCallback = null;
+  }
 }
 
 app.whenReady().then(async () => {
