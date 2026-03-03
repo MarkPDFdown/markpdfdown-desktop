@@ -16,14 +16,23 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
+      include: [
+        "src/core/**/*.ts",
+        "src/main/**/*.ts",
+        "src/preload/**/*.ts",
+        "src/shared/**/*.ts",
+      ],
       exclude: [
         "**/node_modules/**",
         "**/dist/**",
+        "**/coverage/**",
+        "**/release/**",
         "**/*.d.ts",
         "**/migrations/**",
         "**/__tests__/**",
         "**/tests/**",
         "**/*.test.ts",
+        "**/*.test.tsx",
         "**/*.config.ts",
       ],
     },
