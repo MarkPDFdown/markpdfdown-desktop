@@ -231,6 +231,49 @@ describe('AuthManager', () => {
       const state = authManager.getAuthState();
       expect(state.deviceFlowStatus).toBe('error');
     });
+
+    it('should reject duplicate login attempts while polling', async () => {
+      const mockDeviceCode = {
+        device_code: 'test-device-code',
+        user_code: 'ABCD-1234',
+        verification_url: 'https://markdown.fit/device',
+        expires_in: 600,
+        interval: 5,
+      };
+
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ success: true, data: mockDeviceCode }),
+      } as Response);
+
+      const first = await authManager.startDeviceLogin();
+      const second = await authManager.startDeviceLogin();
+
+      expect(first.success).toBe(true);
+      expect(second).toEqual({ success: false, error: 'Login already in progress' });
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return error when browser cannot be opened', async () => {
+      const mockDeviceCode = {
+        device_code: 'test-device-code',
+        user_code: 'ABCD-1234',
+        verification_url: 'https://markdown.fit/device',
+        expires_in: 600,
+        interval: 5,
+      };
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ success: true, data: mockDeviceCode }),
+      } as Response);
+      vi.mocked(shell.openExternal).mockRejectedValueOnce(new Error('open browser failed'));
+
+      const result = await authManager.startDeviceLogin();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Failed to open browser for authorization');
+      expect(authManager.getAuthState().deviceFlowStatus).toBe('error');
+    });
   });
 
   describe('cancelLogin', () => {
@@ -489,6 +532,94 @@ describe('AuthManager', () => {
           }),
         }),
       );
+    });
+
+    it('should convert non-caller AbortError to request timeout', async () => {
+      await authenticateManager();
+
+      const abortError = new Error('aborted');
+      (abortError as any).name = 'AbortError';
+      vi.mocked(global.fetch).mockRejectedValueOnce(abortError);
+
+      await expect(authManager.fetchWithAuth('https://api.example.com/data')).rejects.toThrow(
+        'Request timeout',
+      );
+    });
+  });
+
+  describe('checkDeviceTokenStatus', () => {
+    it('should no-op when no device login is in progress', async () => {
+      await authManager.checkDeviceTokenStatus();
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it('should keep polling when token endpoint returns 428', async () => {
+      const mockDeviceCode = {
+        device_code: 'test-device-code',
+        user_code: 'ABCD-1234',
+        verification_url: 'https://markdown.fit/device',
+        expires_in: 600,
+        interval: 5,
+      };
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ success: true, data: mockDeviceCode }),
+      } as Response);
+      await authManager.startDeviceLogin();
+      vi.mocked(global.fetch).mockClear();
+
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: false,
+        status: 428,
+      } as Response);
+
+      await authManager.checkDeviceTokenStatus();
+
+      expect(authManager.getAuthState().deviceFlowStatus).toBe('polling');
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should obtain token immediately and transition to authenticated idle state', async () => {
+      const mockDeviceCode = {
+        device_code: 'test-device-code',
+        user_code: 'ABCD-1234',
+        verification_url: 'https://markdown.fit/device',
+        expires_in: 600,
+        interval: 5,
+      };
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ success: true, data: mockDeviceCode }),
+      } as Response);
+      await authManager.startDeviceLogin();
+      vi.mocked(global.fetch).mockClear();
+
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            success: true,
+            data: {
+              access_token: 'new-access-token',
+              expires_in: 3600,
+              refresh_token: 'mock-refresh-token',
+            },
+          }),
+      } as Response);
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ success: true, data: { id: 'u1', email: 'u@test.com', name: 'U' } }),
+      } as Response);
+
+      await authManager.checkDeviceTokenStatus();
+
+      const state = authManager.getAuthState();
+      expect(state.isAuthenticated).toBe(true);
+      expect(state.deviceFlowStatus).toBe('idle');
+      expect(state.userCode).toBeNull();
+      expect(state.verificationUrl).toBeNull();
     });
   });
 });
