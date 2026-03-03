@@ -3,6 +3,7 @@ import { Card, Button, Avatar, Typography, Divider, Row, Col, Statistic, Table, 
 import { UserOutlined, LogoutOutlined, CrownOutlined, SafetyCertificateOutlined, InfoCircleOutlined, LoadingOutlined, CopyOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { CheckoutStatus, CloudContext, CreditHistoryItem, PaymentHistoryItem } from '../contexts/CloudContextDefinition';
+import './AccountCenter.css';
 
 const { Title, Text } = Typography;
 
@@ -20,6 +21,15 @@ interface PaymentDialogState {
   createdAt?: string;
   lastError?: string;
 }
+
+type CelebrationParticleStyle = React.CSSProperties & {
+  '--x': string;
+  '--y': string;
+  '--rotate': string;
+  '--delay': string;
+  '--duration': string;
+  '--color': string;
+};
 
 const initialPaymentDialogState: PaymentDialogState = {
   open: false,
@@ -47,6 +57,9 @@ const AccountCenter: React.FC = () => {
   const pollingActiveRef = useRef(false);
   const pollingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isAuthenticatedRef = useRef(false);
+  const celebrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationKey, setCelebrationKey] = useState(0);
 
   const topupOptions = [
     { amount: 5, credits: 7500 },
@@ -98,6 +111,19 @@ const AccountCenter: React.FC = () => {
     }
   }, []);
 
+  const triggerCelebration = useCallback(() => {
+    if (celebrationTimerRef.current) {
+      clearTimeout(celebrationTimerRef.current);
+    }
+
+    setCelebrationKey((prev) => prev + 1);
+    setShowCelebration(true);
+    celebrationTimerRef.current = setTimeout(() => {
+      setShowCelebration(false);
+      celebrationTimerRef.current = null;
+    }, 2600);
+  }, []);
+
   const syncCreditsAndHistory = useCallback(async () => {
     if (!context?.isAuthenticated) return;
     await context.refreshCredits();
@@ -124,11 +150,12 @@ const AccountCenter: React.FC = () => {
 
     await syncCreditsAndHistory();
     if (isSuccess) {
+      triggerCelebration();
       message.success(t('paid_credits.payment_success'));
     } else {
       message.error(t('paid_credits.payment_failed'));
     }
-  }, [stopPolling, syncCreditsAndHistory, t]);
+  }, [stopPolling, syncCreditsAndHistory, t, triggerCelebration]);
 
   const startCheckoutPolling = useCallback((sessionId: string) => {
     if (!context?.isAuthenticated) return;
@@ -215,6 +242,12 @@ const AccountCenter: React.FC = () => {
   useEffect(() => () => {
     stopPolling();
   }, [stopPolling]);
+
+  useEffect(() => () => {
+    if (celebrationTimerRef.current) {
+      clearTimeout(celebrationTimerRef.current);
+    }
+  }, []);
 
   const closePaymentDialog = useCallback(() => {
     stopPolling();
@@ -534,6 +567,33 @@ const AccountCenter: React.FC = () => {
 
   return (
     <div style={{ padding: '0 24px 24px' }}>
+      {showCelebration ? (
+        <div className="payment-celebration-overlay" data-testid="payment-success-celebration" aria-hidden="true">
+          {Array.from({ length: 90 }).map((_, index) => {
+            const angleRad = ((index * 137.5 + celebrationKey * 21) % 360) * (Math.PI / 180);
+            const distance = 20 + ((index * 9) % 45);
+            const style: CelebrationParticleStyle = {
+              left: `${8 + ((index * 11) % 84)}%`,
+              top: `${12 + ((index * 17) % 76)}%`,
+              '--x': `${Math.cos(angleRad) * distance}vw`,
+              '--y': `${Math.sin(angleRad) * distance + 30}vh`,
+              '--rotate': `${220 + ((index * 37) % 260)}deg`,
+              '--delay': `${(index % 12) * 0.04}s`,
+              '--duration': `${1.1 + ((index * 5) % 8) * 0.14}s`,
+              '--color': `hsl(${(index * 31 + celebrationKey * 19) % 360} 92% 60%)`,
+            };
+
+            return (
+              <span
+                key={`${celebrationKey}-${index}`}
+                className="payment-celebration-particle"
+                style={style}
+              />
+            );
+          })}
+        </div>
+      ) : null}
+
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
         <Avatar size={80} src={user.avatarUrl} icon={<UserOutlined />} />
         <div style={{ marginLeft: '24px', flex: 1 }}>

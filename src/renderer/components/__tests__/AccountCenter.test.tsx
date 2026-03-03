@@ -143,4 +143,37 @@ describe('AccountCenter', () => {
     await new Promise((resolve) => setTimeout(resolve, 1800))
     expect(getCheckoutStatus).toHaveBeenCalledTimes(1)
   })
+
+  it('shows fullscreen celebration when payment is completed', async () => {
+    const getCheckoutStatus = vi.fn().mockResolvedValue({
+      success: true,
+      data: {
+        sessionId: 'session-1',
+        orderId: 'order-1',
+        status: 'completed',
+        providerStatus: 'completed',
+        isFinal: true,
+        changed: true,
+        amountUsd: 20,
+        creditsAdded: 32000,
+        createdAt: new Date().toISOString(),
+      },
+    })
+
+    const value = createCloudContextValue({
+      getCheckoutStatus,
+    })
+
+    renderWithContext(value)
+
+    fireEvent.click(screen.getByRole('button', { name: /paid_credits\.recharge/i }))
+
+    await waitFor(() => {
+      expect(getCheckoutStatus).toHaveBeenCalledTimes(1)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('payment-success-celebration')).toBeInTheDocument()
+    })
+  })
 })
