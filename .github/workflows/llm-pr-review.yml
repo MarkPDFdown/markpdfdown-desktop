@@ -227,8 +227,17 @@ jobs:
           review_text_size=$(printf "%s" "$review_text" | wc -c | tr -d '[:space:]')
           if [ "$review_text_size" -gt "$max_review_chars" ]; then
             echo "::notice::Review comment truncated from $review_text_size to $max_review_chars bytes"
-            review_text="$(printf "%s" "$review_text" | head -c "$max_review_chars")"
-            review_text="${review_text}"$'\n\n[Truncated by workflow: review content exceeded GitHub comment size limits.]'
+            truncation_note=$'\n\n[Truncated by workflow: review content exceeded GitHub comment size limits.]'
+            truncation_note_size=$(printf "%s" "$truncation_note" | wc -c | tr -d '[:space:]')
+            remaining_chars=$((max_review_chars - truncation_note_size))
+            if [ "$remaining_chars" -le 0 ]; then
+              review_text=$(printf "%s" "$truncation_note" | head -c "$max_review_chars")
+            else
+              review_text="$(printf "%s" "$review_text" | head -c "$remaining_chars")"
+              review_text="${review_text}${truncation_note}"
+            fi
+            # Hard cap safeguard after suffix append.
+            review_text=$(printf "%s" "$review_text" | head -c "$max_review_chars")
           fi
           printf "%s" "$review_text" > /tmp/review_text.txt
 
