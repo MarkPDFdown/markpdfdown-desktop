@@ -215,7 +215,7 @@ describe('CloudPreview', () => {
 
     await waitFor(() => {
       expect(ctx.getTaskById).toHaveBeenCalledWith('task-1')
-      expect(ctx.getTaskPages).toHaveBeenCalledWith('task-1', 1, 200)
+      expect(ctx.getTaskPages).toHaveBeenCalledWith('task-1', 1, 100)
     })
 
     await waitFor(() => {
@@ -223,6 +223,78 @@ describe('CloudPreview', () => {
     })
 
     expect(window.api.cloud.getPageImage).toHaveBeenCalledWith({ taskId: 'task-1', pageNumber: 1 })
+  })
+
+  it('fetches all API page chunks when task pages are paginated by backend', async () => {
+    const firstChunk = Array.from({ length: 20 }, (_, idx) => ({
+      page: idx + 1,
+      status: 2,
+      status_name: 'COMPLETED',
+      markdown: `page-${idx + 1}`,
+      width_mm: 210,
+      height_mm: 297,
+      image_url: `https://cdn.example.com/p${idx + 1}.png`,
+    }))
+    const secondChunk = Array.from({ length: 5 }, (_, idx) => ({
+      page: idx + 21,
+      status: 2,
+      status_name: 'COMPLETED',
+      markdown: `page-${idx + 21}`,
+      width_mm: 210,
+      height_mm: 297,
+      image_url: `https://cdn.example.com/p${idx + 21}.png`,
+    }))
+
+    const getTaskPages = vi.fn().mockImplementation(async (_taskId: string, page?: number) => {
+      if (page === 1) {
+        return {
+          success: true,
+          data: firstChunk,
+          pagination: { page: 1, page_size: 20, total: 25, total_pages: 2 },
+        }
+      }
+      if (page === 2) {
+        return {
+          success: true,
+          data: secondChunk,
+          pagination: { page: 2, page_size: 20, total: 25, total_pages: 2 },
+        }
+      }
+      return { success: true, data: [], pagination: { page: page || 1, page_size: 20, total: 25, total_pages: 2 } }
+    })
+
+    const ctx = buildContextValue({
+      getTaskById: vi.fn().mockResolvedValue({
+        success: true,
+        data: {
+          id: 'task-1',
+          file_type: 'pdf',
+          file_name: 'demo.pdf',
+          status: 6,
+          status_name: 'COMPLETED',
+          page_count: 25,
+          pages_completed: 25,
+          pages_failed: 0,
+          pdf_url: '/demo.pdf',
+          credits_estimated: 10,
+          credits_consumed: 5,
+          created_at: '2026-03-03T00:00:00.000Z',
+          model_tier: 'lite',
+        },
+      }),
+      getTaskPages,
+    })
+
+    renderPage(ctx)
+
+    await waitFor(() => {
+      expect(getTaskPages).toHaveBeenCalledWith('task-1', 1, 100)
+      expect(getTaskPages).toHaveBeenCalledWith('task-1', 2, 100)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(/25 pages/)).toBeInTheDocument()
+    })
   })
 
   it('navigates back to list when getTaskById fails', async () => {

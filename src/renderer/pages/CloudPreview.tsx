@@ -81,9 +81,24 @@ const CloudPreview: React.FC = () => {
 
     setLoading(true);
     try {
-      const result = await cloudContext.getTaskPages(id, 1, 200);
-      if (result.success && result.data) {
-        setPages(result.data);
+      const requestedPageSize = 100;
+      const result = await cloudContext.getTaskPages(id, 1, requestedPageSize);
+      if (result.success) {
+        const allPages = [...(result.data || [])];
+        const totalApiPages = result.pagination?.total_pages || 1;
+
+        for (let apiPage = 2; apiPage <= totalApiPages; apiPage++) {
+          const nextPageResult = await cloudContext.getTaskPages(id, apiPage, requestedPageSize);
+          if (nextPageResult.success && nextPageResult.data?.length) {
+            allPages.push(...nextPageResult.data);
+          }
+        }
+
+        const dedupedSortedPages = Array.from(
+          new Map(allPages.map(page => [page.page, page])).values()
+        ).sort((a, b) => a.page - b.page);
+
+        setPages(dedupedSortedPages);
       }
     } catch {
       console.error('Failed to fetch pages');
@@ -91,6 +106,26 @@ const CloudPreview: React.FC = () => {
       setLoading(false);
     }
   }, [id, cloudContext]);
+
+  // Fallback: ensure current page data is available even if backend enforces small page-size caps.
+  const ensureCurrentPageLoaded = useCallback(async () => {
+    if (!id || !cloudContext || loading) return;
+    if (pages.some(page => page.page === currentPage)) return;
+
+    try {
+      const result = await cloudContext.getTaskPages(id, currentPage, 1);
+      const pageItems = result.data;
+      if (result.success && pageItems?.length) {
+        setPages(prev => {
+          const merged = [...prev, ...pageItems];
+          return Array.from(new Map(merged.map(page => [page.page, page])).values())
+            .sort((a, b) => a.page - b.page);
+        });
+      }
+    } catch {
+      console.error('Failed to fetch current page data');
+    }
+  }, [id, cloudContext, currentPage, loading, pages]);
 
   // Load image for current page
   const loadPageImage = useCallback(async () => {
@@ -140,6 +175,10 @@ const CloudPreview: React.FC = () => {
   useEffect(() => {
     loadPageImage();
   }, [loadPageImage]);
+
+  useEffect(() => {
+    ensureCurrentPageLoaded();
+  }, [ensureCurrentPageLoaded]);
 
   // SSE event listener for real-time updates
   useEffect(() => {
