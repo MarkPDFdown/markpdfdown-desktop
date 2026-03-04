@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const handlers = new Map<string, (...args: any[]) => any>()
+const AUTH_CHANNELS = ['auth:login', 'auth:cancelLogin', 'auth:logout', 'auth:getAuthState']
 
 const mockIpcMain = {
   handle: vi.fn((channel: string, handler: (...args: any[]) => any) => {
+    if (handlers.has(channel)) {
+      throw new Error(`Attempted to register a second handler for '${channel}'`)
+    }
     handlers.set(channel, handler)
   }),
 }
@@ -25,6 +29,7 @@ vi.mock('../../../../core/infrastructure/services/AuthManager.js', () => ({
 
 describe('auth.handler', () => {
   beforeEach(async () => {
+    vi.resetModules()
     vi.clearAllMocks()
     handlers.clear()
 
@@ -33,10 +38,13 @@ describe('auth.handler', () => {
   })
 
   it('registers auth handlers', () => {
-    expect(handlers.has('auth:login')).toBe(true)
-    expect(handlers.has('auth:cancelLogin')).toBe(true)
-    expect(handlers.has('auth:logout')).toBe(true)
-    expect(handlers.has('auth:getAuthState')).toBe(true)
+    expect(Array.from(handlers.keys()).sort()).toEqual([...AUTH_CHANNELS].sort())
+    expect(mockIpcMain.handle).toHaveBeenCalledTimes(AUTH_CHANNELS.length)
+  })
+
+  it('throws when registering auth handlers twice', async () => {
+    const mod = await import('../auth.handler.js')
+    expect(() => mod.registerAuthHandlers()).toThrow("Attempted to register a second handler for 'auth:login'")
   })
 
   it('auth:login returns manager result on success', async () => {

@@ -33,6 +33,7 @@ const createStream = (chunks: string[]) => {
 
 describe('CloudSSEManager', () => {
   beforeEach(async () => {
+    vi.restoreAllMocks()
     vi.clearAllMocks()
     vi.useRealTimers()
 
@@ -181,10 +182,55 @@ describe('CloudSSEManager', () => {
     expect(reconnectSpy).toHaveBeenCalled()
   })
 
-  it('connect calls startStream and resets delay after successful stream', async () => {
+  it('readStream reconstructs fragmented SSE frames across chunks', async () => {
+    const { cloudSSEManager } = await import('../CloudSSEManager.js')
+    const manager = cloudSSEManager as any
+    manager.connected = true
+
+    const reconnectSpy = vi.spyOn(manager, 'reconnect').mockResolvedValue(undefined)
+
+    await manager.readStream(
+      createStream([
+        'id: 3\nev',
+        'ent: page_completed\ndata: {"task_id":"task-1",',
+        '"page":5}\n\n',
+      ]),
+    )
+
+    expect(manager.lastEventId).toBe('3')
+    expect(mockWindowManager.sendToRenderer).toHaveBeenCalledTimes(1)
+    expect(mockWindowManager.sendToRenderer).toHaveBeenCalledWith(
+      'cloud:taskEvent',
+      expect.objectContaining({
+        type: 'page_completed',
+        data: { task_id: 'task-1', page: 5 },
+      }),
+    )
+    expect(reconnectSpy).toHaveBeenCalled()
+  })
+
+  it('reconnect applies exponential backoff and caps delay', async () => {
+    vi.useFakeTimers()
+    const { cloudSSEManager } = await import('../CloudSSEManager.js')
+    const manager = cloudSSEManager as any
+    manager.connected = true
+    manager.reconnectDelay = 1000
+
+    const expectedTimerDelays = [1000, 2000, 4000, 8000, 16000, 30000]
+    for (const delay of expectedTimerDelays) {
+      await manager.reconnect()
+      expect(manager.reconnectTimer).toBeTruthy()
+      await vi.advanceTimersByTimeAsync(delay)
+    }
+
+    expect(manager.reconnectDelay).toBe(30000)
+  })
+
+  it('connect calls startStream and resets reconnect delay', async () => {
     const { cloudSSEManager } = await import('../CloudSSEManager.js')
     const manager = cloudSSEManager as any
 
+    manager.reconnectDelay = 30000
     mockAuthManager.getAccessToken.mockResolvedValueOnce('token')
     const startStreamSpy = vi.spyOn(manager, 'startStream').mockResolvedValue(undefined)
 
@@ -192,5 +238,6 @@ describe('CloudSSEManager', () => {
 
     expect(startStreamSpy).toHaveBeenCalled()
     expect(manager.connected).toBe(true)
+    expect(manager.reconnectDelay).toBe(1000)
   })
 })

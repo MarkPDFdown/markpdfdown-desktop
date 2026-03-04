@@ -27,6 +27,16 @@ const makeJsonResponse = (status: number, body: any) => ({
   arrayBuffer: vi.fn(),
 })
 
+const makeJsonRejectResponse = (status: number, message: string) => ({
+  ok: status >= 200 && status < 300,
+  status,
+  json: vi.fn().mockRejectedValue(new Error(message)),
+  headers: {
+    get: vi.fn(),
+  },
+  arrayBuffer: vi.fn(),
+})
+
 describe('CloudService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -505,6 +515,39 @@ describe('CloudService', () => {
 
     expect(creditHistory).toEqual({ success: false, error: 'bad credit history' })
     expect(paymentHistory).toEqual({ success: false, error: 'bad payment history' })
+  })
+
+  it('normalizes JSON decode failures for convert/task/page/result methods', async () => {
+    const cloudService = (await import('../CloudService.js')).default
+    mockAuthManager.fetchWithAuth
+      .mockResolvedValueOnce(makeJsonRejectResponse(200, 'convert json fail'))
+      .mockResolvedValueOnce(makeJsonRejectResponse(200, 'tasks json fail'))
+      .mockResolvedValueOnce(makeJsonRejectResponse(200, 'pages json fail'))
+      .mockResolvedValueOnce(makeJsonRejectResponse(200, 'result json fail'))
+
+    await expect(cloudService.convert({ name: 'a.pdf', content: new ArrayBuffer(4) })).resolves.toEqual({
+      success: false,
+      error: 'convert json fail',
+    })
+    await expect(cloudService.getTasks()).resolves.toEqual({ success: false, error: 'tasks json fail' })
+    await expect(cloudService.getTaskPages('task-1')).resolves.toEqual({ success: false, error: 'pages json fail' })
+    await expect(cloudService.getTaskResult('task-1')).resolves.toEqual({ success: false, error: 'result json fail' })
+  })
+
+  it('normalizes JSON decode failures for credit/payment history methods', async () => {
+    const cloudService = (await import('../CloudService.js')).default
+    mockAuthManager.fetchWithAuth
+      .mockResolvedValueOnce(makeJsonRejectResponse(200, 'credit history json fail'))
+      .mockResolvedValueOnce(makeJsonRejectResponse(200, 'payment history json fail'))
+
+    await expect(cloudService.getCreditHistory()).resolves.toEqual({
+      success: false,
+      error: 'credit history json fail',
+    })
+    await expect(cloudService.getPaymentHistory()).resolves.toEqual({
+      success: false,
+      error: 'payment history json fail',
+    })
   })
 
   it('methods return caught exception messages', async () => {

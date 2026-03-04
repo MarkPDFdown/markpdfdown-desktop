@@ -1,9 +1,34 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const handlers = new Map<string, (...args: any[]) => any>()
+const CLOUD_CHANNELS = [
+  'cloud:convert',
+  'cloud:getTasks',
+  'cloud:getTaskById',
+  'cloud:getTaskPages',
+  'cloud:cancelTask',
+  'cloud:retryTask',
+  'cloud:deleteTask',
+  'cloud:retryPage',
+  'cloud:getTaskResult',
+  'cloud:downloadPdf',
+  'cloud:getPageImage',
+  'cloud:createCheckout',
+  'cloud:getCheckoutStatus',
+  'cloud:reconcileCheckout',
+  'cloud:getCredits',
+  'cloud:getCreditHistory',
+  'cloud:getPaymentHistory',
+  'cloud:sseConnect',
+  'cloud:sseDisconnect',
+  'cloud:sseResetAndDisconnect',
+]
 
 const mockIpcMain = {
   handle: vi.fn((channel: string, handler: (...args: any[]) => any) => {
+    if (handlers.has(channel)) {
+      throw new Error(`Attempted to register a second handler for '${channel}'`)
+    }
     handlers.set(channel, handler)
   }),
 }
@@ -69,6 +94,7 @@ vi.mock('../../../../core/infrastructure/services/CloudSSEManager.js', () => ({
 
 describe('cloud.handler', () => {
   beforeEach(async () => {
+    vi.resetModules()
     vi.clearAllMocks()
     handlers.clear()
 
@@ -77,10 +103,13 @@ describe('cloud.handler', () => {
   })
 
   it('registers cloud handlers', () => {
-    expect(handlers.has('cloud:convert')).toBe(true)
-    expect(handlers.has('cloud:getTasks')).toBe(true)
-    expect(handlers.has('cloud:downloadPdf')).toBe(true)
-    expect(handlers.has('cloud:sseConnect')).toBe(true)
+    expect(Array.from(handlers.keys()).sort()).toEqual([...CLOUD_CHANNELS].sort())
+    expect(mockIpcMain.handle).toHaveBeenCalledTimes(CLOUD_CHANNELS.length)
+  })
+
+  it('throws when registering cloud handlers twice', async () => {
+    const mod = await import('../cloud.handler.js')
+    expect(() => mod.registerCloudHandlers()).toThrow("Attempted to register a second handler for 'cloud:convert'")
   })
 
   describe('cloud:convert', () => {
@@ -180,6 +209,33 @@ describe('cloud.handler', () => {
       expect(mockApp.getPath).toHaveBeenCalledWith('downloads')
       expect(mockFs.writeFileSync).toHaveBeenCalled()
       expect(result).toEqual({ success: true, data: { filePath: '/downloads/demo.pdf' } })
+    })
+
+    it('returns cancelled when save dialog is not cancelled but filePath is missing', async () => {
+      mockCloudService.downloadPdf.mockResolvedValueOnce({
+        success: true,
+        data: { buffer: new ArrayBuffer(8), fileName: 'demo.pdf' },
+      })
+      mockDialog.showSaveDialog.mockResolvedValueOnce({ canceled: false, filePath: undefined })
+
+      const result = await handlers.get('cloud:downloadPdf')!({}, 'task-1')
+      expect(result).toEqual({ success: false, error: 'Cancelled' })
+      expect(mockFs.writeFileSync).not.toHaveBeenCalled()
+    })
+
+    it('returns wrapped error when writeFileSync throws', async () => {
+      const buffer = new Uint8Array([1, 2, 3]).buffer
+      mockCloudService.downloadPdf.mockResolvedValueOnce({
+        success: true,
+        data: { buffer, fileName: 'demo.pdf' },
+      })
+      mockDialog.showSaveDialog.mockResolvedValueOnce({ canceled: false, filePath: '/downloads/demo.pdf' })
+      mockFs.writeFileSync.mockImplementationOnce(() => {
+        throw new Error('EACCES')
+      })
+
+      const result = await handlers.get('cloud:downloadPdf')!({}, 'task-1')
+      expect(result).toEqual({ success: false, error: 'EACCES' })
     })
   })
 

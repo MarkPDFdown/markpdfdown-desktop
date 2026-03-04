@@ -1,6 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const handlers: Record<string, (...args: any[]) => void> = {}
+const expectedUpdaterEvents = [
+  'checking-for-update',
+  'update-available',
+  'update-not-available',
+  'download-progress',
+  'update-downloaded',
+  'error',
+]
 
 const mockAutoUpdater = {
   autoDownload: false,
@@ -60,7 +68,9 @@ describe('UpdateService', () => {
     await updateService.checkForUpdates()
     await updateService.checkForUpdates()
 
-    expect(mockAutoUpdater.on).toHaveBeenCalled()
+    const registeredEvents = mockAutoUpdater.on.mock.calls.map(([event]) => event)
+    expect(registeredEvents.sort()).toEqual([...expectedUpdaterEvents].sort())
+    expect(mockAutoUpdater.on).toHaveBeenCalledTimes(expectedUpdaterEvents.length)
     expect(mockAutoUpdater.autoDownload).toBe(true)
     expect(mockAutoUpdater.allowPrerelease).toBe(false)
     expect(mockAutoUpdater.autoInstallOnAppQuit).toBe(true)
@@ -105,17 +115,23 @@ describe('UpdateService', () => {
     expect(mockSendToRenderer).toHaveBeenCalledWith('updater:status', { status: 'downloaded', version: '1.2.3' })
   })
 
-  it('truncates error message before sending to renderer', async () => {
+  it('formats updater error payloads with deterministic truncation', async () => {
     const { updateService } = await import('../UpdateService.js')
     await updateService.checkForUpdates()
 
-    const longError = new Error('x'.repeat(260))
-    handlers.error(longError)
+    handlers.error(new Error('short'))
+    expect(mockSendToRenderer.mock.calls.at(-1)?.[1]).toEqual({ status: 'error', error: 'short' })
 
-    const lastCall = mockSendToRenderer.mock.calls.at(-1)
-    expect(lastCall?.[0]).toBe('updater:status')
-    expect(lastCall?.[1].status).toBe('error')
-    expect(lastCall?.[1].error.endsWith('...')).toBe(true)
+    const exactlyLimit = 'a'.repeat(200)
+    handlers.error(new Error(exactlyLimit))
+    expect(mockSendToRenderer.mock.calls.at(-1)?.[1]).toEqual({ status: 'error', error: exactlyLimit })
+
+    const overLimit = 'b'.repeat(201)
+    handlers.error(new Error(overLimit))
+    expect(mockSendToRenderer.mock.calls.at(-1)?.[1]).toEqual({ status: 'error', error: `${'b'.repeat(200)}...` })
+
+    handlers.error('plain-error')
+    expect(mockSendToRenderer.mock.calls.at(-1)?.[1]).toEqual({ status: 'error', error: 'plain-error' })
   })
 
   it('quitAndInstall delegates to autoUpdater', async () => {

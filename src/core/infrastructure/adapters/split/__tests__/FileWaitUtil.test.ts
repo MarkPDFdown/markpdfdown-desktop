@@ -16,17 +16,17 @@ vi.mock('fs', () => ({
 }))
 
 describe('FileWaitUtil', () => {
-  const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-  const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-  const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers()
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.spyOn(console, 'error').mockImplementation(() => {})
   })
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.restoreAllMocks()
   })
 
   it('returns immediately when file is accessible and non-empty', async () => {
@@ -37,7 +37,7 @@ describe('FileWaitUtil', () => {
 
     expect(mockAccess).toHaveBeenCalledWith('/uploads/t1/a.pdf')
     expect(mockStat).toHaveBeenCalledWith('/uploads/t1/a.pdf')
-    expect(warnSpy).not.toHaveBeenCalled()
+    expect(console.warn).not.toHaveBeenCalled()
   })
 
   it('retries until file becomes available', async () => {
@@ -50,12 +50,19 @@ describe('FileWaitUtil', () => {
       .mockResolvedValueOnce({ size: 10 })
 
     const promise = FileWaitUtil.waitForFile('/uploads/t1/a.pdf', '/uploads', 't1', 'a.pdf', 'PDFSplitter')
-    await vi.advanceTimersByTimeAsync(2000)
+
+    await Promise.resolve()
+    expect(mockAccess).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(999)
+    expect(mockAccess).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(mockAccess).toHaveBeenCalledTimes(2)
+    await vi.advanceTimersByTimeAsync(1000)
     await promise
 
     expect(mockAccess).toHaveBeenCalledTimes(3)
-    expect(warnSpy).toHaveBeenCalled()
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('attempt 3'))
+    expect(console.warn).toHaveBeenCalled()
+    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('attempt 3'))
   })
 
   it('logs existing task directory diagnostics then throws on exhaustion', async () => {
@@ -69,7 +76,8 @@ describe('FileWaitUtil', () => {
     await vi.runAllTimersAsync()
 
     await expectation
-    expect(errorSpy).toHaveBeenCalledWith(
+    expect(mockAccess).toHaveBeenCalledTimes(5)
+    expect(console.error).toHaveBeenCalledWith(
       expect.stringContaining('Task directory exists but target file not found.'),
     )
   })
@@ -84,7 +92,8 @@ describe('FileWaitUtil', () => {
     await vi.runAllTimersAsync()
 
     await expectation
-    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Task directory does not exist'))
+    expect(mockAccess).toHaveBeenCalledTimes(5)
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Task directory does not exist'))
   })
 
   it('handles diagnostics read failure gracefully', async () => {
@@ -98,7 +107,7 @@ describe('FileWaitUtil', () => {
     await vi.runAllTimersAsync()
 
     await expectation
-    expect(errorSpy).toHaveBeenCalledWith(
+    expect(console.error).toHaveBeenCalledWith(
       expect.stringContaining('Diagnostic check failed:'),
       expect.any(Error),
     )

@@ -42,6 +42,26 @@ describe('cloudTaskMapper', () => {
     expect(result.progress).toBe(100)
   })
 
+  it('keeps progress at 0 when page_count is 0', () => {
+    const result = mapCloudTaskToTask({
+      ...baseTask,
+      page_count: 0,
+      pages_completed: 3,
+      status: 3,
+    })
+    expect(result.progress).toBe(0)
+  })
+
+  it('clamps non-completed progress to 100 when completed pages overflow page_count', () => {
+    const result = mapCloudTaskToTask({
+      ...baseTask,
+      page_count: 10,
+      pages_completed: 15,
+      status: 3,
+    })
+    expect(result.progress).toBe(100)
+  })
+
   it('uses started_at as timestamp fallback', () => {
     const result = mapCloudTaskToTask({
       ...baseTask,
