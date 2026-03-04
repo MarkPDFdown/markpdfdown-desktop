@@ -23,7 +23,7 @@ import {
   Typography,
 } from "antd";
 import type { MenuProps } from "antd";
-import React, { useCallback, useContext, useEffect, useState } from "react";
+import React, { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import MarkdownPreview from "../components/MarkdownPreview";
@@ -35,6 +35,10 @@ import type {
 } from "../../shared/types/cloud-api";
 
 const { Text } = Typography;
+
+const dedupeAndSortPages = (pageItems: CloudTaskPageResponse[]): CloudTaskPageResponse[] =>
+  Array.from(new Map(pageItems.map((page) => [page.page, page])).values())
+    .sort((a, b) => a.page - b.page);
 
 const CloudPreview: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -54,6 +58,9 @@ const CloudPreview: React.FC = () => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
+  const taskPagesPageSizeRef = useRef(100);
+  const attemptedFallbackPagesRef = useRef<Set<number>>(new Set());
+  const inFlightFallbackPagesRef = useRef<Set<number>>(new Set());
 
   const currentPageData = pages.find(p => p.page === currentPage);
 
@@ -79,11 +86,31 @@ const CloudPreview: React.FC = () => {
   const fetchPages = useCallback(async () => {
     if (!id || !cloudContext) return;
 
+    attemptedFallbackPagesRef.current.clear();
+    inFlightFallbackPagesRef.current.clear();
+    taskPagesPageSizeRef.current = 100;
     setLoading(true);
     try {
-      const result = await cloudContext.getTaskPages(id, 1, 200);
-      if (result.success && result.data) {
-        setPages(result.data);
+      const requestedPageSize = 100;
+      const result = await cloudContext.getTaskPages(id, 1, requestedPageSize);
+      if (result.success) {
+        const effectivePageSize = Math.max(1, result.pagination?.page_size || requestedPageSize);
+        taskPagesPageSizeRef.current = effectivePageSize;
+        const allPages = [...(result.data || [])];
+        const totalApiPages = Math.max(1, result.pagination?.total_pages || 1);
+
+        for (let apiPage = 2; apiPage <= totalApiPages; apiPage++) {
+          try {
+            const nextPageResult = await cloudContext.getTaskPages(id, apiPage, effectivePageSize);
+            if (nextPageResult.success && nextPageResult.data?.length) {
+              allPages.push(...nextPageResult.data);
+            }
+          } catch {
+            console.error(`Failed to fetch page chunk ${apiPage}`);
+          }
+        }
+
+        setPages(dedupeAndSortPages(allPages));
       }
     } catch {
       console.error('Failed to fetch pages');
@@ -91,6 +118,57 @@ const CloudPreview: React.FC = () => {
       setLoading(false);
     }
   }, [id, cloudContext]);
+
+  // Fallback: ensure current page data is available even if backend enforces small page-size caps.
+  const ensureCurrentPageLoaded = useCallback(async () => {
+    if (!id || !cloudContext || loading) return;
+    if (pages.some(page => page.page === currentPage)) return;
+    if (attemptedFallbackPagesRef.current.has(currentPage) || inFlightFallbackPagesRef.current.has(currentPage)) return;
+
+    const targetPage = currentPage;
+    let shouldMarkAttempted = true;
+    let effectivePageSize = Math.max(1, taskPagesPageSizeRef.current || 1);
+    let fallbackApiPage = Math.max(1, Math.floor((targetPage - 1) / effectivePageSize) + 1);
+    inFlightFallbackPagesRef.current.add(targetPage);
+    try {
+      let result = await cloudContext.getTaskPages(id, fallbackApiPage, effectivePageSize);
+      const responsePageSize = result.pagination?.page_size ? Math.max(1, result.pagination.page_size) : undefined;
+
+      if (responsePageSize) {
+        taskPagesPageSizeRef.current = responsePageSize;
+        if (responsePageSize !== effectivePageSize) {
+          effectivePageSize = responsePageSize;
+          const correctedApiPage = Math.max(1, Math.floor((targetPage - 1) / effectivePageSize) + 1);
+          if (correctedApiPage !== fallbackApiPage) {
+            fallbackApiPage = correctedApiPage;
+            result = await cloudContext.getTaskPages(id, fallbackApiPage, effectivePageSize);
+          }
+        }
+      }
+
+      const pageItems = (result.data || []).filter(page => page.page === targetPage);
+      if (result.success && pageItems?.length) {
+        setPages(prev => dedupeAndSortPages([...prev, ...pageItems]));
+      }
+
+      if (!result.success && !responsePageSize) {
+        shouldMarkAttempted = false;
+      }
+    } catch {
+      console.error('Failed to fetch current page data');
+    } finally {
+      inFlightFallbackPagesRef.current.delete(targetPage);
+      if (shouldMarkAttempted) {
+        attemptedFallbackPagesRef.current.add(targetPage);
+      }
+    }
+  }, [id, cloudContext, currentPage, loading, pages]);
+
+  useEffect(() => {
+    taskPagesPageSizeRef.current = 100;
+    attemptedFallbackPagesRef.current.clear();
+    inFlightFallbackPagesRef.current.clear();
+  }, [id]);
 
   // Load image for current page
   const loadPageImage = useCallback(async () => {
@@ -140,6 +218,10 @@ const CloudPreview: React.FC = () => {
   useEffect(() => {
     loadPageImage();
   }, [loadPageImage]);
+
+  useEffect(() => {
+    ensureCurrentPageLoaded();
+  }, [ensureCurrentPageLoaded]);
 
   // SSE event listener for real-time updates
   useEffect(() => {
