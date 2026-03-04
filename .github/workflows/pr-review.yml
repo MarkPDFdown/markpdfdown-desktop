@@ -45,6 +45,7 @@ jobs:
           include: |
             **/*.js
             **/*.ts
+            **/*.tsx
 
           # [Optional] Exclude globs (comma or newline separated); default is empty
           # Allowed values: any valid glob patterns
