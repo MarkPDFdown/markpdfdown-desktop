@@ -37,6 +37,10 @@
     "test:renderer": "vitest run --config vitest.config.renderer.ts",
     "test:watch": "vitest watch",
     "test:coverage": "vitest run --coverage",
+    "test:coverage:main": "vitest run --config vitest.config.ts --coverage --coverage.reporter=json --coverage.reporter=text --coverage.reportsDirectory coverage/main",
+    "test:coverage:renderer": "vitest run --config vitest.config.renderer.ts --coverage --coverage.reporter=json --coverage.reporter=text --coverage.reportsDirectory coverage/renderer",
+    "test:coverage:merge": "node scripts/coverage-merge.mjs",
+    "test:coverage:all": "npm run test:coverage:main && npm run test:coverage:renderer && npm run test:coverage:merge",
     "prepare": "husky",
     "publish": "node scripts/publish.js"
   },

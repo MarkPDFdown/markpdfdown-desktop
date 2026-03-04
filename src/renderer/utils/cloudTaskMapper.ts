@@ -28,6 +28,7 @@ export function mapCloudTaskToTask(ct: CloudTaskResponse): CloudTask {
     progress = 100;
   } else if (pageCount > 0) {
     progress = Math.round((pagesCompleted / pageCount) * 100);
+    progress = Math.max(0, Math.min(100, progress));
   }
 
   // Map file_type to extension for the type field
