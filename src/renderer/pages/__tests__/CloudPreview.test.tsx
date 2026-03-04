@@ -1,7 +1,7 @@
 import { App } from 'antd'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import React from 'react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import CloudPreview from '../CloudPreview'
 import { CloudContext, type CloudContextType } from '../../contexts/CloudContextDefinition'
@@ -182,6 +182,15 @@ const renderPage = (contextValue: CloudContextType) =>
       </Routes>
     </MemoryRouter>,
   )
+
+const SwitchTaskButton: React.FC = () => {
+  const navigate = useNavigate()
+  return (
+    <button type="button" onClick={() => navigate('/list/cloud-preview/task-2')}>
+      Switch Task
+    </button>
+  )
+}
 
 describe('CloudPreview', () => {
   beforeEach(() => {
@@ -548,6 +557,145 @@ describe('CloudPreview', () => {
     })
   })
 
+  it('recomputes fallback api page when backend returns a different page_size', async () => {
+    const getTaskPages = vi.fn().mockImplementation(async (_taskId: string, page?: number, pageSize?: number) => {
+      if (page === 1 && pageSize === 100) {
+        return {
+          success: true,
+          data: [
+            {
+              page: 1,
+              status: 2,
+              status_name: 'COMPLETED',
+              markdown: 'page-1',
+              width_mm: 210,
+              height_mm: 297,
+              image_url: 'https://cdn.example.com/p1.png',
+            },
+            {
+              page: 2,
+              status: 2,
+              status_name: 'COMPLETED',
+              markdown: 'page-2',
+              width_mm: 210,
+              height_mm: 297,
+              image_url: 'https://cdn.example.com/p2.png',
+            },
+          ],
+          pagination: { page: 1, page_size: 2, total: 6, total_pages: 2 },
+        }
+      }
+      if (page === 2 && pageSize === 2) {
+        return {
+          success: true,
+          data: [
+            {
+              page: 3,
+              status: 2,
+              status_name: 'COMPLETED',
+              markdown: 'page-3',
+              width_mm: 210,
+              height_mm: 297,
+              image_url: 'https://cdn.example.com/p3.png',
+            },
+            {
+              page: 4,
+              status: 2,
+              status_name: 'COMPLETED',
+              markdown: 'page-4',
+              width_mm: 210,
+              height_mm: 297,
+              image_url: 'https://cdn.example.com/p4.png',
+            },
+          ],
+          pagination: { page: 2, page_size: 2, total: 6, total_pages: 2 },
+        }
+      }
+      if (page === 3 && pageSize === 2) {
+        return {
+          success: true,
+          data: [],
+          pagination: { page: 3, page_size: 3, total: 6, total_pages: 2 },
+        }
+      }
+      if (page === 2 && pageSize === 3) {
+        return {
+          success: true,
+          data: [
+            {
+              page: 4,
+              status: 2,
+              status_name: 'COMPLETED',
+              markdown: 'page-4-corrected',
+              width_mm: 210,
+              height_mm: 297,
+              image_url: 'https://cdn.example.com/p4-corrected.png',
+            },
+            {
+              page: 5,
+              status: 2,
+              status_name: 'COMPLETED',
+              markdown: 'page-5-corrected',
+              width_mm: 210,
+              height_mm: 297,
+              image_url: 'https://cdn.example.com/p5-corrected.png',
+            },
+            {
+              page: 6,
+              status: 2,
+              status_name: 'COMPLETED',
+              markdown: 'page-6-corrected',
+              width_mm: 210,
+              height_mm: 297,
+              image_url: 'https://cdn.example.com/p6-corrected.png',
+            },
+          ],
+          pagination: { page: 2, page_size: 3, total: 6, total_pages: 2 },
+        }
+      }
+      return { success: true, data: [], pagination: { page: page || 1, page_size: pageSize || 1, total: 6, total_pages: 2 } }
+    })
+
+    const ctx = buildContextValue({
+      getTaskById: vi.fn().mockResolvedValue({
+        success: true,
+        data: {
+          id: 'task-1',
+          file_type: 'pdf',
+          file_name: 'demo.pdf',
+          status: 6,
+          status_name: 'COMPLETED',
+          page_count: 6,
+          pages_completed: 6,
+          pages_failed: 0,
+          pdf_url: '/demo.pdf',
+          credits_estimated: 10,
+          credits_consumed: 5,
+          created_at: '2026-03-03T00:00:00.000Z',
+          model_tier: 'lite',
+        },
+      }),
+      getTaskPages,
+    })
+
+    renderPage(ctx)
+
+    await waitFor(() => {
+      expect(screen.getByText(/6 pages/)).toBeInTheDocument()
+      expect(getTaskPages).toHaveBeenCalledWith('task-1', 2, 2)
+    })
+
+    const pageFiveAnchor = document.querySelector('li[title="5"] a') as HTMLElement | null
+    expect(pageFiveAnchor).toBeTruthy()
+    fireEvent.click(pageFiveAnchor as HTMLElement)
+
+    await waitFor(() => {
+      expect(getTaskPages).toHaveBeenCalledWith('task-1', 3, 2)
+      expect(getTaskPages).toHaveBeenCalledWith('task-1', 2, 3)
+      expect(screen.getByTestId('markdown-content')).toHaveTextContent('page-5-corrected')
+    })
+  })
+
   it('dedupes duplicate pages across chunks and keeps latest content', async () => {
     const getTaskPages = vi.fn().mockImplementation(async (_taskId: string, page?: number, pageSize?: number) => {
       if (page === 1 && pageSize === 100) {
@@ -743,6 +891,97 @@ describe('CloudPreview', () => {
 
     await waitFor(() => {
       expect(pageThreeCalls).toBe(2)
+    })
+  })
+
+  it('resets fallback attempted state when route task id changes', async () => {
+    const getTaskById = vi.fn().mockImplementation(async (taskId: string) => ({
+      success: true,
+      data: {
+        id: taskId,
+        file_type: 'pdf',
+        file_name: `${taskId}.pdf`,
+        status: 6,
+        status_name: 'COMPLETED',
+        page_count: 3,
+        pages_completed: 3,
+        pages_failed: 0,
+        pdf_url: '/demo.pdf',
+        credits_estimated: 10,
+        credits_consumed: 5,
+        created_at: '2026-03-03T00:00:00.000Z',
+        model_tier: 'lite',
+      },
+    }))
+    const getTaskPages = vi.fn().mockImplementation(async (taskId: string, page?: number, pageSize?: number) => {
+      if (page === 1 && pageSize === 100) {
+        return {
+          success: true,
+          data: [
+            {
+              page: 1,
+              status: 2,
+              status_name: 'COMPLETED',
+              markdown: `${taskId}-page-1`,
+              width_mm: 210,
+              height_mm: 297,
+              image_url: 'https://cdn.example.com/p1.png',
+            },
+          ],
+          pagination: { page: 1, page_size: 2, total: 3, total_pages: 1 },
+        }
+      }
+      if (page === 2 && pageSize === 2) {
+        return {
+          success: true,
+          data: [],
+          pagination: { page: 2, page_size: 2, total: 3, total_pages: 1 },
+        }
+      }
+      return { success: true, data: [], pagination: { page: page || 1, page_size: pageSize || 1, total: 3, total_pages: 1 } }
+    })
+
+    const ctx = buildContextValue({
+      getTaskById,
+      getTaskPages,
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/list/cloud-preview/task-1']}>
+        <Routes>
+          <Route
+            path="/list/cloud-preview/:id"
+            element={
+              <App>
+                <CloudContext.Provider value={ctx}>
+                  <CloudPreview />
+                  <SwitchTaskButton />
+                </CloudContext.Provider>
+              </App>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => {
+      expect(getTaskPages).toHaveBeenCalledWith('task-1', 1, 100)
+      expect(screen.getByText(/3 pages/)).toBeInTheDocument()
+    })
+
+    const pageThreeAnchor = document.querySelector('li[title="3"] a') as HTMLElement | null
+    expect(pageThreeAnchor).toBeTruthy()
+    fireEvent.click(pageThreeAnchor as HTMLElement)
+
+    await waitFor(() => {
+      expect(getTaskPages).toHaveBeenCalledWith('task-1', 2, 2)
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Switch Task' }))
+
+    await waitFor(() => {
+      expect(getTaskById).toHaveBeenCalledWith('task-2')
+      expect(getTaskPages).toHaveBeenCalledWith('task-2', 2, 2)
     })
   })
 

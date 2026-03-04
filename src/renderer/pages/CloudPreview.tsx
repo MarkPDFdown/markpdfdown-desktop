@@ -125,23 +125,42 @@ const CloudPreview: React.FC = () => {
     if (pages.some(page => page.page === currentPage)) return;
     if (attemptedFallbackPagesRef.current.has(currentPage) || inFlightFallbackPagesRef.current.has(currentPage)) return;
 
-    const effectivePageSize = Math.max(1, taskPagesPageSizeRef.current || 1);
-    const fallbackApiPage = Math.max(1, Math.floor((currentPage - 1) / effectivePageSize) + 1);
-    inFlightFallbackPagesRef.current.add(currentPage);
+    const targetPage = currentPage;
+    let shouldMarkAttempted = true;
+    let effectivePageSize = Math.max(1, taskPagesPageSizeRef.current || 1);
+    let fallbackApiPage = Math.max(1, Math.floor((targetPage - 1) / effectivePageSize) + 1);
+    inFlightFallbackPagesRef.current.add(targetPage);
     try {
-      const result = await cloudContext.getTaskPages(id, fallbackApiPage, effectivePageSize);
-      if (result.pagination?.page_size) {
-        taskPagesPageSizeRef.current = Math.max(1, result.pagination.page_size);
+      let result = await cloudContext.getTaskPages(id, fallbackApiPage, effectivePageSize);
+      const responsePageSize = result.pagination?.page_size ? Math.max(1, result.pagination.page_size) : undefined;
+
+      if (responsePageSize) {
+        taskPagesPageSizeRef.current = responsePageSize;
+        if (responsePageSize !== effectivePageSize) {
+          effectivePageSize = responsePageSize;
+          const correctedApiPage = Math.max(1, Math.floor((targetPage - 1) / effectivePageSize) + 1);
+          if (correctedApiPage !== fallbackApiPage) {
+            fallbackApiPage = correctedApiPage;
+            result = await cloudContext.getTaskPages(id, fallbackApiPage, effectivePageSize);
+          }
+        }
       }
-      const pageItems = (result.data || []).filter(page => page.page === currentPage);
+
+      const pageItems = (result.data || []).filter(page => page.page === targetPage);
       if (result.success && pageItems?.length) {
         setPages(prev => dedupeAndSortPages([...prev, ...pageItems]));
+      }
+
+      if (!result.success && !responsePageSize) {
+        shouldMarkAttempted = false;
       }
     } catch {
       console.error('Failed to fetch current page data');
     } finally {
-      inFlightFallbackPagesRef.current.delete(currentPage);
-      attemptedFallbackPagesRef.current.add(currentPage);
+      inFlightFallbackPagesRef.current.delete(targetPage);
+      if (shouldMarkAttempted) {
+        attemptedFallbackPagesRef.current.add(targetPage);
+      }
     }
   }, [id, cloudContext, currentPage, loading, pages]);
 
