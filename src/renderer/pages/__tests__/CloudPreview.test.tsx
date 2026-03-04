@@ -300,7 +300,7 @@ describe('CloudPreview', () => {
 
     await waitFor(() => {
       expect(getTaskPages).toHaveBeenCalledWith('task-1', 1, 100)
-      expect(getTaskPages).toHaveBeenCalledWith('task-1', 2, 100)
+      expect(getTaskPages).toHaveBeenCalledWith('task-1', 2, 20)
     })
 
     await waitFor(() => {
@@ -349,10 +349,10 @@ describe('CloudPreview', () => {
           pagination: { page: 1, page_size: 2, total: 3, total_pages: 3 },
         }
       }
-      if (page === 2 && pageSize === 100) {
+      if (page === 2 && pageSize === 2) {
         throw new Error('chunk failed')
       }
-      if (page === 3 && pageSize === 100) {
+      if (page === 3 && pageSize === 2) {
         return {
           success: true,
           data: thirdChunk,
@@ -387,8 +387,8 @@ describe('CloudPreview', () => {
     renderPage(ctx)
 
     await waitFor(() => {
-      expect(getTaskPages).toHaveBeenCalledWith('task-1', 2, 100)
-      expect(getTaskPages).toHaveBeenCalledWith('task-1', 3, 100)
+      expect(getTaskPages).toHaveBeenCalledWith('task-1', 2, 2)
+      expect(getTaskPages).toHaveBeenCalledWith('task-1', 3, 2)
     })
 
     await waitFor(() => {
@@ -397,43 +397,10 @@ describe('CloudPreview', () => {
     })
   })
 
-  it('loads missing current page through fallback and merges it into local pages', async () => {
-    const getTaskPages = vi.fn().mockImplementation(async (_taskId: string, page?: number, pageSize?: number) => {
-      if (page === 1 && pageSize === 100) {
-        return {
-          success: true,
-          data: [
-            {
-              page: 2,
-              status: 2,
-              status_name: 'COMPLETED',
-              markdown: 'page-2',
-              width_mm: 210,
-              height_mm: 297,
-              image_url: 'https://cdn.example.com/p2.png',
-            },
-          ],
-          pagination: { page: 1, page_size: 100, total: 2, total_pages: 1 },
-        }
-      }
-      if (page === 1 && pageSize === 1) {
-        return {
-          success: true,
-          data: [
-            {
-              page: 1,
-              status: 2,
-              status_name: 'COMPLETED',
-              markdown: 'page-1-fallback',
-              width_mm: 210,
-              height_mm: 297,
-              image_url: 'https://cdn.example.com/p1.png',
-            },
-          ],
-          pagination: { page: 1, page_size: 1, total: 2, total_pages: 2 },
-        }
-      }
-      return { success: true, data: [], pagination: { page: page || 1, page_size: pageSize || 1, total: 2, total_pages: 2 } }
+  it('keeps UI stable when initial paginated fetch returns success false', async () => {
+    const getTaskPages = vi.fn().mockResolvedValue({
+      success: false,
+      error: 'bad response',
     })
 
     const ctx = buildContextValue({
@@ -462,12 +429,122 @@ describe('CloudPreview', () => {
 
     await waitFor(() => {
       expect(getTaskPages).toHaveBeenCalledWith('task-1', 1, 100)
-      expect(getTaskPages).toHaveBeenCalledWith('task-1', 1, 1)
     })
 
     await waitFor(() => {
-      expect(screen.getByText(/2 pages/)).toBeInTheDocument()
-      expect(screen.getByTestId('markdown-content')).toHaveTextContent('page-1-fallback')
+      expect(screen.getByText('No page data')).toBeInTheDocument()
+    })
+  })
+
+  it('loads missing current page via computed API page index fallback', async () => {
+    let pageThreeCalls = 0
+    const getTaskPages = vi.fn().mockImplementation(async (_taskId: string, page?: number, pageSize?: number) => {
+      if (page === 1 && pageSize === 100) {
+        return {
+          success: true,
+          data: Array.from({ length: 2 }, (_, idx) => ({
+            page: idx + 1,
+            status: 2,
+            status_name: 'COMPLETED',
+            markdown: `page-${idx + 1}`,
+            width_mm: 210,
+            height_mm: 297,
+            image_url: `https://cdn.example.com/p${idx + 1}.png`,
+          })),
+          pagination: { page: 1, page_size: 2, total: 6, total_pages: 3 },
+        }
+      }
+      if (page === 2 && pageSize === 2) {
+        return {
+          success: true,
+          data: [
+            {
+              page: 3,
+              status: 2,
+              status_name: 'COMPLETED',
+              markdown: 'page-3',
+              width_mm: 210,
+              height_mm: 297,
+              image_url: 'https://cdn.example.com/p3.png',
+            },
+            {
+              page: 4,
+              status: 2,
+              status_name: 'COMPLETED',
+              markdown: 'page-4',
+              width_mm: 210,
+              height_mm: 297,
+              image_url: 'https://cdn.example.com/p4.png',
+            },
+          ],
+          pagination: { page: 2, page_size: 2, total: 6, total_pages: 3 },
+        }
+      }
+      if (page === 3 && pageSize === 2) {
+        pageThreeCalls += 1
+        if (pageThreeCalls === 1) {
+          return {
+            success: false,
+            data: [],
+            pagination: { page: 3, page_size: 2, total: 6, total_pages: 3 },
+          }
+        }
+        return {
+          success: true,
+          data: [
+            {
+              page: 5,
+              status: 2,
+              status_name: 'COMPLETED',
+              markdown: 'page-5-fallback',
+              width_mm: 210,
+              height_mm: 297,
+              image_url: 'https://cdn.example.com/p5.png',
+            },
+          ],
+          pagination: { page: 3, page_size: 2, total: 6, total_pages: 3 },
+        }
+      }
+      return { success: true, data: [], pagination: { page: page || 1, page_size: pageSize || 1, total: 6, total_pages: 3 } }
+    })
+
+    const ctx = buildContextValue({
+      getTaskById: vi.fn().mockResolvedValue({
+        success: true,
+        data: {
+          id: 'task-1',
+          file_type: 'pdf',
+          file_name: 'demo.pdf',
+          status: 6,
+          status_name: 'COMPLETED',
+          page_count: 6,
+          pages_completed: 6,
+          pages_failed: 0,
+          pdf_url: '/demo.pdf',
+          credits_estimated: 10,
+          credits_consumed: 5,
+          created_at: '2026-03-03T00:00:00.000Z',
+          model_tier: 'lite',
+        },
+      }),
+      getTaskPages,
+    })
+
+    renderPage(ctx)
+
+    await waitFor(() => {
+      expect(getTaskPages).toHaveBeenCalledWith('task-1', 2, 2)
+      expect(getTaskPages).toHaveBeenCalledWith('task-1', 3, 2)
+      expect(screen.getByText(/6 pages/)).toBeInTheDocument()
+    })
+
+    const pageFiveAnchor = document.querySelector('li[title="5"] a') as HTMLElement | null
+    expect(pageFiveAnchor).toBeTruthy()
+    fireEvent.click(pageFiveAnchor as HTMLElement)
+
+    await waitFor(() => {
+      expect(getTaskPages).toHaveBeenCalledWith('task-1', 3, 2)
+      expect(screen.getByTestId('markdown-content')).toHaveTextContent('page-5-fallback')
     })
   })
 
@@ -499,7 +576,7 @@ describe('CloudPreview', () => {
           pagination: { page: 1, page_size: 2, total: 3, total_pages: 2 },
         }
       }
-      if (page === 2 && pageSize === 100) {
+      if (page === 2 && pageSize === 2) {
         return {
           success: true,
           data: [
@@ -566,33 +643,62 @@ describe('CloudPreview', () => {
     })
   })
 
-  it('does not repeatedly call fallback for an unavailable current page', async () => {
+  it('cleans up fallback in-flight state after throw and avoids retry loops', async () => {
+    let pageThreeCalls = 0
     const getTaskPages = vi.fn().mockImplementation(async (_taskId: string, page?: number, pageSize?: number) => {
       if (page === 1 && pageSize === 100) {
         return {
           success: true,
-          data: [
-            {
-              page: 2,
-              status: 2,
-              status_name: 'COMPLETED',
-              markdown: 'page-2',
-              width_mm: 210,
-              height_mm: 297,
-              image_url: 'https://cdn.example.com/p2.png',
-            },
-          ],
-          pagination: { page: 1, page_size: 100, total: 2, total_pages: 1 },
+          data: Array.from({ length: 2 }, (_, idx) => ({
+            page: idx + 1,
+            status: 2,
+            status_name: 'COMPLETED',
+            markdown: `page-${idx + 1}`,
+            width_mm: 210,
+            height_mm: 297,
+            image_url: `https://cdn.example.com/p${idx + 1}.png`,
+          })),
+          pagination: { page: 1, page_size: 2, total: 6, total_pages: 3 },
         }
       }
-      if (page === 1 && pageSize === 1) {
+      if (page === 2 && pageSize === 2) {
         return {
           success: true,
-          data: [],
-          pagination: { page: 1, page_size: 1, total: 2, total_pages: 2 },
+          data: [
+            {
+              page: 3,
+              status: 2,
+              status_name: 'COMPLETED',
+              markdown: 'page-3',
+              width_mm: 210,
+              height_mm: 297,
+              image_url: 'https://cdn.example.com/p3.png',
+            },
+            {
+              page: 4,
+              status: 2,
+              status_name: 'COMPLETED',
+              markdown: 'page-4',
+              width_mm: 210,
+              height_mm: 297,
+              image_url: 'https://cdn.example.com/p4.png',
+            },
+          ],
+          pagination: { page: 2, page_size: 2, total: 6, total_pages: 3 },
         }
       }
-      return { success: true, data: [], pagination: { page: page || 1, page_size: pageSize || 1, total: 2, total_pages: 2 } }
+      if (page === 3 && pageSize === 2) {
+        pageThreeCalls += 1
+        if (pageThreeCalls === 1) {
+          return {
+            success: false,
+            data: [],
+            pagination: { page: 3, page_size: 2, total: 6, total_pages: 3 },
+          }
+        }
+        throw new Error('fallback failed')
+      }
+      return { success: true, data: [], pagination: { page: page || 1, page_size: pageSize || 1, total: 6, total_pages: 3 } }
     })
 
     const ctx = buildContextValue({
@@ -604,8 +710,8 @@ describe('CloudPreview', () => {
           file_name: 'demo.pdf',
           status: 6,
           status_name: 'COMPLETED',
-          page_count: 2,
-          pages_completed: 2,
+          page_count: 6,
+          pages_completed: 6,
           pages_failed: 0,
           pdf_url: '/demo.pdf',
           credits_estimated: 10,
@@ -620,20 +726,24 @@ describe('CloudPreview', () => {
     renderPage(ctx)
 
     await waitFor(() => {
-      expect(window.api.events.onCloudTaskEvent).toHaveBeenCalled()
-      expect(getTaskPages).toHaveBeenCalledWith('task-1', 1, 1)
+      expect(getTaskPages).toHaveBeenCalledWith('task-1', 3, 2)
+      expect(pageThreeCalls).toBe(1)
     })
 
-    const fallbackCallCount = () =>
-      getTaskPages.mock.calls.filter(([, page, pageSize]) => page === 1 && pageSize === 1).length
+    const pageFiveAnchor = document.querySelector('li[title="5"] a') as HTMLElement | null
+    expect(pageFiveAnchor).toBeTruthy()
+    fireEvent.click(pageFiveAnchor as HTMLElement)
 
-    expect(fallbackCallCount()).toBe(1)
+    await waitFor(() => {
+      expect(pageThreeCalls).toBe(2)
+    })
 
-    cloudEventCb?.({ type: 'completed', data: { task_id: 'task-1', status: 6, pages_completed: 2, pages_failed: 0 } })
-    cloudEventCb?.({ type: 'completed', data: { task_id: 'task-1', status: 6, pages_completed: 2, pages_failed: 0 } })
+    cloudEventCb?.({ type: 'completed', data: { task_id: 'task-1', status: 6, pages_completed: 6, pages_failed: 0 } })
+    cloudEventCb?.({ type: 'completed', data: { task_id: 'task-1', status: 6, pages_completed: 6, pages_failed: 0 } })
 
-    await new Promise(resolve => setTimeout(resolve, 30))
-    expect(fallbackCallCount()).toBe(1)
+    await waitFor(() => {
+      expect(pageThreeCalls).toBe(2)
+    })
   })
 
   it('navigates back to list when getTaskById fails', async () => {

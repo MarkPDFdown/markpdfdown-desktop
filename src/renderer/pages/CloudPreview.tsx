@@ -58,6 +58,7 @@ const CloudPreview: React.FC = () => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
+  const taskPagesPageSizeRef = useRef(100);
   const attemptedFallbackPagesRef = useRef<Set<number>>(new Set());
   const inFlightFallbackPagesRef = useRef<Set<number>>(new Set());
 
@@ -87,17 +88,20 @@ const CloudPreview: React.FC = () => {
 
     attemptedFallbackPagesRef.current.clear();
     inFlightFallbackPagesRef.current.clear();
+    taskPagesPageSizeRef.current = 100;
     setLoading(true);
     try {
       const requestedPageSize = 100;
       const result = await cloudContext.getTaskPages(id, 1, requestedPageSize);
       if (result.success) {
+        const effectivePageSize = Math.max(1, result.pagination?.page_size || requestedPageSize);
+        taskPagesPageSizeRef.current = effectivePageSize;
         const allPages = [...(result.data || [])];
         const totalApiPages = Math.max(1, result.pagination?.total_pages || 1);
 
         for (let apiPage = 2; apiPage <= totalApiPages; apiPage++) {
           try {
-            const nextPageResult = await cloudContext.getTaskPages(id, apiPage, requestedPageSize);
+            const nextPageResult = await cloudContext.getTaskPages(id, apiPage, effectivePageSize);
             if (nextPageResult.success && nextPageResult.data?.length) {
               allPages.push(...nextPageResult.data);
             }
@@ -121,10 +125,15 @@ const CloudPreview: React.FC = () => {
     if (pages.some(page => page.page === currentPage)) return;
     if (attemptedFallbackPagesRef.current.has(currentPage) || inFlightFallbackPagesRef.current.has(currentPage)) return;
 
+    const effectivePageSize = Math.max(1, taskPagesPageSizeRef.current || 1);
+    const fallbackApiPage = Math.max(1, Math.floor((currentPage - 1) / effectivePageSize) + 1);
     inFlightFallbackPagesRef.current.add(currentPage);
     try {
-      const result = await cloudContext.getTaskPages(id, currentPage, 1);
-      const pageItems = result.data;
+      const result = await cloudContext.getTaskPages(id, fallbackApiPage, effectivePageSize);
+      if (result.pagination?.page_size) {
+        taskPagesPageSizeRef.current = Math.max(1, result.pagination.page_size);
+      }
+      const pageItems = (result.data || []).filter(page => page.page === currentPage);
       if (result.success && pageItems?.length) {
         setPages(prev => dedupeAndSortPages([...prev, ...pageItems]));
       }
@@ -137,6 +146,7 @@ const CloudPreview: React.FC = () => {
   }, [id, cloudContext, currentPage, loading, pages]);
 
   useEffect(() => {
+    taskPagesPageSizeRef.current = 100;
     attemptedFallbackPagesRef.current.clear();
     inFlightFallbackPagesRef.current.clear();
   }, [id]);
