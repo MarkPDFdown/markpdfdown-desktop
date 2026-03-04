@@ -1,0 +1,113 @@
+name: Code Reviewer Workflow
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.ZENMUX_API_KEY }}
+    steps:
+      - name: Check OPENAI_API_KEY
+        if: ${{ env.OPENAI_API_KEY == '' }}
+        run: echo "OPENAI_API_KEY is not set. Skip review run."
+
+      - name: Run AI Code Review Action
+        if: ${{ env.OPENAI_API_KEY != '' }}
+        uses: TiyAgents/code-review-agent-action@v1
+        with:
+          # [Required] GitHub token with pull-requests:write and issues:write permissions
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+          # [Conditionally required] OpenAI key. If not provided here,
+          # it must be available via OPENAI_API_KEY environment variable
+          openai_api_key: ${{ env.OPENAI_API_KEY }}
+
+          # [Optional] OpenAI base URL; any OpenAI-compatible API base URL
+          # If omitted, default official base is used; can also come from OPENAI_API_BASE
+          openai_api_base: ${{ vars.OPENAI_API_BASE }}
+
+          # [Optional] Allowed hosts for openai_api_base (comma/newline separated); default api.openai.com
+          # Required when using a custom OpenAI-compatible gateway host
+          openai_api_base_allowlist: |
+            api.openai.com
+            zenmux.ai
+
+          # [Optional] Include globs (comma or newline separated); default is ** (all files)
+          # Allowed values: any valid glob patterns
+          include: |
+            **/*.js
+            **/*.ts
+
+          # [Optional] Exclude globs (comma or newline separated); default is empty
+          # Allowed values: any valid glob patterns
+          exclude: |
+            **/*.lock
+            **/dist/**
+            **/*.min.js
+            **/release/**
+
+          # [Optional] Planner model; default is gpt-5.3-codex
+          # Allowed values: any available model name (string)
+          planner_model: ${{ vars.PLANNER_OPENAI_MODEL }}
+
+          # [Optional] Sub-agent model; default is gpt-5.3-codex
+          # Allowed values: any available model name (string)
+          reviewer_model: ${{ vars.DEFAULT_OPENAI_MODEL }}
+
+          # [Optional] Review dimensions (comma or newline separated);
+          # default is general,security,performance,testing
+          # Suggested values: general, security, performance, testing
+          review_dimensions: general,security,performance,testing
+
+          # [Optional] Review language; default is English
+          # Allowed values: any language label (for example English, Chinese, Simplified Chinese)
+          review_language: English
+
+          # [Optional] Minimum confidence to keep a finding; default is 0.72
+          # Allowed range: 0.0 - 1.0 (float)
+          min_finding_confidence: 0.72
+
+          # [Optional] Round-1 coverage-first mode; default is true
+          # Allowed values: true, false
+          # true: first round runs only primary dimension to reduce duplicates/cost
+          coverage_first_round_primary_only: true
+
+          # [Optional] Auto-minimize outdated historical inline comments from this action; default is true
+          # Allowed values: true, false
+          auto_minimize_outdated_comments: true
+
+          # [Optional] Maximum review rounds; default is 8
+          # Allowed range: positive integer (>=1)
+          # Rough sizing: increase with max_model_calls if many files are changed
+          max_rounds: 4
+
+          # [Optional] Maximum model calls; default is 40
+          # Allowed range: positive integer (>=1)
+          # Rough sizing: calls ~= rounds * (1 + ceil(patch_files / batch_size) * dimensions)
+          # Example: ~100 changed files with default dimensions usually needs 80-120 calls
+          max_model_calls: 64
+
+          # [Optional] Maximum files per batch; default is 8
+          # Allowed range: positive integer (>=1)
+          # Larger value reduces batch count (and model calls) but increases per-call context size
+          max_files_per_batch: 16
+
+          # [Optional] Maximum context characters per batch; default is 128000
+          # Allowed range: positive integer (>=1)
+          max_context_chars: 256000
+
+          # [Optional] Maximum findings kept after aggregation; default is 60
+          # Allowed range: positive integer (>=1)
+          max_findings: 64
+
+          # [Optional] Maximum inline comments posted in PR review; default is 30
+          # Allowed range: positive integer (>=1)
+          max_inline_comments: 32
