@@ -23,7 +23,7 @@ import {
   Typography,
 } from "antd";
 import type { MenuProps } from "antd";
-import React, { useCallback, useContext, useEffect, useState } from "react";
+import React, { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import MarkdownPreview from "../components/MarkdownPreview";
@@ -35,6 +35,10 @@ import type {
 } from "../../shared/types/cloud-api";
 
 const { Text } = Typography;
+
+const dedupeAndSortPages = (pageItems: CloudTaskPageResponse[]): CloudTaskPageResponse[] =>
+  Array.from(new Map(pageItems.map((page) => [page.page, page])).values())
+    .sort((a, b) => a.page - b.page);
 
 const CloudPreview: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -54,6 +58,8 @@ const CloudPreview: React.FC = () => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
+  const attemptedFallbackPagesRef = useRef<Set<number>>(new Set());
+  const inFlightFallbackPagesRef = useRef<Set<number>>(new Set());
 
   const currentPageData = pages.find(p => p.page === currentPage);
 
@@ -79,26 +85,28 @@ const CloudPreview: React.FC = () => {
   const fetchPages = useCallback(async () => {
     if (!id || !cloudContext) return;
 
+    attemptedFallbackPagesRef.current.clear();
+    inFlightFallbackPagesRef.current.clear();
     setLoading(true);
     try {
       const requestedPageSize = 100;
       const result = await cloudContext.getTaskPages(id, 1, requestedPageSize);
       if (result.success) {
         const allPages = [...(result.data || [])];
-        const totalApiPages = result.pagination?.total_pages || 1;
+        const totalApiPages = Math.max(1, result.pagination?.total_pages || 1);
 
         for (let apiPage = 2; apiPage <= totalApiPages; apiPage++) {
-          const nextPageResult = await cloudContext.getTaskPages(id, apiPage, requestedPageSize);
-          if (nextPageResult.success && nextPageResult.data?.length) {
-            allPages.push(...nextPageResult.data);
+          try {
+            const nextPageResult = await cloudContext.getTaskPages(id, apiPage, requestedPageSize);
+            if (nextPageResult.success && nextPageResult.data?.length) {
+              allPages.push(...nextPageResult.data);
+            }
+          } catch {
+            console.error(`Failed to fetch page chunk ${apiPage}`);
           }
         }
 
-        const dedupedSortedPages = Array.from(
-          new Map(allPages.map(page => [page.page, page])).values()
-        ).sort((a, b) => a.page - b.page);
-
-        setPages(dedupedSortedPages);
+        setPages(dedupeAndSortPages(allPages));
       }
     } catch {
       console.error('Failed to fetch pages');
@@ -111,21 +119,27 @@ const CloudPreview: React.FC = () => {
   const ensureCurrentPageLoaded = useCallback(async () => {
     if (!id || !cloudContext || loading) return;
     if (pages.some(page => page.page === currentPage)) return;
+    if (attemptedFallbackPagesRef.current.has(currentPage) || inFlightFallbackPagesRef.current.has(currentPage)) return;
 
+    inFlightFallbackPagesRef.current.add(currentPage);
     try {
       const result = await cloudContext.getTaskPages(id, currentPage, 1);
       const pageItems = result.data;
       if (result.success && pageItems?.length) {
-        setPages(prev => {
-          const merged = [...prev, ...pageItems];
-          return Array.from(new Map(merged.map(page => [page.page, page])).values())
-            .sort((a, b) => a.page - b.page);
-        });
+        setPages(prev => dedupeAndSortPages([...prev, ...pageItems]));
       }
     } catch {
       console.error('Failed to fetch current page data');
+    } finally {
+      inFlightFallbackPagesRef.current.delete(currentPage);
+      attemptedFallbackPagesRef.current.add(currentPage);
     }
   }, [id, cloudContext, currentPage, loading, pages]);
+
+  useEffect(() => {
+    attemptedFallbackPagesRef.current.clear();
+    inFlightFallbackPagesRef.current.clear();
+  }, [id]);
 
   // Load image for current page
   const loadPageImage = useCallback(async () => {

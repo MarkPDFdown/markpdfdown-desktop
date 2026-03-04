@@ -6,57 +6,68 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import CloudPreview from '../CloudPreview'
 import { CloudContext, type CloudContextType } from '../../contexts/CloudContextDefinition'
 
+const translate = (ns: string | undefined, key: string, params?: any) => {
+  const dict: Record<string, string> = {
+    back: 'Back',
+    fetch_task_failed: 'Fetch task failed',
+    fetch_pages_failed: 'Fetch pages failed',
+    download_md: 'Download MD',
+    download_success: 'Download success',
+    download_failed: 'Download failed',
+    confirm_cancel: 'Confirm cancel',
+    confirm_cancel_content: 'Cancel this task?',
+    cancel_success: 'Cancel success',
+    cancel_failed: 'Cancel failed',
+    confirm_retry: 'Confirm retry',
+    confirm_retry_content: 'Retry this task?',
+    retry_success: 'Retry success',
+    retry_failed: 'Retry failed',
+    confirm_retry_failed: 'Confirm retry failed pages',
+    confirm_retry_failed_content: 'Retry failed pages?',
+    retry_failed_pages: 'Retry Failed Pages',
+    retry_failed_success: `Retried ${params?.count ?? 0}`,
+    page_retry_success: 'Page retried',
+    page_retry_failed: 'Page retry failed',
+    confirm_delete: 'Confirm delete',
+    confirm_delete_content: 'Delete this task?',
+    delete_success: 'Delete success',
+    delete_failed: 'Delete failed',
+    page_status: 'Status',
+    'page_status.pending': 'Pending',
+    'page_status.processing': 'Processing',
+    'page_status.completed': 'Completed',
+    'page_status.failed': 'Failed',
+    regenerate: 'Regenerate',
+    regenerate_tooltip: 'Regenerate this page',
+    no_page_data: 'No page data',
+    page_label: `Page ${params?.page}/${params?.total}`,
+    more_actions: 'More Actions',
+    retry_all: 'Retry All',
+    cancel_task: 'Cancel Task',
+    delete_task: 'Delete Task',
+  }
+  if (ns === 'common') {
+    if (key === 'common.confirm') return 'Confirm'
+    if (key === 'common.cancel') return 'Cancel'
+    if (key === 'common.pages') return `${params?.count ?? 0} pages`
+  }
+  return dict[key] || key
+}
+
+const translationFnCache = new Map<string, (key: string, params?: any) => string>()
+const i18nMock = { changeLanguage: vi.fn() }
+
 vi.mock('react-i18next', () => ({
-  useTranslation: (ns?: string) => ({
-    t: (key: string, params?: any) => {
-      const dict: Record<string, string> = {
-        back: 'Back',
-        fetch_task_failed: 'Fetch task failed',
-        fetch_pages_failed: 'Fetch pages failed',
-        download_md: 'Download MD',
-        download_success: 'Download success',
-        download_failed: 'Download failed',
-        confirm_cancel: 'Confirm cancel',
-        confirm_cancel_content: 'Cancel this task?',
-        cancel_success: 'Cancel success',
-        cancel_failed: 'Cancel failed',
-        confirm_retry: 'Confirm retry',
-        confirm_retry_content: 'Retry this task?',
-        retry_success: 'Retry success',
-        retry_failed: 'Retry failed',
-        confirm_retry_failed: 'Confirm retry failed pages',
-        confirm_retry_failed_content: 'Retry failed pages?',
-        retry_failed_pages: 'Retry Failed Pages',
-        retry_failed_success: `Retried ${params?.count ?? 0}`,
-        page_retry_success: 'Page retried',
-        page_retry_failed: 'Page retry failed',
-        confirm_delete: 'Confirm delete',
-        confirm_delete_content: 'Delete this task?',
-        delete_success: 'Delete success',
-        delete_failed: 'Delete failed',
-        page_status: 'Status',
-        'page_status.pending': 'Pending',
-        'page_status.processing': 'Processing',
-        'page_status.completed': 'Completed',
-        'page_status.failed': 'Failed',
-        regenerate: 'Regenerate',
-        regenerate_tooltip: 'Regenerate this page',
-        no_page_data: 'No page data',
-        page_label: `Page ${params?.page}/${params?.total}`,
-        more_actions: 'More Actions',
-        retry_all: 'Retry All',
-        cancel_task: 'Cancel Task',
-        delete_task: 'Delete Task',
-      }
-      if (ns === 'common') {
-        if (key === 'common.confirm') return 'Confirm'
-        if (key === 'common.cancel') return 'Cancel'
-        if (key === 'common.pages') return `${params?.count ?? 0} pages`
-      }
-      return dict[key] || key
-    },
-    i18n: { changeLanguage: vi.fn() },
-  }),
+  useTranslation: (ns?: string) => {
+    const cacheKey = ns || '__default__'
+    if (!translationFnCache.has(cacheKey)) {
+      translationFnCache.set(cacheKey, (key: string, params?: any) => translate(ns, key, params))
+    }
+    return {
+      t: translationFnCache.get(cacheKey)!,
+      i18n: i18nMock,
+    }
+  },
 }))
 
 vi.mock('../../components/MarkdownPreview', () => ({
@@ -295,6 +306,334 @@ describe('CloudPreview', () => {
     await waitFor(() => {
       expect(screen.getByText(/25 pages/)).toBeInTheDocument()
     })
+  })
+
+  it('keeps successfully fetched chunks when a later API page chunk fails', async () => {
+    const firstChunk = [
+      {
+        page: 1,
+        status: 2,
+        status_name: 'COMPLETED',
+        markdown: 'page-1',
+        width_mm: 210,
+        height_mm: 297,
+        image_url: 'https://cdn.example.com/p1.png',
+      },
+      {
+        page: 2,
+        status: 2,
+        status_name: 'COMPLETED',
+        markdown: 'page-2',
+        width_mm: 210,
+        height_mm: 297,
+        image_url: 'https://cdn.example.com/p2.png',
+      },
+    ]
+    const thirdChunk = [
+      {
+        page: 3,
+        status: 2,
+        status_name: 'COMPLETED',
+        markdown: 'page-3',
+        width_mm: 210,
+        height_mm: 297,
+        image_url: 'https://cdn.example.com/p3.png',
+      },
+    ]
+
+    const getTaskPages = vi.fn().mockImplementation(async (_taskId: string, page?: number, pageSize?: number) => {
+      if (page === 1 && pageSize === 100) {
+        return {
+          success: true,
+          data: firstChunk,
+          pagination: { page: 1, page_size: 2, total: 3, total_pages: 3 },
+        }
+      }
+      if (page === 2 && pageSize === 100) {
+        throw new Error('chunk failed')
+      }
+      if (page === 3 && pageSize === 100) {
+        return {
+          success: true,
+          data: thirdChunk,
+          pagination: { page: 3, page_size: 2, total: 3, total_pages: 3 },
+        }
+      }
+      return { success: true, data: [], pagination: { page: page || 1, page_size: 2, total: 3, total_pages: 3 } }
+    })
+
+    const ctx = buildContextValue({
+      getTaskById: vi.fn().mockResolvedValue({
+        success: true,
+        data: {
+          id: 'task-1',
+          file_type: 'pdf',
+          file_name: 'demo.pdf',
+          status: 6,
+          status_name: 'COMPLETED',
+          page_count: 3,
+          pages_completed: 3,
+          pages_failed: 0,
+          pdf_url: '/demo.pdf',
+          credits_estimated: 10,
+          credits_consumed: 5,
+          created_at: '2026-03-03T00:00:00.000Z',
+          model_tier: 'lite',
+        },
+      }),
+      getTaskPages,
+    })
+
+    renderPage(ctx)
+
+    await waitFor(() => {
+      expect(getTaskPages).toHaveBeenCalledWith('task-1', 2, 100)
+      expect(getTaskPages).toHaveBeenCalledWith('task-1', 3, 100)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(/3 pages/)).toBeInTheDocument()
+      expect(screen.getByTestId('markdown-content')).toHaveTextContent('page-1')
+    })
+  })
+
+  it('loads missing current page through fallback and merges it into local pages', async () => {
+    const getTaskPages = vi.fn().mockImplementation(async (_taskId: string, page?: number, pageSize?: number) => {
+      if (page === 1 && pageSize === 100) {
+        return {
+          success: true,
+          data: [
+            {
+              page: 2,
+              status: 2,
+              status_name: 'COMPLETED',
+              markdown: 'page-2',
+              width_mm: 210,
+              height_mm: 297,
+              image_url: 'https://cdn.example.com/p2.png',
+            },
+          ],
+          pagination: { page: 1, page_size: 100, total: 2, total_pages: 1 },
+        }
+      }
+      if (page === 1 && pageSize === 1) {
+        return {
+          success: true,
+          data: [
+            {
+              page: 1,
+              status: 2,
+              status_name: 'COMPLETED',
+              markdown: 'page-1-fallback',
+              width_mm: 210,
+              height_mm: 297,
+              image_url: 'https://cdn.example.com/p1.png',
+            },
+          ],
+          pagination: { page: 1, page_size: 1, total: 2, total_pages: 2 },
+        }
+      }
+      return { success: true, data: [], pagination: { page: page || 1, page_size: pageSize || 1, total: 2, total_pages: 2 } }
+    })
+
+    const ctx = buildContextValue({
+      getTaskById: vi.fn().mockResolvedValue({
+        success: true,
+        data: {
+          id: 'task-1',
+          file_type: 'pdf',
+          file_name: 'demo.pdf',
+          status: 6,
+          status_name: 'COMPLETED',
+          page_count: 2,
+          pages_completed: 2,
+          pages_failed: 0,
+          pdf_url: '/demo.pdf',
+          credits_estimated: 10,
+          credits_consumed: 5,
+          created_at: '2026-03-03T00:00:00.000Z',
+          model_tier: 'lite',
+        },
+      }),
+      getTaskPages,
+    })
+
+    renderPage(ctx)
+
+    await waitFor(() => {
+      expect(getTaskPages).toHaveBeenCalledWith('task-1', 1, 100)
+      expect(getTaskPages).toHaveBeenCalledWith('task-1', 1, 1)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(/2 pages/)).toBeInTheDocument()
+      expect(screen.getByTestId('markdown-content')).toHaveTextContent('page-1-fallback')
+    })
+  })
+
+  it('dedupes duplicate pages across chunks and keeps latest content', async () => {
+    const getTaskPages = vi.fn().mockImplementation(async (_taskId: string, page?: number, pageSize?: number) => {
+      if (page === 1 && pageSize === 100) {
+        return {
+          success: true,
+          data: [
+            {
+              page: 2,
+              status: 2,
+              status_name: 'COMPLETED',
+              markdown: 'page-2-old',
+              width_mm: 210,
+              height_mm: 297,
+              image_url: 'https://cdn.example.com/p2-old.png',
+            },
+            {
+              page: 1,
+              status: 2,
+              status_name: 'COMPLETED',
+              markdown: 'page-1',
+              width_mm: 210,
+              height_mm: 297,
+              image_url: 'https://cdn.example.com/p1.png',
+            },
+          ],
+          pagination: { page: 1, page_size: 2, total: 3, total_pages: 2 },
+        }
+      }
+      if (page === 2 && pageSize === 100) {
+        return {
+          success: true,
+          data: [
+            {
+              page: 3,
+              status: 2,
+              status_name: 'COMPLETED',
+              markdown: 'page-3',
+              width_mm: 210,
+              height_mm: 297,
+              image_url: 'https://cdn.example.com/p3.png',
+            },
+            {
+              page: 2,
+              status: 2,
+              status_name: 'COMPLETED',
+              markdown: 'page-2-new',
+              width_mm: 210,
+              height_mm: 297,
+              image_url: 'https://cdn.example.com/p2-new.png',
+            },
+          ],
+          pagination: { page: 2, page_size: 2, total: 3, total_pages: 2 },
+        }
+      }
+      return { success: true, data: [], pagination: { page: page || 1, page_size: pageSize || 1, total: 3, total_pages: 2 } }
+    })
+
+    const ctx = buildContextValue({
+      getTaskById: vi.fn().mockResolvedValue({
+        success: true,
+        data: {
+          id: 'task-1',
+          file_type: 'pdf',
+          file_name: 'demo.pdf',
+          status: 6,
+          status_name: 'COMPLETED',
+          page_count: 3,
+          pages_completed: 3,
+          pages_failed: 0,
+          pdf_url: '/demo.pdf',
+          credits_estimated: 10,
+          credits_consumed: 5,
+          created_at: '2026-03-03T00:00:00.000Z',
+          model_tier: 'lite',
+        },
+      }),
+      getTaskPages,
+    })
+
+    renderPage(ctx)
+
+    await waitFor(() => {
+      expect(screen.getByText(/3 pages/)).toBeInTheDocument()
+    })
+
+    const pageTwoAnchor = document.querySelector('li[title="2"] a') as HTMLElement | null
+    expect(pageTwoAnchor).toBeTruthy()
+    fireEvent.click(pageTwoAnchor as HTMLElement)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('markdown-content')).toHaveTextContent('page-2-new')
+      expect(screen.getByTestId('markdown-content')).not.toHaveTextContent('page-2-old')
+    })
+  })
+
+  it('does not repeatedly call fallback for an unavailable current page', async () => {
+    const getTaskPages = vi.fn().mockImplementation(async (_taskId: string, page?: number, pageSize?: number) => {
+      if (page === 1 && pageSize === 100) {
+        return {
+          success: true,
+          data: [
+            {
+              page: 2,
+              status: 2,
+              status_name: 'COMPLETED',
+              markdown: 'page-2',
+              width_mm: 210,
+              height_mm: 297,
+              image_url: 'https://cdn.example.com/p2.png',
+            },
+          ],
+          pagination: { page: 1, page_size: 100, total: 2, total_pages: 1 },
+        }
+      }
+      if (page === 1 && pageSize === 1) {
+        return {
+          success: true,
+          data: [],
+          pagination: { page: 1, page_size: 1, total: 2, total_pages: 2 },
+        }
+      }
+      return { success: true, data: [], pagination: { page: page || 1, page_size: pageSize || 1, total: 2, total_pages: 2 } }
+    })
+
+    const ctx = buildContextValue({
+      getTaskById: vi.fn().mockResolvedValue({
+        success: true,
+        data: {
+          id: 'task-1',
+          file_type: 'pdf',
+          file_name: 'demo.pdf',
+          status: 6,
+          status_name: 'COMPLETED',
+          page_count: 2,
+          pages_completed: 2,
+          pages_failed: 0,
+          pdf_url: '/demo.pdf',
+          credits_estimated: 10,
+          credits_consumed: 5,
+          created_at: '2026-03-03T00:00:00.000Z',
+          model_tier: 'lite',
+        },
+      }),
+      getTaskPages,
+    })
+
+    renderPage(ctx)
+
+    await waitFor(() => {
+      expect(window.api.events.onCloudTaskEvent).toHaveBeenCalled()
+      expect(getTaskPages).toHaveBeenCalledWith('task-1', 1, 1)
+    })
+
+    const fallbackCallCount = () =>
+      getTaskPages.mock.calls.filter(([, page, pageSize]) => page === 1 && pageSize === 1).length
+
+    expect(fallbackCallCount()).toBe(1)
+
+    cloudEventCb?.({ type: 'completed', data: { task_id: 'task-1', status: 6, pages_completed: 2, pages_failed: 0 } })
+    cloudEventCb?.({ type: 'completed', data: { task_id: 'task-1', status: 6, pages_completed: 2, pages_failed: 0 } })
+
+    await new Promise(resolve => setTimeout(resolve, 30))
+    expect(fallbackCallCount()).toBe(1)
   })
 
   it('navigates back to list when getTaskById fails', async () => {
