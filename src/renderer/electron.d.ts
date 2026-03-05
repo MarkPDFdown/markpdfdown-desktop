@@ -132,6 +132,18 @@ interface UpdateTaskDTO {
   [key: string]: any;
 }
 
+interface RetryTaskDTO {
+  taskId: string;
+  providerId?: number;
+  modelId?: string;
+}
+
+interface RetryTaskDetailDTO {
+  pageId: number;
+  providerId?: number;
+  modelId?: string;
+}
+
 interface TaskListResponse {
   list: Task[];
   total: number;
@@ -207,6 +219,7 @@ interface ElectronAPI {
     }) => Promise<IpcResponse<TaskListResponse>>;
     getById: (id: string) => Promise<IpcResponse<Task>>;
     update: (id: string, data: UpdateTaskDTO) => Promise<IpcResponse<Task>>;
+    retry: (params: RetryTaskDTO) => Promise<IpcResponse<Task>>;
     delete: (id: string) => Promise<IpcResponse<Task>>;
     hasRunningTasks: () => Promise<IpcResponse<{ hasRunning: boolean; count: number }>>;
   };
@@ -214,7 +227,7 @@ interface ElectronAPI {
   taskDetail: {
     getByPage: (taskId: string, page: number) => Promise<IpcResponse<TaskDetailWithImage>>;
     getAllByTask: (taskId: string) => Promise<IpcResponse<TaskDetail[]>>;
-    retry: (pageId: number) => Promise<IpcResponse<TaskDetail>>;
+    retry: (params: number | RetryTaskDetailDTO) => Promise<IpcResponse<TaskDetail>>;
     retryFailed: (taskId: string) => Promise<IpcResponse<{ retried: number }>>;
   };
 
@@ -266,9 +279,13 @@ interface ElectronAPI {
     getTaskById: (id: string) => Promise<IpcResponse<import('../shared/types/cloud-api').CloudTaskResponse>>;
     getTaskPages: (params: { taskId: string; page?: number; pageSize?: number }) => Promise<IpcResponse<any>>;
     cancelTask: (id: string) => Promise<IpcResponse<import('../shared/types/cloud-api').CloudCancelTaskResponse>>;
-    retryTask: (id: string) => Promise<IpcResponse<import('../shared/types/cloud-api').CreateTaskResponse>>;
+    retryTask: (
+      params: string | { id: string; model?: import('../shared/types/cloud-api').CloudModelTier }
+    ) => Promise<IpcResponse<import('../shared/types/cloud-api').CreateTaskResponse>>;
     deleteTask: (id: string) => Promise<IpcResponse<{ id: string; message: string }>>;
-    retryPage: (params: { taskId: string; pageNumber: number }) => Promise<IpcResponse<import('../shared/types/cloud-api').CloudRetryPageResponse>>;
+    retryPage: (
+      params: { taskId: string; pageNumber: number; model?: import('../shared/types/cloud-api').CloudModelTier }
+    ) => Promise<IpcResponse<import('../shared/types/cloud-api').CloudRetryPageResponse>>;
     getTaskResult: (id: string) => Promise<IpcResponse<import('../shared/types/cloud-api').CloudTaskResult>>;
     downloadPdf: (id: string) => Promise<IpcResponse<{ filePath: string }>>;
     getPageImage: (params: { taskId: string; pageNumber: number }) => Promise<IpcResponse<{ dataUrl: string }>>;

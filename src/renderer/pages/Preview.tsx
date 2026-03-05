@@ -18,6 +18,7 @@ import {
   Dropdown,
   Pagination,
   Progress,
+  Select,
   Space,
   Spin,
   Splitter,
@@ -66,6 +67,20 @@ interface TaskDetailEvent {
   timestamp: number;
 }
 
+interface LocalModelOption {
+  value: string;
+  label: string;
+}
+
+interface LocalModelGroup {
+  provider: number;
+  providerName: string;
+  models: Array<{
+    id: string;
+    name: string;
+  }>;
+}
+
 const { Text } = Typography;
 
 const Preview: React.FC = () => {
@@ -83,6 +98,41 @@ const Preview: React.FC = () => {
   const [imageError, setImageError] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [retryingFailed, setRetryingFailed] = useState(false);
+
+  const buildModelValue = (modelId: string, providerId: number) => `${modelId}@${providerId}`;
+
+  const parseModelValue = (value: string): { modelId: string; providerId: number } | null => {
+    const separatorIndex = value.lastIndexOf('@');
+    if (separatorIndex <= 0 || separatorIndex === value.length - 1) {
+      return null;
+    }
+
+    const modelId = value.slice(0, separatorIndex);
+    const providerId = Number(value.slice(separatorIndex + 1));
+    if (!modelId || !Number.isInteger(providerId)) {
+      return null;
+    }
+
+    return {
+      modelId,
+      providerId,
+    };
+  };
+
+  const loadLocalModelOptions = useCallback(async (): Promise<LocalModelOption[]> => {
+    const result = await window.api.model.getAll();
+    if (!result.success || !result.data) {
+      throw new Error(result.error || t('preview.load_models_failed'));
+    }
+
+    const modelGroups = result.data as LocalModelGroup[];
+    return modelGroups.flatMap((group) =>
+      group.models.map((model) => ({
+        value: buildModelValue(model.id, group.provider),
+        label: `${model.name} | ${group.providerName}`,
+      }))
+    );
+  }, [t]);
 
   // 获取任务元数据
   const fetchTask = useCallback(async () => {
@@ -284,28 +334,69 @@ const Preview: React.FC = () => {
 
   // 重试任务（全部重试）
   const handleRetryTask = async () => {
-    if (!id) return;
+    if (!id || !task) return;
 
-    modal.confirm({
-      title: t('preview.confirm_retry'),
-      content: t('preview.confirm_retry_content'),
-      okText: tCommon('common.confirm'),
-      cancelText: tCommon('common.cancel'),
-      onOk: async () => {
-        try {
-          const result = await window.api.task.update(id, { status: 1 }); // PENDING = 1
-
-          if (result.success) {
-            message.success(t('preview.retry_success'));
-          } else {
-            message.error(result.error || t('preview.retry_failed'));
-          }
-        } catch (error) {
-          console.error('重试失败:', error);
-          message.error(t('preview.retry_failed'));
-        }
+    try {
+      const modelOptions = await loadLocalModelOptions();
+      if (modelOptions.length === 0) {
+        message.error(t('preview.no_models_available'));
+        return;
       }
-    });
+
+      const defaultModelValue = buildModelValue(task.model || '', task.provider || 0);
+      let selectedModelValue = modelOptions.some((opt) => opt.value === defaultModelValue)
+        ? defaultModelValue
+        : modelOptions[0].value;
+
+      modal.confirm({
+        title: t('preview.confirm_retry_with_model'),
+        content: (
+          <div style={{ marginTop: 8 }}>
+            <div style={{ marginBottom: 8 }}>{t('preview.select_retry_model')}</div>
+            <Select
+              style={{ width: '100%' }}
+              options={modelOptions}
+              defaultValue={selectedModelValue}
+              onChange={(value) => {
+                selectedModelValue = value;
+              }}
+            />
+          </div>
+        ),
+        okText: tCommon('common.confirm'),
+        cancelText: tCommon('common.cancel'),
+        onOk: async () => {
+          try {
+            const shouldOverride = selectedModelValue !== defaultModelValue;
+            let overridePayload: { providerId: number; modelId: string } | null = null;
+            if (shouldOverride) {
+              const parsedModel = parseModelValue(selectedModelValue);
+              if (!parsedModel) {
+                message.error(t('preview.retry_failed'));
+                return;
+              }
+              overridePayload = parsedModel;
+            }
+
+            const result = await window.api.task.retry({
+              taskId: id,
+              ...(overridePayload || {}),
+            });
+
+            if (result.success) {
+              message.success(t('preview.retry_success'));
+            } else {
+              message.error(result.error || t('preview.retry_failed'));
+            }
+          } catch (error) {
+            console.error('重试失败:', error);
+            message.error(t('preview.retry_failed'));
+          }
+        }
+      });
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : t('preview.load_models_failed'));
+    }
   };
 
   // 重试失败页
@@ -346,22 +437,71 @@ const Preview: React.FC = () => {
   const handleRetryPage = async () => {
     if (!taskDetail?.id) return;
 
-    setRetrying(true);
     try {
-      const result = await window.api.taskDetail.retry(taskDetail.id);
-
-      if (result.success) {
-        message.success(t('preview.page_retry_success'));
-        // 重新获取页面详情
-        fetchPageDetail(currentPage);
-      } else {
-        message.error(result.error || t('preview.page_retry_failed'));
+      const modelOptions = await loadLocalModelOptions();
+      if (modelOptions.length === 0) {
+        message.error(t('preview.no_models_available'));
+        return;
       }
+
+      const defaultModelValue = buildModelValue(taskDetail.model, taskDetail.provider);
+      let selectedModelValue = modelOptions.some((opt) => opt.value === defaultModelValue)
+        ? defaultModelValue
+        : modelOptions[0].value;
+
+      modal.confirm({
+        title: t('preview.confirm_page_retry_with_model'),
+        content: (
+          <div style={{ marginTop: 8 }}>
+            <div style={{ marginBottom: 8 }}>{t('preview.select_retry_model')}</div>
+            <Select
+              style={{ width: '100%' }}
+              options={modelOptions}
+              defaultValue={selectedModelValue}
+              onChange={(value) => {
+                selectedModelValue = value;
+              }}
+            />
+          </div>
+        ),
+        okText: tCommon('common.confirm'),
+        cancelText: tCommon('common.cancel'),
+        onOk: async () => {
+          setRetrying(true);
+          try {
+            const shouldOverride = selectedModelValue !== defaultModelValue;
+            let overridePayload: { providerId: number; modelId: string } | null = null;
+            if (shouldOverride) {
+              const parsedModel = parseModelValue(selectedModelValue);
+              if (!parsedModel) {
+                message.error(t('preview.page_retry_failed'));
+                return;
+              }
+              overridePayload = parsedModel;
+            }
+
+            const result = await window.api.taskDetail.retry(
+              overridePayload
+                ? { pageId: taskDetail.id, ...overridePayload }
+                : { pageId: taskDetail.id }
+            );
+
+            if (result.success) {
+              message.success(t('preview.page_retry_success'));
+              fetchPageDetail(currentPage);
+            } else {
+              message.error(result.error || t('preview.page_retry_failed'));
+            }
+          } catch (error) {
+            console.error('Failed to retry page:', error);
+            message.error(t('preview.page_retry_failed'));
+          } finally {
+            setRetrying(false);
+          }
+        }
+      });
     } catch (error) {
-      console.error('Failed to retry page:', error);
-      message.error(t('preview.page_retry_failed'));
-    } finally {
-      setRetrying(false);
+      message.error(error instanceof Error ? error.message : t('preview.load_models_failed'));
     }
   };
 
@@ -524,8 +664,8 @@ const Preview: React.FC = () => {
                 });
               }
 
-              // 全部重试: status === 0
-              if (status === 0) {
+              // 全部重试: status === 0 || status === 6
+              if (status === 0 || status === 6) {
                 menuItems.push({
                   key: 'retry_all',
                   icon: <ReloadOutlined />,

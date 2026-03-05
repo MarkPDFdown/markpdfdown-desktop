@@ -109,6 +109,8 @@ describe('Preview', () => {
     filename: 'document.pdf',
     type: 'pdf',
     pages: 5,
+    provider: 1,
+    model: 'gpt-4o',
     model_name: 'GPT-4o',
     progress: 60,
     status: 3, // PROCESSING
@@ -130,9 +132,11 @@ describe('Preview', () => {
   }
 
   const mockTaskDetail = {
-    id: 'detail-1',
+    id: 1,
     taskId: 'task-1',
     page: 1,
+    provider: 1,
+    model: 'gpt-4o',
     status: 2, // COMPLETED
     content: '# Page 1 Content\n\nThis is the content.',
     imagePath: 'C:\\images\\page1.png',
@@ -183,7 +187,21 @@ describe('Preview', () => {
 
     vi.mocked(window.api.taskDetail.retry).mockResolvedValue({
       success: true,
-      data: { id: 'detail-1' }
+      data: { id: 1 }
+    })
+
+    vi.mocked(window.api.model.getAll).mockResolvedValue({
+      success: true,
+      data: [
+        {
+          provider: 1,
+          providerName: 'OpenAI',
+          models: [
+            { id: 'gpt-4o', name: 'GPT-4o', provider: 1 },
+            { id: 'gpt-4.1', name: 'GPT-4.1', provider: 1 },
+          ],
+        },
+      ],
     })
 
     // Setup event listener mocks
@@ -531,6 +549,7 @@ describe('Preview', () => {
     })
 
     it('should call retry API when clicking regenerate', async () => {
+      const { useAppSpy } = mockUseApp()
       render(
         <Wrapper>
           <Preview />
@@ -554,8 +573,10 @@ describe('Preview', () => {
       fireEvent.click(regenerateButton)
 
       await waitFor(() => {
-        expect(window.api.taskDetail.retry).toHaveBeenCalledWith('detail-1')
+        expect(window.api.taskDetail.retry).toHaveBeenCalledWith({ pageId: 1 })
       })
+
+      useAppSpy.mockRestore()
     })
   })
 
@@ -697,6 +718,101 @@ describe('Preview', () => {
 
         expect(screen.queryByText('Retry Failed')).not.toBeInTheDocument()
         expect(screen.queryByText('Retry All')).not.toBeInTheDocument()
+      })
+
+      it('should show retry all in More Actions menu for completed tasks', async () => {
+        vi.mocked(window.api.task.getById).mockResolvedValue({
+          success: true,
+          data: mockCompletedTask
+        })
+
+        render(
+          <Wrapper>
+            <Preview />
+          </Wrapper>
+        )
+
+        await waitFor(() => {
+          expect(screen.getByText('More Actions')).toBeInTheDocument()
+        })
+
+        fireEvent.click(screen.getByText('More Actions'))
+
+        await waitFor(() => {
+          expect(screen.getByText('Retry All')).toBeInTheDocument()
+        })
+      })
+
+      it('should call task retry when clicking Retry All for completed tasks', async () => {
+        const { useAppSpy } = mockUseApp()
+        vi.mocked(window.api.task.getById).mockResolvedValue({
+          success: true,
+          data: mockCompletedTask
+        })
+        vi.mocked(window.api.task.retry).mockResolvedValue({
+          success: true,
+          data: { id: 'task-1' }
+        } as any)
+
+        render(
+          <Wrapper>
+            <Preview />
+          </Wrapper>
+        )
+
+        await waitFor(() => {
+          expect(screen.getByText('More Actions')).toBeInTheDocument()
+        })
+
+        fireEvent.click(screen.getByText('More Actions'))
+
+        await waitFor(() => {
+          expect(screen.getByText('Retry All')).toBeInTheDocument()
+        })
+
+        fireEvent.click(screen.getByText('Retry All'))
+
+        await waitFor(() => {
+          expect(window.api.task.retry).toHaveBeenCalledWith({ taskId: 'task-1' })
+        })
+
+        useAppSpy.mockRestore()
+      })
+
+      it('should show error when task retry fails from Retry All action', async () => {
+        const { useAppSpy, message } = mockUseApp()
+        vi.mocked(window.api.task.getById).mockResolvedValue({
+          success: true,
+          data: mockCompletedTask
+        })
+        vi.mocked(window.api.task.retry).mockResolvedValue({
+          success: false,
+          error: 'retry backend failed'
+        } as any)
+
+        render(
+          <Wrapper>
+            <Preview />
+          </Wrapper>
+        )
+
+        await waitFor(() => {
+          expect(screen.getByText('More Actions')).toBeInTheDocument()
+        })
+
+        fireEvent.click(screen.getByText('More Actions'))
+
+        await waitFor(() => {
+          expect(screen.getByText('Retry All')).toBeInTheDocument()
+        })
+
+        fireEvent.click(screen.getByText('Retry All'))
+
+        await waitFor(() => {
+          expect(message.error).toHaveBeenCalledWith('retry backend failed')
+        })
+
+        useAppSpy.mockRestore()
       })
     })
 

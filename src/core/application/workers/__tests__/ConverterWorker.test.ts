@@ -585,6 +585,8 @@ describe('ConverterWorker', () => {
     };
 
     it('should update page status to COMPLETED', async () => {
+      let pageUpdateData: any;
+
       vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
         const tx = {
           taskDetail: {
@@ -592,7 +594,9 @@ describe('ConverterWorker', () => {
               worker_id: worker.getWorkerId(),
               status: PageStatus.PROCESSING,
             }),
-            update: vi.fn(),
+            update: vi.fn().mockImplementation((params: any) => {
+              pageUpdateData = params.data;
+            }),
           },
           task: {
             findUnique: vi.fn().mockResolvedValue({
@@ -600,6 +604,8 @@ describe('ConverterWorker', () => {
               pages: 10,
               completed_count: 5,
               failed_count: 0,
+              provider: 1,
+              model: 'gpt-4o',
             }),
             update: vi.fn().mockResolvedValue({
               completed_count: 6,
@@ -618,6 +624,8 @@ describe('ConverterWorker', () => {
       await (worker as any).completePageSuccess(mockPage, mockResult);
 
       expect(prisma.$transaction).toHaveBeenCalled();
+      expect(pageUpdateData.provider).toBe(1);
+      expect(pageUpdateData.model).toBe('gpt-4o');
     });
 
     it('should skip if page already completed (idempotency)', async () => {
@@ -823,6 +831,8 @@ describe('ConverterWorker', () => {
               pages: 10,
               completed_count: 5,
               failed_count: 1,
+              provider: 9,
+              model: 'claude-3-7-sonnet',
             }),
             update: vi.fn().mockResolvedValue({ failed_count: 2 }),
           },
@@ -839,6 +849,8 @@ describe('ConverterWorker', () => {
 
       expect(pageUpdateData.status).toBe(PageStatus.FAILED);
       expect(pageUpdateData.error).toBe('Test error');
+      expect(pageUpdateData.provider).toBe(9);
+      expect(pageUpdateData.model).toBe('claude-3-7-sonnet');
     });
 
     it('should set task to FAILED when all pages failed', async () => {

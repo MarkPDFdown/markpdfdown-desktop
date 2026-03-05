@@ -39,6 +39,18 @@
     "action_success": "{{action}} successful",
     "action_failed": "{{action}} failed"
   },
+  "retry": {
+    "confirm_with_model": "Retry Task (Choose Model)",
+    "confirm_cloud_with_model": "Retry Cloud Task (Choose Model)",
+    "select_model": "Select retry model",
+    "load_models_failed": "Failed to load model list",
+    "no_models_available": "No available models. Please configure models in settings first.",
+    "model": {
+      "lite": "Fit Lite",
+      "pro": "Fit Pro",
+      "ultra": "Fit Ultra"
+    }
+  },
   "task_type": {
     "cloud": "Cloud Task",
     "local": "Local Task"

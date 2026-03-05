@@ -32,7 +32,7 @@
     "migrate:reset": "prisma migrate reset --schema=./src/core/infrastructure/db/schema.prisma",
     "generate": "prisma generate --schema=./src/core/infrastructure/db/schema.prisma",
     "logo": "electron-icon-builder --input=./src/renderer/assets/logo.png --output=./public",
-    "test": "vitest",
+    "test": "vitest run",
     "test:unit": "vitest run --config vitest.config.ts",
     "test:renderer": "vitest run --config vitest.config.renderer.ts",
     "test:watch": "vitest watch",

@@ -1,48 +1,58 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, cleanup, waitFor } from '@testing-library/react'
+import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { App } from 'antd'
 import List from '../List'
 
+const tMock = (key: string, params?: any) => {
+  const translations: Record<string, string> = {
+    'messages.fetch_failed': 'Failed to fetch tasks',
+    'messages.delete_success': 'Task deleted',
+    'messages.delete_failed': 'Failed to delete task',
+    'messages.action_success': `${params?.action} successful`,
+    'messages.action_failed': `${params?.action} failed`,
+    'confirmations.delete_title': 'Delete Task',
+    'confirmations.delete_content': 'Are you sure you want to delete this task?',
+    'confirmations.cancel_title': `Confirm ${params?.action}`,
+    'confirmations.cancel_content': `Are you sure you want to ${params?.action}?`,
+    'confirmations.ok': 'OK',
+    'confirmations.cancel': 'Cancel',
+    'status.pending': 'Pending',
+    'status.initializing': 'Initializing',
+    'status.processing': 'Processing',
+    'status.merging_pending': 'Ready to Merge',
+    'status.merging': 'Merging',
+    'status.completed': 'Completed',
+    'status.cancelled': 'Cancelled',
+    'status.failed': 'Failed',
+    'status.partial_failed': 'Partial Failed',
+    'status.unknown': 'Unknown',
+    'columns.file': 'File',
+    'columns.model': 'Model',
+    'columns.progress': 'Progress',
+    'columns.status': 'Status',
+    'columns.action': 'Actions',
+    'actions.view': 'View',
+    'actions.cancel': 'Cancel',
+    'actions.retry': 'Retry',
+    'actions.delete': 'Delete',
+    'retry.confirm_with_model': 'Retry Task (Choose Model)',
+    'retry.confirm_cloud_with_model': 'Retry Cloud Task (Choose Model)',
+    'retry.select_model': 'Select retry model',
+    'retry.load_models_failed': 'Failed to load model list',
+    'retry.no_models_available': 'No available models',
+    'retry.model.lite': 'Fit Lite',
+    'retry.model.pro': 'Fit Pro',
+    'retry.model.ultra': 'Fit Ultra',
+    'task_type.cloud': 'Cloud Task'
+  }
+  return translations[key] || key
+}
+
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, params?: any) => {
-      const translations: Record<string, string> = {
-        'messages.fetch_failed': 'Failed to fetch tasks',
-        'messages.delete_success': 'Task deleted',
-        'messages.delete_failed': 'Failed to delete task',
-        'messages.action_success': `${params?.action} successful`,
-        'messages.action_failed': `${params?.action} failed`,
-        'confirmations.delete_title': 'Delete Task',
-        'confirmations.delete_content': 'Are you sure you want to delete this task?',
-        'confirmations.cancel_title': `Confirm ${params?.action}`,
-        'confirmations.cancel_content': `Are you sure you want to ${params?.action}?`,
-        'confirmations.ok': 'OK',
-        'confirmations.cancel': 'Cancel',
-        'status.pending': 'Pending',
-        'status.initializing': 'Initializing',
-        'status.processing': 'Processing',
-        'status.merging_pending': 'Ready to Merge',
-        'status.merging': 'Merging',
-        'status.completed': 'Completed',
-        'status.cancelled': 'Cancelled',
-        'status.failed': 'Failed',
-        'status.partial_failed': 'Partial Failed',
-        'status.unknown': 'Unknown',
-        'columns.file': 'File',
-        'columns.model': 'Model',
-        'columns.progress': 'Progress',
-        'columns.status': 'Status',
-        'columns.action': 'Actions',
-        'actions.view': 'View',
-        'actions.cancel': 'Cancel',
-        'actions.retry': 'Retry',
-        'actions.delete': 'Delete',
-        'task_type.cloud': 'Cloud Task'
-      }
-      return translations[key] || key
-    },
+    t: tMock,
     i18n: {
       changeLanguage: vi.fn()
     }
@@ -53,7 +63,9 @@ vi.mock('react-i18next', () => ({
 const mockCloudContext = {
   user: { id: '', email: '', fullName: null, imageUrl: '', isLoaded: true, isSignedIn: false },
   isAuthenticated: false,
-  getTasks: vi.fn().mockResolvedValue({ success: false, error: 'Not authenticated' })
+  getTasks: vi.fn().mockResolvedValue({ success: false, error: 'Not authenticated' }),
+  cancelTask: vi.fn().mockResolvedValue({ success: true }),
+  retryTask: vi.fn().mockResolvedValue({ success: true }),
 }
 
 vi.mock('../../contexts/CloudContextDefinition', () => ({
@@ -290,6 +302,112 @@ describe('List', () => {
         expect(deleteButtons.length).toBeGreaterThan(0)
       })
     })
+
+    it('should retry local failed task with selected provider/model payload', async () => {
+      vi.mocked(window.api.model.getAll).mockResolvedValue({
+        success: true,
+        data: [
+          {
+            provider: 9,
+            providerName: 'Custom',
+            models: [{ id: 'vendor@model', name: 'Vendor@Model' }],
+          },
+        ],
+      } as any)
+      vi.mocked(window.api.task.retry).mockResolvedValue({ success: true, data: {} } as any)
+
+      render(
+        <Wrapper>
+          <List />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Retry')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByText('Retry'))
+
+      await waitFor(() => {
+        expect(screen.getAllByText('Retry Task (Choose Model)').length).toBeGreaterThan(0)
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: 'OK' }))
+
+      await waitFor(() => {
+        expect(window.api.task.retry).toHaveBeenCalledWith({
+          taskId: 'task-3',
+          providerId: 9,
+          modelId: 'vendor@model',
+        })
+      })
+    })
+
+    it('should show load model error and skip retry when model list fetch fails', async () => {
+      vi.mocked(window.api.model.getAll).mockResolvedValue({
+        success: false,
+        error: 'load failed',
+      } as any)
+
+      render(
+        <Wrapper>
+          <List />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Retry')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByText('Retry'))
+
+      await waitFor(() => {
+        expect(window.api.task.retry).not.toHaveBeenCalled()
+      })
+    })
+
+    it('should fallback to lite tier when cloud task tier is unknown', async () => {
+      vi.mocked(window.api.task.getAll).mockResolvedValue({
+        success: true,
+        data: {
+          list: [
+            {
+              id: 'cloud-task-1',
+              filename: 'cloud.pdf',
+              type: 'pdf',
+              pages: 2,
+              model_name: 'Markdown.Fit',
+              progress: 0,
+              status: 0,
+              provider: -1,
+            },
+          ],
+          total: 1,
+        },
+      } as any)
+
+      render(
+        <Wrapper>
+          <List />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Retry')).toBeInTheDocument()
+      })
+
+      await waitFor(() => {
+        expect(screen.getAllByText('Retry').length).toBe(1)
+      })
+
+      fireEvent.click(screen.getByText('Retry'))
+      fireEvent.click(screen.getByRole('button', { name: 'OK' }))
+
+      await waitFor(() => {
+        expect(mockCloudContext.retryTask).toHaveBeenCalledWith('cloud-task-1', 'lite')
+      })
+    })
+
   })
 
   describe('Pagination', () => {

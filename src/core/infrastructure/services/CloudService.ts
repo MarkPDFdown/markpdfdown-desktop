@@ -12,6 +12,7 @@ import type {
   CloudCancelTaskResponse,
   CloudRetryPageResponse,
   CloudApiPagination,
+  CloudModelTier,
   PaymentCheckoutApiResponse,
   PaymentCheckoutStatusApiResponse,
   PaymentHistoryApiItem,
@@ -433,15 +434,23 @@ class CloudService {
   /**
    * Retry an entire task (creates a new task)
    */
-  public async retryTask(id: string): Promise<{
+  public async retryTask(id: string, model?: CloudModelTier): Promise<{
     success: boolean;
     data?: CreateTaskResponse;
     error?: string;
   }> {
     try {
-      const res = await authManager.fetchWithAuth(`${API_BASE_URL}/api/v1/tasks/${encodeURIComponent(id)}/retry`, {
-        method: 'POST',
-      });
+      const hasModelOverride = typeof model === 'string' && model.length > 0;
+      const res = await authManager.fetchWithAuth(
+        `${API_BASE_URL}/api/v1/tasks/${encodeURIComponent(id)}/retry`,
+        hasModelOverride
+          ? {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model }),
+            }
+          : { method: 'POST' }
+      );
 
       if (!res.ok) {
         const errorBody = await res.json().catch(() => null);
@@ -469,15 +478,22 @@ class CloudService {
   /**
    * Retry a single page
    */
-  public async retryPage(taskId: string, pageNumber: number): Promise<{
+  public async retryPage(taskId: string, pageNumber: number, model?: CloudModelTier): Promise<{
     success: boolean;
     data?: CloudRetryPageResponse;
     error?: string;
   }> {
     try {
+      const hasModelOverride = typeof model === 'string' && model.length > 0;
       const res = await authManager.fetchWithAuth(
         `${API_BASE_URL}/api/v1/tasks/${encodeURIComponent(taskId)}/pages/${encodeURIComponent(String(pageNumber))}/retry`,
-        { method: 'POST' },
+        hasModelOverride
+          ? {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model }),
+            }
+          : { method: 'POST' },
       );
 
       if (!res.ok) {

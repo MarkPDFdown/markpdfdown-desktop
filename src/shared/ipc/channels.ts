@@ -31,6 +31,7 @@ export const IPC_CHANNELS = {
     GET_ALL: 'task:getAll',
     GET_BY_ID: 'task:getById',
     UPDATE: 'task:update',
+    RETRY: 'task:retry',
     DELETE: 'task:delete',
     HAS_RUNNING: 'task:hasRunningTasks',
   },

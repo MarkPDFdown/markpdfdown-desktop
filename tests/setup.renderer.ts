@@ -25,6 +25,7 @@ const mockWindowApi = {
     getAll: vi.fn(),
     getById: vi.fn(),
     update: vi.fn(),
+    retry: vi.fn(),
     delete: vi.fn(),
     hasRunningTasks: vi.fn(),
   },
@@ -208,6 +209,7 @@ beforeEach(() => {
   mockWindowApi.file.selectDialog.mockResolvedValue({ success: true, data: { canceled: true, filePaths: [] } })
   mockWindowApi.file.copyImageToClipboard.mockResolvedValue({ success: true, data: { copied: true } })
   mockWindowApi.task.create.mockResolvedValue({ success: true, data: [] })
+  mockWindowApi.task.retry.mockResolvedValue({ success: true, data: {} })
 
   mockWindowApi.cloud.getTasks.mockResolvedValue({ success: true, data: [], pagination: { page: 1, page_size: 10, total: 0, total_pages: 0 } })
   mockWindowApi.cloud.getTaskPages.mockResolvedValue({ success: true, data: [], pagination: { page: 1, page_size: 10, total: 0, total_pages: 0 } })

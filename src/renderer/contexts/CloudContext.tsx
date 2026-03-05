@@ -8,7 +8,7 @@ import {
   CloudFileInput,
   CheckoutStatus,
 } from './CloudContextDefinition';
-import type { AuthState, DeviceFlowStatus } from '../../shared/types/cloud-api';
+import type { AuthState, CloudModelTier, DeviceFlowStatus } from '../../shared/types/cloud-api';
 
 interface CloudProviderProps {
   children: ReactNode;
@@ -227,9 +227,12 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
     }
   }, [isAuthenticated, refreshCredits]);
 
-  const retryTask = useCallback(async (id: string) => {
+  const retryTask = useCallback(async (id: string, model?: CloudModelTier) => {
     if (!isAuthenticated) return { success: false, error: 'User not signed in' };
     try {
+      if (model) {
+        return await window.api.cloud.retryTask({ id, model });
+      }
       return await window.api.cloud.retryTask(id);
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : String(error) };
@@ -245,9 +248,12 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
     }
   }, [isAuthenticated]);
 
-  const retryPage = useCallback(async (taskId: string, pageNumber: number) => {
+  const retryPage = useCallback(async (taskId: string, pageNumber: number, model?: CloudModelTier) => {
     if (!isAuthenticated) return { success: false, error: 'User not signed in' };
     try {
+      if (model) {
+        return await window.api.cloud.retryPage({ taskId, pageNumber, model });
+      }
       return await window.api.cloud.retryPage({ taskId, pageNumber });
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : String(error) };

@@ -13,6 +13,9 @@
   "cancel_task": "Cancel",
   "confirm_retry": "Retry Task",
   "confirm_retry_content": "This will create a new task. Are you sure?",
+  "confirm_retry_with_model": "Retry Task (Choose Model)",
+  "confirm_page_retry_with_model": "Retry Current Page (Choose Model)",
+  "select_retry_model": "Select retry model",
   "retry_success": "Retry started",
   "retry_failed": "Retry failed",
   "retry_all": "Retry All",
@@ -40,6 +43,11 @@
   "copy_image_tooltip": "Copy current page image",
   "copy_image_success": "Image copied",
   "copy_image_failed": "Failed to copy image",
+  "retry_model": {
+    "lite": "Fit Lite (~10 credits/page)",
+    "pro": "Fit Pro (~20 credits/page)",
+    "ultra": "Fit Ultra (~60 credits/page)"
+  },
   "page_status": {
     "pending": "Pending",
     "processing": "Processing",

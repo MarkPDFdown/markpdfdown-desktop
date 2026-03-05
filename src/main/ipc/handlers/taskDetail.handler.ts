@@ -79,10 +79,24 @@ export function registerTaskDetailHandlers() {
    */
   ipcMain.handle(
     IPC_CHANNELS.TASK_DETAIL.RETRY,
-    async (_, pageId: number): Promise<IpcResponse> => {
+    async (
+      _,
+      params: number | { pageId: number; providerId?: number; modelId?: string }
+    ): Promise<IpcResponse> => {
       try {
+        const payload = typeof params === 'number' ? { pageId: params } : params;
+        const pageId = payload?.pageId;
+
         if (!pageId) {
           return { success: false, error: "Page ID is required" };
+        }
+
+        const hasProviderOverride = payload?.providerId !== undefined;
+        const hasModelOverride = payload?.modelId !== undefined;
+        const hasAnyModelOverride = hasProviderOverride || hasModelOverride;
+
+        if (hasAnyModelOverride && (!hasProviderOverride || !hasModelOverride)) {
+          return { success: false, error: "providerId and modelId must be provided together" };
         }
 
         const result = await prisma.$transaction(async (tx) => {
@@ -113,6 +127,40 @@ export function registerTaskDetailHandlers() {
             throw new Error("Task is cancelled, cannot retry");
           }
 
+          let targetProvider = page.provider;
+          let targetModel = page.model;
+
+          if (hasAnyModelOverride) {
+            const providerId = payload.providerId as number;
+            const modelId = payload.modelId as string;
+
+            const provider = await tx.provider.findUnique({
+              where: { id: providerId },
+              select: { id: true, status: true },
+            });
+
+            if (!provider || provider.status !== 0) {
+              throw new Error("Provider not found or disabled");
+            }
+
+            const model = await tx.model.findUnique({
+              where: {
+                id_provider: {
+                  id: modelId,
+                  provider: providerId,
+                },
+              },
+              select: { id: true },
+            });
+
+            if (!model) {
+              throw new Error("Model not found for provider");
+            }
+
+            targetProvider = providerId;
+            targetModel = modelId;
+          }
+
           // Step 4: Update page status
           const updatedPage = await tx.taskDetail.update({
             where: { id: pageId },
@@ -127,6 +175,8 @@ export function registerTaskDetailHandlers() {
               output_tokens: 0,
               conversion_time: 0,
               content: "",
+              provider: targetProvider,
+              model: targetModel,
             },
           });
 

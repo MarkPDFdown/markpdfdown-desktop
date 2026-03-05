@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef, useContext } from "react";
-import { Progress, Space, Table, Tooltip, Typography, Tag, App } from "antd";
+import { Progress, Space, Table, Tooltip, Typography, Tag, App, Select } from "antd";
 import {
   FilePdfTwoTone,
   FileImageTwoTone,
@@ -14,9 +14,24 @@ import { useTranslation } from "react-i18next";
 import { Task } from "../../shared/types/Task";
 import { CloudContext } from "../contexts/CloudContextDefinition";
 import { mapCloudTasksToTasks, type CloudTask } from "../utils/cloudTaskMapper";
-import type { CloudSSEEvent } from "../../shared/types/cloud-api";
+import type { CloudModelTier, CloudSSEEvent } from "../../shared/types/cloud-api";
 
 const { Text } = Typography;
+const CLOUD_MODEL_TIERS: CloudModelTier[] = ['lite', 'pro', 'ultra'];
+
+interface LocalModelOption {
+  value: string;
+  label: string;
+}
+
+interface LocalModelGroup {
+  provider: number;
+  providerName: string;
+  models: Array<{
+    id: string;
+    name: string;
+  }>;
+}
 
 const List: React.FC = () => {
   const { message, modal } = App.useApp();
@@ -41,6 +56,52 @@ const List: React.FC = () => {
 
   // Max items to fetch for unified sorting and local pagination
   const MAX_FETCH_ITEMS = 100;
+  const buildLocalModelValue = (modelId: string, providerId: number) => `${modelId}@${providerId}`;
+
+  const parseLocalModelValue = (value: string): { modelId: string; providerId: number } | null => {
+    const separatorIndex = value.lastIndexOf('@');
+    if (separatorIndex <= 0 || separatorIndex === value.length - 1) {
+      return null;
+    }
+
+    const modelId = value.slice(0, separatorIndex);
+    const providerId = Number(value.slice(separatorIndex + 1));
+    if (!modelId || !Number.isInteger(providerId)) {
+      return null;
+    }
+
+    return {
+      modelId,
+      providerId,
+    };
+  };
+
+  const loadLocalModelOptions = useCallback(async (): Promise<LocalModelOption[]> => {
+    const result = await window.api.model.getAll();
+    if (!result.success || !result.data) {
+      throw new Error(result.error || t('retry.load_models_failed'));
+    }
+
+    const modelGroups = result.data as LocalModelGroup[];
+    return modelGroups.flatMap((group) =>
+      group.models.map((model) => ({
+        value: buildLocalModelValue(model.id, group.provider),
+        label: `${model.name} | ${group.providerName}`,
+      }))
+    );
+  }, [t]);
+
+  const parseCloudModelTier = (record: Task | CloudTask): CloudModelTier => {
+    const explicitTier = (record as any)?.model_tier as string | undefined;
+    if (explicitTier && CLOUD_MODEL_TIERS.includes(explicitTier as CloudModelTier)) {
+      return explicitTier as CloudModelTier;
+    }
+
+    const modelName = (record.model_name || '').toLowerCase();
+    if (modelName.includes('ultra')) return 'ultra';
+    if (modelName.includes('pro')) return 'pro';
+    return 'lite';
+  };
 
   const fetchTasks = useCallback(async (page = 1, pageSize = 10) => {
     setLoading(true);
@@ -377,9 +438,73 @@ const List: React.FC = () => {
     });
   };
 
-  // 重试任务
-  const handleRetryTask = (id: string) => {
-    handleUpdateTaskStatus(id, 1, t('actions.retry'));
+  // 本地任务重试（支持切换模型）
+  const handleRetryTask = async (task: Task | CloudTask) => {
+    if (!task.id) return;
+
+    try {
+      const modelOptions = await loadLocalModelOptions();
+      if (modelOptions.length === 0) {
+        message.error(t('retry.no_models_available'));
+        return;
+      }
+
+      const defaultModelValue = (
+        task.model &&
+        task.provider !== undefined &&
+        task.provider >= 0
+      ) ? buildLocalModelValue(task.model, task.provider) : modelOptions[0].value;
+
+      let selectedModelValue = modelOptions.some((opt) => opt.value === defaultModelValue)
+        ? defaultModelValue
+        : modelOptions[0].value;
+
+      modal.confirm({
+        title: t('retry.confirm_with_model'),
+        content: (
+          <div>
+            <div style={{ marginBottom: 8 }}>{t('retry.select_model')}</div>
+            <Select
+              style={{ width: '100%' }}
+              options={modelOptions}
+              defaultValue={selectedModelValue}
+              onChange={(value) => {
+                selectedModelValue = value;
+              }}
+            />
+          </div>
+        ),
+        okText: t('confirmations.ok'),
+        cancelText: t('confirmations.cancel'),
+        onOk: async () => {
+          const parsedModel = parseLocalModelValue(selectedModelValue);
+          if (!parsedModel) {
+            message.error(t('messages.action_failed', { action: t('actions.retry') }));
+            return;
+          }
+
+          const { modelId, providerId } = parsedModel;
+          try {
+            const result = await window.api.task.retry({
+              taskId: task.id as string,
+              providerId,
+              modelId,
+            });
+            if (result.success) {
+              message.success(t('messages.action_success', { action: t('actions.retry') }));
+              fetchTasks(pagination.current, pagination.pageSize);
+            } else {
+              message.error(result.error || t('messages.action_failed', { action: t('actions.retry') }));
+            }
+          } catch (error) {
+            console.error('Failed to retry local task:', error);
+            message.error(t('messages.action_failed', { action: t('actions.retry') }));
+          }
+        },
+      });
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : t('retry.load_models_failed'));
+    }
   };
 
   // 取消任务
@@ -412,16 +537,34 @@ const List: React.FC = () => {
   };
 
   // 云端重试任务
-  const handleCloudRetryTask = async (id: string) => {
+  const handleCloudRetryTask = async (task: Task | CloudTask) => {
     if (!cloudContext) return;
+    if (!task.id) return;
+
+    let selectedModel = parseCloudModelTier(task);
     modal.confirm({
-      title: t('confirmations.cancel_title', { action: t('actions.retry') }),
-      content: t('confirmations.cancel_content', { action: t('actions.retry') }),
+      title: t('retry.confirm_cloud_with_model'),
+      content: (
+        <div>
+          <div style={{ marginBottom: 8 }}>{t('retry.select_model')}</div>
+          <Select
+            style={{ width: '100%' }}
+            options={CLOUD_MODEL_TIERS.map((tier) => ({
+              value: tier,
+              label: t(`retry.model.${tier}`),
+            }))}
+            defaultValue={selectedModel}
+            onChange={(value: CloudModelTier) => {
+              selectedModel = value;
+            }}
+          />
+        </div>
+      ),
       okText: t('confirmations.ok'),
       cancelText: t('confirmations.cancel'),
       onOk: async () => {
         try {
-          const result = await cloudContext.retryTask(id);
+          const result = await cloudContext.retryTask(task.id as string, selectedModel);
           if (result.success) {
             message.success(t('messages.action_success', { action: t('actions.retry') }));
             fetchTasks(pagination.current, pagination.pageSize);
@@ -638,7 +781,7 @@ const List: React.FC = () => {
                 <Text
                   type="warning"
                   style={{ cursor: "pointer" }}
-                  onClick={() => record.id && (isCloud ? handleCloudRetryTask(record.id) : handleRetryTask(record.id))}
+                  onClick={() => record.id && (isCloud ? handleCloudRetryTask(record) : handleRetryTask(record))}
                 >
                   {t('actions.retry')}
                 </Text>

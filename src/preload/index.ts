@@ -40,6 +40,8 @@ contextBridge.exposeInMainWorld("api", {
     getById: (id: string) => ipcRenderer.invoke("task:getById", id),
     update: (id: string, data: any) =>
       ipcRenderer.invoke("task:update", id, data),
+    retry: (params: { taskId: string; providerId?: number; modelId?: string }) =>
+      ipcRenderer.invoke("task:retry", params),
     delete: (id: string) => ipcRenderer.invoke("task:delete", id),
     hasRunningTasks: () => ipcRenderer.invoke("task:hasRunningTasks"),
   },
@@ -50,8 +52,8 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("taskDetail:getByPage", taskId, page),
     getAllByTask: (taskId: string) =>
       ipcRenderer.invoke("taskDetail:getAllByTask", taskId),
-    retry: (pageId: number) =>
-      ipcRenderer.invoke("taskDetail:retry", pageId),
+    retry: (params: number | { pageId: number; providerId?: number; modelId?: string }) =>
+      ipcRenderer.invoke("taskDetail:retry", params),
     retryFailed: (taskId: string) =>
       ipcRenderer.invoke("taskDetail:retryFailed", taskId),
   },
@@ -99,11 +101,11 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("cloud:getTaskPages", params),
     cancelTask: (id: string) =>
       ipcRenderer.invoke("cloud:cancelTask", id),
-    retryTask: (id: string) =>
-      ipcRenderer.invoke("cloud:retryTask", id),
+    retryTask: (params: string | { id: string; model?: 'lite' | 'pro' | 'ultra' }) =>
+      ipcRenderer.invoke("cloud:retryTask", params),
     deleteTask: (id: string) =>
       ipcRenderer.invoke("cloud:deleteTask", id),
-    retryPage: (params: { taskId: string; pageNumber: number }) =>
+    retryPage: (params: { taskId: string; pageNumber: number; model?: 'lite' | 'pro' | 'ultra' }) =>
       ipcRenderer.invoke("cloud:retryPage", params),
     getTaskResult: (id: string) =>
       ipcRenderer.invoke("cloud:getTaskResult", id),

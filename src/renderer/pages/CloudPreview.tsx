@@ -19,6 +19,7 @@ import {
   Dropdown,
   Pagination,
   Progress,
+  Select,
   Space,
   Spin,
   Splitter,
@@ -32,6 +33,7 @@ import { useTranslation } from "react-i18next";
 import MarkdownPreview from "../components/MarkdownPreview";
 import { CloudContext } from "../contexts/CloudContextDefinition";
 import type {
+  CloudModelTier,
   CloudTaskResponse,
   CloudTaskPageResponse,
   CloudSSEEvent,
@@ -42,6 +44,8 @@ const { Text } = Typography;
 const dedupeAndSortPages = (pageItems: CloudTaskPageResponse[]): CloudTaskPageResponse[] =>
   Array.from(new Map(pageItems.map((page) => [page.page, page])).values())
     .sort((a, b) => a.page - b.page);
+
+const CLOUD_MODEL_TIERS: CloudModelTier[] = ['lite', 'pro', 'ultra'];
 
 const CloudPreview: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -383,13 +387,32 @@ const CloudPreview: React.FC = () => {
   const handleRetryTask = async () => {
     if (!id || !cloudContext) return;
 
+    const options = CLOUD_MODEL_TIERS.map((tier) => ({
+      value: tier,
+      label: t(`retry_model.${tier}`),
+    }));
+    const taskTier = (task?.model_tier || 'lite') as CloudModelTier;
+    let selectedModel: CloudModelTier = CLOUD_MODEL_TIERS.includes(taskTier) ? taskTier : 'lite';
+
     modal.confirm({
-      title: t('confirm_retry'),
-      content: t('confirm_retry_content'),
+      title: t('confirm_retry_with_model'),
+      content: (
+        <div style={{ marginTop: 8 }}>
+          <div style={{ marginBottom: 8 }}>{t('select_retry_model')}</div>
+          <Select
+            style={{ width: '100%' }}
+            options={options}
+            defaultValue={selectedModel}
+            onChange={(value) => {
+              selectedModel = value;
+            }}
+          />
+        </div>
+      ),
       okText: tCommon('common.confirm'),
       cancelText: tCommon('common.cancel'),
       onOk: async () => {
-        const result = await cloudContext.retryTask(id);
+        const result = await cloudContext.retryTask(id, selectedModel);
         if (result.success && result.data) {
           message.success(t('retry_success'));
           navigate(`/list/cloud-preview/${result.data.task_id}`);
@@ -404,29 +427,56 @@ const CloudPreview: React.FC = () => {
   const handleRetryPage = async () => {
     if (!id || !cloudContext || !currentPageData) return;
 
-    setRetrying(true);
-    try {
-      const result = await cloudContext.retryPage(id, currentPage);
-      if (result.success) {
-        message.success(t('page_retry_success'));
-        // Update page status locally
-        setPages(prev => {
-          const idx = prev.findIndex(p => p.page === currentPage);
-          if (idx >= 0) {
-            const updated = [...prev];
-            updated[idx] = { ...updated[idx], status: 1 };
-            return updated;
+    const options = CLOUD_MODEL_TIERS.map((tier) => ({
+      value: tier,
+      label: t(`retry_model.${tier}`),
+    }));
+    const taskTier = (task?.model_tier || 'lite') as CloudModelTier;
+    let selectedModel: CloudModelTier = CLOUD_MODEL_TIERS.includes(taskTier) ? taskTier : 'lite';
+
+    modal.confirm({
+      title: t('confirm_page_retry_with_model'),
+      content: (
+        <div style={{ marginTop: 8 }}>
+          <div style={{ marginBottom: 8 }}>{t('select_retry_model')}</div>
+          <Select
+            style={{ width: '100%' }}
+            options={options}
+            defaultValue={selectedModel}
+            onChange={(value) => {
+              selectedModel = value;
+            }}
+          />
+        </div>
+      ),
+      okText: tCommon('common.confirm'),
+      cancelText: tCommon('common.cancel'),
+      onOk: async () => {
+        setRetrying(true);
+        try {
+          const result = await cloudContext.retryPage(id, currentPage, selectedModel);
+          if (result.success) {
+            message.success(t('page_retry_success'));
+            // Update page status locally
+            setPages(prev => {
+              const idx = prev.findIndex(p => p.page === currentPage);
+              if (idx >= 0) {
+                const updated = [...prev];
+                updated[idx] = { ...updated[idx], status: 1 };
+                return updated;
+              }
+              return prev;
+            });
+          } else {
+            message.error(result.error || t('page_retry_failed'));
           }
-          return prev;
-        });
-      } else {
-        message.error(result.error || t('page_retry_failed'));
-      }
-    } catch {
-      message.error(t('page_retry_failed'));
-    } finally {
-      setRetrying(false);
-    }
+        } catch {
+          message.error(t('page_retry_failed'));
+        } finally {
+          setRetrying(false);
+        }
+      },
+    });
   };
 
   // Retry all failed pages
@@ -671,8 +721,8 @@ const CloudPreview: React.FC = () => {
                 });
               }
 
-              // Retry all: status === 0 (failed)
-              if (status === 0) {
+              // Retry all: status === 0 (failed) or status === 6 (completed)
+              if (status === 0 || status === 6) {
                 menuItems.push({
                   key: 'retry_all',
                   icon: <ReloadOutlined />,

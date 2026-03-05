@@ -19,9 +19,20 @@ const mockEventBus = {
 }
 
 const mockPrisma = {
+  $transaction: vi.fn(),
   task: {
     count: vi.fn()
-  }
+  },
+  taskDetail: {
+    count: vi.fn(),
+    updateMany: vi.fn(),
+  },
+  provider: {
+    findUnique: vi.fn(),
+  },
+  model: {
+    findUnique: vi.fn(),
+  },
 }
 
 const mockIpcMain = {
@@ -64,7 +75,8 @@ vi.mock('../../../../shared/types/TaskStatus.js', () => ({
     READY_TO_MERGE: 4,
     MERGING: 5,
     COMPLETED: 6,
-    CANCELLED: 7
+    CANCELLED: 7,
+    PARTIAL_FAILED: 8,
   }
 }))
 
@@ -75,6 +87,7 @@ vi.mock('../../../../shared/ipc/channels.js', () => ({
       GET_ALL: 'task:getAll',
       GET_BY_ID: 'task:getById',
       UPDATE: 'task:update',
+      RETRY: 'task:retry',
       DELETE: 'task:delete',
       HAS_RUNNING: 'task:hasRunningTasks'
     }
@@ -287,6 +300,342 @@ describe('Task Handler', () => {
         'task:status_changed',
         expect.anything()
       )
+    })
+  })
+
+  describe('task:retry', () => {
+    it('should retry task with legacy string payload', async () => {
+      const taskUpdate = vi.fn().mockResolvedValue({
+        id: 'task-1',
+        status: 3,
+        provider: 1,
+        model: 'gpt-4o',
+      })
+
+      mockPrisma.$transaction.mockImplementation(async (callback: any) => {
+        const tx = {
+          task: {
+            findUnique: vi.fn().mockResolvedValue({
+              id: 'task-1',
+              status: 0,
+              provider: 1,
+              model: 'gpt-4o',
+              model_name: 'GPT-4o | OpenAI',
+            }),
+            update: taskUpdate,
+          },
+          taskDetail: {
+            count: vi.fn().mockResolvedValue(2),
+            updateMany: vi.fn().mockResolvedValue({ count: 2 }),
+          },
+          provider: {
+            findUnique: vi.fn(),
+          },
+          model: {
+            findUnique: vi.fn(),
+          },
+        }
+        return callback(tx)
+      })
+
+      const handler = handlers.get('task:retry')
+      const result = await handler!({}, 'task-1')
+
+      expect(result.success).toBe(true)
+      expect(taskUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'task-1' },
+        })
+      )
+    })
+
+    it('should retry task with model override', async () => {
+      const taskDetailUpdateMany = vi.fn().mockResolvedValue({ count: 3 })
+      const taskUpdate = vi.fn().mockResolvedValue({
+        id: 'task-1',
+        status: 3,
+        provider: 2,
+        model: 'gpt-4.1',
+      })
+
+      mockPrisma.$transaction.mockImplementation(async (callback: any) => {
+        const tx = {
+          task: {
+            findUnique: vi.fn().mockResolvedValue({
+              id: 'task-1',
+              status: 0,
+              provider: 1,
+              model: 'gpt-4o',
+              model_name: 'GPT-4o | OpenAI',
+            }),
+            update: taskUpdate,
+          },
+          taskDetail: {
+            count: vi.fn().mockResolvedValue(3),
+            updateMany: taskDetailUpdateMany,
+          },
+          provider: {
+            findUnique: vi.fn().mockResolvedValue({ id: 2, name: 'Anthropic', status: 0 }),
+          },
+          model: {
+            findUnique: vi.fn().mockResolvedValue({ id: 'gpt-4.1', name: 'GPT-4.1', provider: 2 }),
+          },
+        }
+        return callback(tx)
+      })
+
+      const handler = handlers.get('task:retry')
+      const result = await handler!({}, { taskId: 'task-1', providerId: 2, modelId: 'gpt-4.1' })
+
+      expect(result.success).toBe(true)
+      expect(taskDetailUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { task: 'task-1' },
+          data: expect.objectContaining({
+            provider: 2,
+            model: 'gpt-4.1',
+          }),
+        })
+      )
+      expect(taskUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'task-1' },
+          data: expect.objectContaining({
+            provider: 2,
+            model: 'gpt-4.1',
+            status: 3,
+          }),
+        })
+      )
+      expect(mockEventBus.emitTaskEvent).toHaveBeenCalledWith(
+        'task:status_changed',
+        expect.objectContaining({
+          taskId: 'task-1',
+          task: { status: 3 },
+        })
+      )
+    })
+
+    it('should set task to pending when task has no details', async () => {
+      const taskDetailUpdateMany = vi.fn().mockResolvedValue({ count: 0 })
+      const taskUpdate = vi.fn().mockResolvedValue({
+        id: 'task-1',
+        status: 1,
+        provider: 1,
+        model: 'gpt-4o',
+      })
+
+      mockPrisma.$transaction.mockImplementation(async (callback: any) => {
+        const tx = {
+          task: {
+            findUnique: vi.fn().mockResolvedValue({
+              id: 'task-1',
+              status: 0,
+              provider: 1,
+              model: 'gpt-4o',
+              model_name: 'GPT-4o | OpenAI',
+            }),
+            update: taskUpdate,
+          },
+          taskDetail: {
+            count: vi.fn().mockResolvedValue(0),
+            updateMany: taskDetailUpdateMany,
+          },
+          provider: {
+            findUnique: vi.fn(),
+          },
+          model: {
+            findUnique: vi.fn(),
+          },
+        }
+        return callback(tx)
+      })
+
+      const handler = handlers.get('task:retry')
+      const result = await handler!({}, { taskId: 'task-1' })
+
+      expect(result.success).toBe(true)
+      expect(taskDetailUpdateMany).not.toHaveBeenCalled()
+      expect(taskUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: 1,
+          }),
+        })
+      )
+      expect(mockEventBus.emitTaskEvent).toHaveBeenCalledWith(
+        'task:status_changed',
+        expect.objectContaining({
+          taskId: 'task-1',
+          task: { status: 1 },
+        })
+      )
+    })
+
+    it('should return error when taskId is missing', async () => {
+      const handler = handlers.get('task:retry')
+      const result = await handler!({}, { taskId: '' })
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Task ID is required'
+      })
+    })
+
+    it('should return error when model override params are incomplete', async () => {
+      const handler = handlers.get('task:retry')
+      const result = await handler!({}, { taskId: 'task-1', providerId: 1 })
+
+      expect(result).toEqual({
+        success: false,
+        error: 'providerId and modelId must be provided together'
+      })
+    })
+
+    it('should reject non-retryable task status', async () => {
+      mockPrisma.$transaction.mockImplementation(async (callback: any) => {
+        const tx = {
+          task: {
+            findUnique: vi.fn().mockResolvedValue({
+              id: 'task-1',
+              status: 3,
+              provider: 1,
+              model: 'gpt-4o',
+              model_name: 'GPT-4o | OpenAI',
+            }),
+          },
+          taskDetail: {
+            count: vi.fn(),
+            updateMany: vi.fn(),
+          },
+          provider: {
+            findUnique: vi.fn(),
+          },
+          model: {
+            findUnique: vi.fn(),
+          },
+        }
+        return callback(tx)
+      })
+
+      const handler = handlers.get('task:retry')
+      const result = await handler!({}, { taskId: 'task-1' })
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Task is not retryable'
+      })
+    })
+
+    it('should return error when override provider is not found', async () => {
+      mockPrisma.$transaction.mockImplementation(async (callback: any) => {
+        const tx = {
+          task: {
+            findUnique: vi.fn().mockResolvedValue({
+              id: 'task-1',
+              status: 0,
+              provider: 1,
+              model: 'gpt-4o',
+              model_name: 'GPT-4o | OpenAI',
+            }),
+            update: vi.fn(),
+          },
+          taskDetail: {
+            count: vi.fn().mockResolvedValue(1),
+            updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          },
+          provider: {
+            findUnique: vi.fn().mockResolvedValue(null),
+          },
+          model: {
+            findUnique: vi.fn(),
+          },
+        }
+        return callback(tx)
+      })
+
+      const handler = handlers.get('task:retry')
+      const result = await handler!({}, { taskId: 'task-1', providerId: 2, modelId: 'gpt-4.1' })
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Provider not found or disabled'
+      })
+      expect(mockEventBus.emitTaskEvent).not.toHaveBeenCalled()
+    })
+
+    it('should return error when override provider is disabled', async () => {
+      mockPrisma.$transaction.mockImplementation(async (callback: any) => {
+        const tx = {
+          task: {
+            findUnique: vi.fn().mockResolvedValue({
+              id: 'task-1',
+              status: 0,
+              provider: 1,
+              model: 'gpt-4o',
+              model_name: 'GPT-4o | OpenAI',
+            }),
+            update: vi.fn(),
+          },
+          taskDetail: {
+            count: vi.fn().mockResolvedValue(1),
+            updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          },
+          provider: {
+            findUnique: vi.fn().mockResolvedValue({ id: 2, name: 'Disabled', status: 1 }),
+          },
+          model: {
+            findUnique: vi.fn(),
+          },
+        }
+        return callback(tx)
+      })
+
+      const handler = handlers.get('task:retry')
+      const result = await handler!({}, { taskId: 'task-1', providerId: 2, modelId: 'gpt-4.1' })
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Provider not found or disabled'
+      })
+      expect(mockEventBus.emitTaskEvent).not.toHaveBeenCalled()
+    })
+
+    it('should return error when override model is not found', async () => {
+      mockPrisma.$transaction.mockImplementation(async (callback: any) => {
+        const tx = {
+          task: {
+            findUnique: vi.fn().mockResolvedValue({
+              id: 'task-1',
+              status: 0,
+              provider: 1,
+              model: 'gpt-4o',
+              model_name: 'GPT-4o | OpenAI',
+            }),
+            update: vi.fn(),
+          },
+          taskDetail: {
+            count: vi.fn().mockResolvedValue(1),
+            updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          },
+          provider: {
+            findUnique: vi.fn().mockResolvedValue({ id: 2, name: 'Anthropic', status: 0 }),
+          },
+          model: {
+            findUnique: vi.fn().mockResolvedValue(null),
+          },
+        }
+        return callback(tx)
+      })
+
+      const handler = handlers.get('task:retry')
+      const result = await handler!({}, { taskId: 'task-1', providerId: 2, modelId: 'gpt-4.1' })
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Model not found for provider'
+      })
+      expect(mockEventBus.emitTaskEvent).not.toHaveBeenCalled()
     })
   })
 
