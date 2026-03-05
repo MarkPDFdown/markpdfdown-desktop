@@ -224,6 +224,11 @@ interface ElectronAPI {
       taskId: string,
       filePath: string,
     ) => Promise<IpcResponse<FileUploadResult>>;
+    uploadFileContent: (
+      taskId: string,
+      fileName: string,
+      fileBuffer: ArrayBuffer,
+    ) => Promise<IpcResponse<FileUploadResult>>;
     getImagePath: (
       taskId: string,
       page: number,
@@ -231,6 +236,9 @@ interface ElectronAPI {
     downloadMarkdown: (
       taskId: string,
     ) => Promise<IpcResponse<{ savedPath: string }>>;
+    copyImageToClipboard: (
+      imageSource: string,
+    ) => Promise<IpcResponse<{ copied: true }>>;
   };
 
   completion: {

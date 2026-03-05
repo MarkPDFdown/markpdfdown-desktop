@@ -67,6 +67,8 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("file:getImagePath", taskId, page),
     downloadMarkdown: (taskId: string) =>
       ipcRenderer.invoke("file:downloadMarkdown", taskId),
+    copyImageToClipboard: (imageSource: string) =>
+      ipcRenderer.invoke("file:copyImageToClipboard", imageSource),
   },
 
   // ==================== Completion APIs ====================

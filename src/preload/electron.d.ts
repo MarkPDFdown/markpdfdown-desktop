@@ -99,6 +99,7 @@ interface WindowAPI {
     uploadFileContent: (taskId: string, fileName: string, fileBuffer: ArrayBuffer) => Promise<any>;
     getImagePath: (taskId: string, page: number) => Promise<any>;
     downloadMarkdown: (taskId: string) => Promise<any>;
+    copyImageToClipboard: (imageSource: string) => Promise<any>;
   };
   completion: {
     markImagedown: (providerId: number, modelId: string, url: string) => Promise<any>;

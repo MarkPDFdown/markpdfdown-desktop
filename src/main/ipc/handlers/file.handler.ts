@@ -1,11 +1,32 @@
-import { ipcMain, dialog } from "electron";
+import { ipcMain, dialog, clipboard, nativeImage } from "electron";
 import path from "path";
 import fs from "fs";
+import { fileURLToPath } from "url";
 import taskRepository from "../../../core/domain/repositories/TaskRepository.js";
 import fileLogic from "../../../core/infrastructure/services/FileService.js";
 import { ImagePathUtil } from "../../../core/infrastructure/adapters/split/index.js";
 import { IPC_CHANNELS } from "../../../shared/ipc/channels.js";
 import type { IpcResponse } from "../../../shared/ipc/responses.js";
+
+async function createImageFromSource(imageSource: string) {
+  const normalizedSource = imageSource.trim();
+  const lowerSource = normalizedSource.toLowerCase();
+
+  if (lowerSource.startsWith("data:image/")) {
+    return nativeImage.createFromDataURL(normalizedSource);
+  }
+
+  // Do not allow renderer-provided remote URLs to avoid SSRF/network abuse.
+  if (lowerSource.startsWith("http://") || lowerSource.startsWith("https://")) {
+    throw new Error("Remote image URLs are not allowed");
+  }
+
+  if (lowerSource.startsWith("file://")) {
+    return nativeImage.createFromPath(fileURLToPath(normalizedSource));
+  }
+
+  return nativeImage.createFromPath(normalizedSource);
+}
 
 /**
  * Register all file-related IPC handlers
@@ -92,6 +113,31 @@ export function registerFileHandlers() {
       } catch (error: any) {
         console.error("[IPC] file:downloadMarkdown error:", error);
         return { success: false, error: error.message };
+      }
+    }
+  );
+
+  /**
+   * Copy image to clipboard
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.FILE.COPY_IMAGE_TO_CLIPBOARD,
+    async (_, imageSource: string): Promise<IpcResponse> => {
+      try {
+        if (!imageSource) {
+          return { success: false, error: "Image source is required" };
+        }
+
+        const image = await createImageFromSource(imageSource);
+        if (image.isEmpty()) {
+          return { success: false, error: "Image data is empty or invalid" };
+        }
+
+        clipboard.writeImage(image);
+        return { success: true, data: { copied: true } };
+      } catch (error: any) {
+        console.error("[IPC] file:copyImageToClipboard error:", error);
+        return { success: false, error: error.message || "Failed to copy image" };
       }
     }
   );

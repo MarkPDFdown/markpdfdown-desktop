@@ -1,6 +1,7 @@
 {
   "back": "返回",
   "fetch_task_failed": "获取任务失败",
+  "download": "下载",
   "download_md": "下载 MD",
   "download_pdf": "下载 PDF",
   "download_success": "下载成功",
@@ -31,6 +32,14 @@
   "page_label": "第 {{page}} 页 / 共 {{total}} 页",
   "regenerate": "重新生成",
   "regenerate_tooltip": "重试此页面的转换",
+  "copy_markdown": "复制 Markdown",
+  "copy_markdown_tooltip": "复制当前页 Markdown",
+  "copy_markdown_success": "Markdown 已复制",
+  "copy_markdown_failed": "复制 Markdown 失败",
+  "copy_image": "复制图片",
+  "copy_image_tooltip": "复制当前页图片",
+  "copy_image_success": "图片已复制",
+  "copy_image_failed": "复制图片失败",
   "page_status": {
     "pending": "待处理",
     "processing": "处理中",

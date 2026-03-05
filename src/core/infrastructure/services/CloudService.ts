@@ -37,6 +37,109 @@ class CloudService {
 
   private constructor() {}
 
+  private extractDownloadFileName(contentDisposition: string, fallback: string): string {
+    const rfc5987Name = this.parseRFC5987Filename(contentDisposition);
+    if (rfc5987Name) {
+      return this.sanitizeDownloadFileName(rfc5987Name, fallback);
+    }
+
+    const plainName = this.parsePlainFilename(contentDisposition);
+    if (!plainName) {
+      return this.sanitizeDownloadFileName(fallback, fallback);
+    }
+
+    const repairedName = this.tryRepairUtf8Mojibake(plainName);
+    return this.sanitizeDownloadFileName(repairedName || plainName, fallback);
+  }
+
+  private parseRFC5987Filename(contentDisposition: string): string | null {
+    const match = contentDisposition.match(/filename\*\s*=\s*([^;]+)/i);
+    if (!match) return null;
+
+    const rawValue = match[1]?.trim();
+    if (!rawValue) return null;
+
+    const unquoted = rawValue.replace(/^"(.*)"$/, '$1');
+    const parts = unquoted.match(/^([^']*)'[^']*'(.*)$/);
+    if (!parts) return null;
+
+    const charset = (parts[1] || 'utf-8').trim().toLowerCase();
+    const encodedValue = parts[2] || '';
+
+    try {
+      if (charset === 'utf-8' || charset === 'utf8') {
+        return decodeURIComponent(encodedValue);
+      }
+
+      const bytes = this.percentDecodeToBytes(encodedValue);
+      if (charset === 'iso-8859-1' || charset === 'latin1') {
+        return Buffer.from(bytes).toString('latin1');
+      }
+      return Buffer.from(bytes).toString('utf8');
+    } catch {
+      return null;
+    }
+  }
+
+  private parsePlainFilename(contentDisposition: string): string | null {
+    const match = contentDisposition.match(/filename\s*=\s*("(?:\\.|[^"])*"|[^;]+)/i);
+    if (!match) return null;
+
+    let value = match[1]?.trim();
+    if (!value) return null;
+
+    if (value.startsWith('"') && value.endsWith('"')) {
+      value = value.slice(1, -1).replace(/\\"/g, '"');
+    }
+
+    return value;
+  }
+
+  private percentDecodeToBytes(input: string): number[] {
+    const bytes: number[] = [];
+    for (let i = 0; i < input.length; i++) {
+      const ch = input[i];
+      if (ch === '%' && i + 2 < input.length) {
+        const hex = input.slice(i + 1, i + 3);
+        const parsed = Number.parseInt(hex, 16);
+        if (!Number.isNaN(parsed)) {
+          bytes.push(parsed);
+          i += 2;
+          continue;
+        }
+      }
+      bytes.push(input.charCodeAt(i));
+    }
+    return bytes;
+  }
+
+  private tryRepairUtf8Mojibake(input: string): string | null {
+    const hasCjk = /[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]/.test(input);
+    if (hasCjk) return null;
+
+    const latinSupplementCount = Array.from(input).filter((ch) => {
+      const code = ch.charCodeAt(0);
+      return code >= 0x00c0 && code <= 0x00ff;
+    }).length;
+    if (latinSupplementCount < 2) return null;
+
+    const repaired = Buffer.from(input, 'latin1').toString('utf8');
+    if (!repaired) return null;
+
+    const repairedHasCjk = /[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]/.test(repaired);
+    const roundTrip = Buffer.from(repaired, 'utf8').toString('latin1') === input;
+    if (repairedHasCjk && roundTrip) {
+      return repaired;
+    }
+    return null;
+  }
+
+  private sanitizeDownloadFileName(input: string, fallback: string): string {
+    // Sanitize: extract basename and strip control/reserved characters
+    // eslint-disable-next-line no-control-regex
+    return path.basename(input).replace(/[\u0000-\u001f<>:"|?*]/g, '_') || fallback;
+  }
+
   private normalizeCheckoutStatus(data: any): PaymentCheckoutStatusApiResponse | null {
     if (!data || typeof data !== 'object') {
       return null;
@@ -454,11 +557,8 @@ class CloudService {
       }
 
       const contentDisposition = res.headers.get('Content-Disposition') || '';
-      const match = contentDisposition.match(/filename="?([^";\n]+)"?/);
-      const rawName = match ? match[1] : `task-${id}.pdf`;
-      // Sanitize: extract basename and strip control/reserved characters
-      // eslint-disable-next-line no-control-regex
-      const fileName = path.basename(rawName).replace(/[\u0000-\u001f<>:"|?*]/g, '_') || `task-${id}.pdf`;
+      const fallbackName = `task-${id}.pdf`;
+      const fileName = this.extractDownloadFileName(contentDisposition, fallbackName);
 
       const buffer = await res.arrayBuffer();
       return { success: true, data: { buffer, fileName } };

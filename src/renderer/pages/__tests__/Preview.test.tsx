@@ -15,6 +15,14 @@ const translations: Record<string, string> = {
   'preview.delete': 'Delete',
   'preview.regenerate': 'Regenerate',
   'preview.regenerate_tooltip': 'Regenerate this page',
+  'preview.copy_markdown': 'Copy Markdown',
+  'preview.copy_markdown_tooltip': 'Copy current page markdown',
+  'preview.copy_markdown_success': 'Markdown copied',
+  'preview.copy_markdown_failed': 'Failed to copy markdown',
+  'preview.copy_image': 'Copy Image',
+  'preview.copy_image_tooltip': 'Copy current page image',
+  'preview.copy_image_success': 'Image copied',
+  'preview.copy_image_failed': 'Failed to copy image',
   'preview.confirm_delete': 'Delete Task',
   'preview.confirm_delete_content': 'Are you sure you want to delete this task?',
   'preview.confirm_cancel': 'Cancel Task',
@@ -74,6 +82,26 @@ const Wrapper = ({ children }: { children: React.ReactNode }) => (
     </Routes>
   </MemoryRouter>
 )
+
+const mockUseApp = () => {
+  const message = {
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+    info: vi.fn(),
+    loading: vi.fn(),
+    open: vi.fn(),
+    destroy: vi.fn(),
+  }
+  const useAppSpy = vi.spyOn(App, 'useApp').mockReturnValue({
+    message: message as any,
+    modal: {
+      confirm: ({ onOk }: any) => onOk?.(),
+    } as any,
+    notification: {} as any,
+  } as any)
+  return { useAppSpy, message }
+}
 
 describe('Preview', () => {
   const mockTask = {
@@ -259,7 +287,7 @@ describe('Preview', () => {
       )
 
       await waitFor(() => {
-        const img = document.querySelector('img')
+        const img = screen.getByRole('img', { name: 'Page 1' })
         expect(img).toBeInTheDocument()
         expect(img?.alt).toBe('Page 1')
       })
@@ -306,6 +334,94 @@ describe('Preview', () => {
       await waitFor(() => {
         expect(screen.getByTestId('markdown-preview')).toHaveTextContent('# Page 1 Content')
       })
+    })
+  })
+
+  describe('Copy Actions', () => {
+    it('should copy current page markdown', async () => {
+      render(
+        <Wrapper>
+          <Preview />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('markdown-preview')).toHaveTextContent('# Page 1 Content')
+      })
+
+      const copyMarkdownButton = screen.getByRole('button', { name: 'Copy Markdown' })
+      fireEvent.click(copyMarkdownButton)
+
+      await waitFor(() => {
+        expect(navigator.clipboard.writeText).toHaveBeenCalledWith('# Page 1 Content\n\nThis is the content.')
+      })
+    })
+
+    it('should copy current page image', async () => {
+      render(
+        <Wrapper>
+          <Preview />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        const img = screen.getByRole('img', { name: 'Page 1' })
+        expect(img).toBeInTheDocument()
+      })
+
+      const copyImageButton = screen.getByRole('button', { name: 'Copy Image' })
+      fireEvent.click(copyImageButton)
+
+      await waitFor(() => {
+        expect(window.api.file.copyImageToClipboard).toHaveBeenCalledWith('C:\\images\\page1.png')
+      })
+    })
+
+    it('should show error when markdown copy fails', async () => {
+      const { useAppSpy, message } = mockUseApp()
+      vi.mocked(navigator.clipboard.writeText).mockRejectedValueOnce(new Error('clipboard denied'))
+
+      render(
+        <Wrapper>
+          <Preview />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('markdown-preview')).toHaveTextContent('# Page 1 Content')
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: 'Copy Markdown' }))
+
+      await waitFor(() => {
+        expect(message.error).toHaveBeenCalledWith('Failed to copy markdown')
+      })
+      useAppSpy.mockRestore()
+    })
+
+    it('should show error when image copy IPC fails', async () => {
+      const { useAppSpy, message } = mockUseApp()
+      vi.mocked(window.api.file.copyImageToClipboard).mockResolvedValueOnce({
+        success: false,
+        error: 'copy denied',
+      })
+
+      render(
+        <Wrapper>
+          <Preview />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByRole('img', { name: 'Page 1' })).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: 'Copy Image' }))
+
+      await waitFor(() => {
+        expect(message.error).toHaveBeenCalledWith('copy denied')
+      })
+      useAppSpy.mockRestore()
     })
   })
 

@@ -1,6 +1,7 @@
 {
   "back": "رجوع",
   "fetch_task_failed": "فشل في جلب المهمة",
+  "download": "تحميل",
   "download_md": "تحميل MD",
   "download_pdf": "تحميل PDF",
   "download_success": "تم التحميل بنجاح",
@@ -31,6 +32,14 @@
   "page_label": "صفحة {{page}} / {{total}}",
   "regenerate": "إعادة إنشاء",
   "regenerate_tooltip": "إعادة محاولة تحويل هذه الصفحة",
+  "copy_markdown": "نسخ Markdown",
+  "copy_markdown_tooltip": "نسخ Markdown للصفحة الحالية",
+  "copy_markdown_success": "تم نسخ Markdown",
+  "copy_markdown_failed": "فشل نسخ Markdown",
+  "copy_image": "نسخ الصورة",
+  "copy_image_tooltip": "نسخ صورة الصفحة الحالية",
+  "copy_image_success": "تم نسخ الصورة",
+  "copy_image_failed": "فشل نسخ الصورة",
   "page_status": {
     "pending": "في الانتظار",
     "processing": "قيد المعالجة",

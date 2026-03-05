@@ -3,9 +3,12 @@ import {
   CheckCircleFilled,
   ClockCircleFilled,
   CloseCircleFilled,
+  CopyOutlined,
   DeleteOutlined,
+  DownloadOutlined,
   DownOutlined,
   FileMarkdownOutlined,
+  FilePdfOutlined,
   LoadingOutlined,
   ReloadOutlined,
   StopOutlined,
@@ -310,7 +313,7 @@ const CloudPreview: React.FC = () => {
   }, [id]);
 
   // Download result as markdown
-  const handleDownloadResult = async () => {
+  const handleDownloadMarkdown = async () => {
     if (!id || !cloudContext) return;
 
     setDownloading(true);
@@ -325,6 +328,25 @@ const CloudPreview: React.FC = () => {
         a.download = (task?.file_name?.replace(/\.[^.]+$/, '') || 'result') + '.md';
         a.click();
         URL.revokeObjectURL(url);
+        message.success(t('download_success'));
+      } else {
+        message.error(result.error || t('download_failed'));
+      }
+    } catch {
+      message.error(t('download_failed'));
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  // Download generated PDF
+  const handleDownloadPdf = async () => {
+    if (!id || !cloudContext) return;
+
+    setDownloading(true);
+    try {
+      const result = await cloudContext.downloadResult(id);
+      if (result.success) {
         message.success(t('download_success'));
       } else {
         message.error(result.error || t('download_failed'));
@@ -450,6 +472,52 @@ const CloudPreview: React.FC = () => {
     });
   };
 
+  // Copy current page markdown
+  const handleCopyMarkdown = async () => {
+    const markdown = currentPageData?.markdown || '';
+    if (!markdown) return;
+
+    try {
+      await navigator.clipboard.writeText(markdown);
+      message.success(t('copy_markdown_success'));
+    } catch {
+      message.error(t('copy_markdown_failed'));
+    }
+  };
+
+  // Copy current page image to system clipboard
+  const handleCopyImage = async () => {
+    if (!imageUrl) return;
+
+    try {
+      let sourceForClipboard = imageUrl;
+      const isRemoteImage = imageUrl.startsWith('http://') || imageUrl.startsWith('https://');
+
+      if (isRemoteImage) {
+        if (!id || !currentPageData) {
+          message.error(t('copy_image_failed'));
+          return;
+        }
+
+        const proxyImageResult = await window.api.cloud.getPageImage({ taskId: id, pageNumber: currentPageData.page });
+        if (!proxyImageResult.success || !proxyImageResult.data?.dataUrl) {
+          message.error(proxyImageResult.error || t('copy_image_failed'));
+          return;
+        }
+        sourceForClipboard = proxyImageResult.data.dataUrl;
+      }
+
+      const result = await window.api.file.copyImageToClipboard(sourceForClipboard);
+      if (result.success) {
+        message.success(t('copy_image_success'));
+      } else {
+        message.error(result.error || t('copy_image_failed'));
+      }
+    } catch {
+      message.error(t('copy_image_failed'));
+    }
+  };
+
   // Delete task
   const handleDelete = async () => {
     if (!id || !cloudContext) return;
@@ -511,6 +579,21 @@ const CloudPreview: React.FC = () => {
   const pageStatusInfo = getPageStatusInfo();
   const totalPages = task?.page_count || 0;
   const progress = task ? (task.status === 6 ? 100 : totalPages > 0 ? Math.round(((task.pages_completed || 0) / totalPages) * 100) : 0) : 0;
+  const canDownload = task?.status === 6 && !downloading;
+  const downloadMenuItems: MenuProps['items'] = [
+    {
+      key: 'download_md',
+      icon: <FileMarkdownOutlined />,
+      label: t('download_md'),
+      onClick: handleDownloadMarkdown,
+    },
+    {
+      key: 'download_pdf',
+      icon: <FilePdfOutlined />,
+      label: t('download_pdf'),
+      onClick: handleDownloadPdf,
+    },
+  ];
 
   return (
     <App>
@@ -554,16 +637,21 @@ const CloudPreview: React.FC = () => {
           </div>
 
           <Space>
-            {/* Download Markdown */}
-            <Button
-              color="primary"
-              icon={downloading ? <LoadingOutlined /> : <FileMarkdownOutlined />}
-              variant="filled"
-              onClick={handleDownloadResult}
-              disabled={task?.status !== 6 || downloading}
+            <Dropdown
+              menu={{ items: downloadMenuItems }}
+              trigger={['click']}
+              disabled={!canDownload}
             >
-              {t('download_md')}
-            </Button>
+              <Button
+                color="primary"
+                icon={downloading ? <LoadingOutlined /> : <DownloadOutlined />}
+                variant="filled"
+                disabled={!canDownload}
+              >
+                {t('download')}
+                <DownOutlined />
+              </Button>
+            </Dropdown>
 
             {/* Action dropdown */}
             {(() => {
@@ -700,8 +788,20 @@ const CloudPreview: React.FC = () => {
                 justifyContent: "center",
                 alignItems: "center",
                 overflow: "hidden",
+                position: "relative",
               }}
             >
+              <Tooltip title={t('copy_image_tooltip')}>
+                <Button
+                  className="preview-floating-action"
+                  aria-label={t('copy_image')}
+                  icon={<CopyOutlined />}
+                  shape="circle"
+                  size="small"
+                  onClick={handleCopyImage}
+                  disabled={loading || imageLoading || imageError || !imageUrl}
+                />
+              </Tooltip>
               {loading || imageLoading ? (
                 <Spin size="large" />
               ) : !currentPageData ? (
@@ -766,8 +866,21 @@ const CloudPreview: React.FC = () => {
           </Splitter.Panel>
 
           {/* Markdown Panel */}
-          <Splitter.Panel style={{ overflow: "auto", minWidth: 0 }}>
-            <MarkdownPreview content={currentPageData?.markdown || ''} />
+          <Splitter.Panel style={{ overflow: "hidden", minWidth: 0 }}>
+            <div style={{ position: "relative", height: "100%" }}>
+              <Tooltip title={t('copy_markdown_tooltip')}>
+                <Button
+                  className="preview-floating-action"
+                  aria-label={t('copy_markdown')}
+                  icon={<CopyOutlined />}
+                  shape="circle"
+                  size="small"
+                  onClick={handleCopyMarkdown}
+                  disabled={!currentPageData?.markdown}
+                />
+              </Tooltip>
+              <MarkdownPreview content={currentPageData?.markdown || ''} />
+            </div>
           </Splitter.Panel>
         </Splitter>
 

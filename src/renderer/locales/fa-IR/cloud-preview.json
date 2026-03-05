@@ -1,6 +1,7 @@
 {
   "back": "بازگشت",
   "fetch_task_failed": "دریافت وظیفه ناموفق بود",
+  "download": "دانلود",
   "download_md": "دانلود MD",
   "download_pdf": "دانلود PDF",
   "download_success": "دانلود موفق",
@@ -31,6 +32,14 @@
   "page_label": "صفحه {{page}} / {{total}}",
   "regenerate": "بازتولید",
   "regenerate_tooltip": "تلاش مجدد تبدیل این صفحه",
+  "copy_markdown": "کپی Markdown",
+  "copy_markdown_tooltip": "کپی Markdown صفحه فعلی",
+  "copy_markdown_success": "Markdown کپی شد",
+  "copy_markdown_failed": "کپی Markdown ناموفق بود",
+  "copy_image": "کپی تصویر",
+  "copy_image_tooltip": "کپی تصویر صفحه فعلی",
+  "copy_image_success": "تصویر کپی شد",
+  "copy_image_failed": "کپی تصویر ناموفق بود",
   "page_status": {
     "pending": "در انتظار",
     "processing": "در حال پردازش",

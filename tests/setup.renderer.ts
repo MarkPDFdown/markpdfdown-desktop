@@ -40,6 +40,7 @@ const mockWindowApi = {
     uploadFileContent: vi.fn(),
     getImagePath: vi.fn(),
     downloadMarkdown: vi.fn(),
+    copyImageToClipboard: vi.fn(),
   },
   completion: {
     markImagedown: vi.fn(),
@@ -190,6 +191,13 @@ if (!window.HTMLElement.prototype.scrollIntoView) {
   window.HTMLElement.prototype.scrollIntoView = vi.fn()
 }
 
+Object.defineProperty(navigator, 'clipboard', {
+  configurable: true,
+  value: {
+    writeText: vi.fn().mockResolvedValue(undefined),
+  },
+})
+
 // Reset all mocks before each test
 beforeEach(() => {
   vi.clearAllMocks()
@@ -198,6 +206,7 @@ beforeEach(() => {
   mockWindowApi.model.getAll.mockResolvedValue({ success: true, data: [] })
   mockWindowApi.provider.getPresets.mockResolvedValue({ success: true, data: [] })
   mockWindowApi.file.selectDialog.mockResolvedValue({ success: true, data: { canceled: true, filePaths: [] } })
+  mockWindowApi.file.copyImageToClipboard.mockResolvedValue({ success: true, data: { copied: true } })
   mockWindowApi.task.create.mockResolvedValue({ success: true, data: [] })
 
   mockWindowApi.cloud.getTasks.mockResolvedValue({ success: true, data: [], pagination: { page: 1, page_size: 10, total: 0, total_pages: 0 } })
