@@ -1271,6 +1271,63 @@ describe('CloudPreview', () => {
     })
   })
 
+  it('falls back to lite tier and shows error when completed retry all fails', async () => {
+    const ctx = buildContextValue({
+      retryTask: vi.fn().mockResolvedValue({ success: false, error: 'cannot retry now' }),
+      getTaskById: vi.fn().mockResolvedValue({
+        success: true,
+        data: {
+          id: 'task-1',
+          file_type: 'pdf',
+          file_name: 'done.pdf',
+          status: 6,
+          status_name: 'COMPLETED',
+          page_count: 2,
+          pages_completed: 2,
+          pages_failed: 0,
+          pdf_url: '/done.pdf',
+          credits_estimated: 10,
+          credits_consumed: 5,
+          created_at: '2026-03-03T00:00:00.000Z',
+          model_tier: 'unknown-tier',
+        },
+      }),
+      getTaskPages: vi.fn().mockResolvedValue({
+        success: true,
+        data: [
+          {
+            page: 1,
+            status: 2,
+            status_name: 'COMPLETED',
+            markdown: 'page-1',
+            width_mm: 210,
+            height_mm: 297,
+            image_url: 'https://cdn.example.com/p1.png',
+          },
+        ],
+      }),
+    })
+
+    renderPage(ctx)
+
+    await waitFor(() => {
+      expect(screen.getByText('More Actions')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('More Actions'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Retry All')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('Retry All'))
+
+    await waitFor(() => {
+      expect(ctx.retryTask).toHaveBeenCalledWith('task-1', 'lite')
+      expect(mockMessageApi.error).toHaveBeenCalledWith('cannot retry now')
+    })
+  })
+
   it('handles download markdown action', async () => {
     const ctx = buildContextValue({
       getTaskById: vi.fn().mockResolvedValue({

@@ -101,11 +101,21 @@ const Preview: React.FC = () => {
 
   const buildModelValue = (modelId: string, providerId: number) => `${modelId}@${providerId}`;
 
-  const parseModelValue = (value: string) => {
-    const [modelId, providerIdStr] = value.split('@');
+  const parseModelValue = (value: string): { modelId: string; providerId: number } | null => {
+    const separatorIndex = value.lastIndexOf('@');
+    if (separatorIndex <= 0 || separatorIndex === value.length - 1) {
+      return null;
+    }
+
+    const modelId = value.slice(0, separatorIndex);
+    const providerId = Number(value.slice(separatorIndex + 1));
+    if (!modelId || !Number.isInteger(providerId)) {
+      return null;
+    }
+
     return {
       modelId,
-      providerId: Number(providerIdStr),
+      providerId,
     };
   };
 
@@ -357,11 +367,20 @@ const Preview: React.FC = () => {
         cancelText: tCommon('common.cancel'),
         onOk: async () => {
           try {
-            const { modelId, providerId } = parseModelValue(selectedModelValue);
             const shouldOverride = selectedModelValue !== defaultModelValue;
+            let overridePayload: { providerId: number; modelId: string } | null = null;
+            if (shouldOverride) {
+              const parsedModel = parseModelValue(selectedModelValue);
+              if (!parsedModel) {
+                message.error(t('preview.retry_failed'));
+                return;
+              }
+              overridePayload = parsedModel;
+            }
+
             const result = await window.api.task.retry({
               taskId: id,
-              ...(shouldOverride ? { providerId, modelId } : {}),
+              ...(overridePayload || {}),
             });
 
             if (result.success) {
@@ -450,11 +469,20 @@ const Preview: React.FC = () => {
         onOk: async () => {
           setRetrying(true);
           try {
-            const { modelId, providerId } = parseModelValue(selectedModelValue);
             const shouldOverride = selectedModelValue !== defaultModelValue;
+            let overridePayload: { providerId: number; modelId: string } | null = null;
+            if (shouldOverride) {
+              const parsedModel = parseModelValue(selectedModelValue);
+              if (!parsedModel) {
+                message.error(t('preview.page_retry_failed'));
+                return;
+              }
+              overridePayload = parsedModel;
+            }
+
             const result = await window.api.taskDetail.retry(
-              shouldOverride
-                ? { pageId: taskDetail.id, providerId, modelId }
+              overridePayload
+                ? { pageId: taskDetail.id, ...overridePayload }
                 : { pageId: taskDetail.id }
             );
 

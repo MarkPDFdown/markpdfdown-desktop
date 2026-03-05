@@ -742,6 +742,78 @@ describe('Preview', () => {
           expect(screen.getByText('Retry All')).toBeInTheDocument()
         })
       })
+
+      it('should call task retry when clicking Retry All for completed tasks', async () => {
+        const { useAppSpy } = mockUseApp()
+        vi.mocked(window.api.task.getById).mockResolvedValue({
+          success: true,
+          data: mockCompletedTask
+        })
+        vi.mocked(window.api.task.retry).mockResolvedValue({
+          success: true,
+          data: { id: 'task-1' }
+        } as any)
+
+        render(
+          <Wrapper>
+            <Preview />
+          </Wrapper>
+        )
+
+        await waitFor(() => {
+          expect(screen.getByText('More Actions')).toBeInTheDocument()
+        })
+
+        fireEvent.click(screen.getByText('More Actions'))
+
+        await waitFor(() => {
+          expect(screen.getByText('Retry All')).toBeInTheDocument()
+        })
+
+        fireEvent.click(screen.getByText('Retry All'))
+
+        await waitFor(() => {
+          expect(window.api.task.retry).toHaveBeenCalledWith({ taskId: 'task-1' })
+        })
+
+        useAppSpy.mockRestore()
+      })
+
+      it('should show error when task retry fails from Retry All action', async () => {
+        const { useAppSpy, message } = mockUseApp()
+        vi.mocked(window.api.task.getById).mockResolvedValue({
+          success: true,
+          data: mockCompletedTask
+        })
+        vi.mocked(window.api.task.retry).mockResolvedValue({
+          success: false,
+          error: 'retry backend failed'
+        } as any)
+
+        render(
+          <Wrapper>
+            <Preview />
+          </Wrapper>
+        )
+
+        await waitFor(() => {
+          expect(screen.getByText('More Actions')).toBeInTheDocument()
+        })
+
+        fireEvent.click(screen.getByText('More Actions'))
+
+        await waitFor(() => {
+          expect(screen.getByText('Retry All')).toBeInTheDocument()
+        })
+
+        fireEvent.click(screen.getByText('Retry All'))
+
+        await waitFor(() => {
+          expect(message.error).toHaveBeenCalledWith('retry backend failed')
+        })
+
+        useAppSpy.mockRestore()
+      })
     })
 
     describe('Delete', () => {

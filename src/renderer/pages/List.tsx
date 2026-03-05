@@ -58,11 +58,21 @@ const List: React.FC = () => {
   const MAX_FETCH_ITEMS = 100;
   const buildLocalModelValue = (modelId: string, providerId: number) => `${modelId}@${providerId}`;
 
-  const parseLocalModelValue = (value: string) => {
-    const [modelId, providerIdStr] = value.split('@');
+  const parseLocalModelValue = (value: string): { modelId: string; providerId: number } | null => {
+    const separatorIndex = value.lastIndexOf('@');
+    if (separatorIndex <= 0 || separatorIndex === value.length - 1) {
+      return null;
+    }
+
+    const modelId = value.slice(0, separatorIndex);
+    const providerId = Number(value.slice(separatorIndex + 1));
+    if (!modelId || !Number.isInteger(providerId)) {
+      return null;
+    }
+
     return {
       modelId,
-      providerId: Number(providerIdStr),
+      providerId,
     };
   };
 
@@ -467,7 +477,13 @@ const List: React.FC = () => {
         okText: t('confirmations.ok'),
         cancelText: t('confirmations.cancel'),
         onOk: async () => {
-          const { modelId, providerId } = parseLocalModelValue(selectedModelValue);
+          const parsedModel = parseLocalModelValue(selectedModelValue);
+          if (!parsedModel) {
+            message.error(t('messages.action_failed', { action: t('actions.retry') }));
+            return;
+          }
+
+          const { modelId, providerId } = parsedModel;
           try {
             const result = await window.api.task.retry({
               taskId: task.id as string,
