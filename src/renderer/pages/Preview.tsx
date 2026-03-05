@@ -72,6 +72,15 @@ interface LocalModelOption {
   label: string;
 }
 
+interface LocalModelGroup {
+  provider: number;
+  providerName: string;
+  models: Array<{
+    id: string;
+    name: string;
+  }>;
+}
+
 const { Text } = Typography;
 
 const Preview: React.FC = () => {
@@ -106,7 +115,8 @@ const Preview: React.FC = () => {
       throw new Error(result.error || t('preview.load_models_failed'));
     }
 
-    return result.data.flatMap((group) =>
+    const modelGroups = result.data as LocalModelGroup[];
+    return modelGroups.flatMap((group) =>
       group.models.map((model) => ({
         value: buildModelValue(model.id, group.provider),
         label: `${model.name} | ${group.providerName}`,

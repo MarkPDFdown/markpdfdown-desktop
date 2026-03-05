@@ -24,6 +24,15 @@ interface LocalModelOption {
   label: string;
 }
 
+interface LocalModelGroup {
+  provider: number;
+  providerName: string;
+  models: Array<{
+    id: string;
+    name: string;
+  }>;
+}
+
 const List: React.FC = () => {
   const { message, modal } = App.useApp();
   const { t } = useTranslation('list');
@@ -63,7 +72,8 @@ const List: React.FC = () => {
       throw new Error(result.error || t('retry.load_models_failed'));
     }
 
-    return result.data.flatMap((group) =>
+    const modelGroups = result.data as LocalModelGroup[];
+    return modelGroups.flatMap((group) =>
       group.models.map((model) => ({
         value: buildLocalModelValue(model.id, group.provider),
         label: `${model.name} | ${group.providerName}`,
@@ -460,7 +470,7 @@ const List: React.FC = () => {
           const { modelId, providerId } = parseLocalModelValue(selectedModelValue);
           try {
             const result = await window.api.task.retry({
-              id: task.id as string,
+              taskId: task.id as string,
               providerId,
               modelId,
             });
