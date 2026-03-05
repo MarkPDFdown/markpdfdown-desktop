@@ -1,6 +1,7 @@
 {
   "back": "Назад",
   "fetch_task_failed": "Не удалось загрузить задачу",
+  "download": "Скачать",
   "download_md": "Скачать MD",
   "download_pdf": "Скачать PDF",
   "download_success": "Загрузка завершена",
@@ -31,6 +32,14 @@
   "page_label": "Страница {{page}} / {{total}}",
   "regenerate": "Перегенерировать",
   "regenerate_tooltip": "Повторить конвертацию этой страницы",
+  "copy_markdown": "Копировать Markdown",
+  "copy_markdown_tooltip": "Скопировать Markdown текущей страницы",
+  "copy_markdown_success": "Markdown скопирован",
+  "copy_markdown_failed": "Не удалось скопировать Markdown",
+  "copy_image": "Копировать изображение",
+  "copy_image_tooltip": "Скопировать изображение текущей страницы",
+  "copy_image_success": "Изображение скопировано",
+  "copy_image_failed": "Не удалось скопировать изображение",
   "page_status": {
     "pending": "В ожидании",
     "processing": "Обработка",

@@ -3,6 +3,7 @@ import {
   CheckCircleFilled,
   ClockCircleFilled,
   CloseCircleFilled,
+  CopyOutlined,
   DeleteOutlined,
   DownOutlined,
   FileMarkdownOutlined,
@@ -364,6 +365,38 @@ const Preview: React.FC = () => {
     }
   };
 
+  // 复制当前页 Markdown
+  const handleCopyMarkdown = async () => {
+    const content = taskDetail?.content || '';
+    if (!content) return;
+
+    try {
+      await navigator.clipboard.writeText(content);
+      message.success(t('preview.copy_markdown_success'));
+    } catch (error) {
+      console.error('Failed to copy markdown:', error);
+      message.error(t('preview.copy_markdown_failed'));
+    }
+  };
+
+  // 复制当前页图片到系统剪贴板
+  const handleCopyImage = async () => {
+    const imagePath = taskDetail?.imagePath;
+    if (!imagePath) return;
+
+    try {
+      const result = await window.api.file.copyImageToClipboard(imagePath);
+      if (result.success) {
+        message.success(t('preview.copy_image_success'));
+      } else {
+        message.error(result.error || t('preview.copy_image_failed'));
+      }
+    } catch (error) {
+      console.error('Failed to copy image:', error);
+      message.error(t('preview.copy_image_failed'));
+    }
+  };
+
   // 获取页面状态信息
   const getPageStatusInfo = () => {
     const status = taskDetail?.status;
@@ -612,8 +645,20 @@ const Preview: React.FC = () => {
                 justifyContent: "center",
                 alignItems: "center",
                 overflow: "hidden",
+                position: "relative",
               }}
             >
+              <Tooltip title={t('preview.copy_image_tooltip')}>
+                <Button
+                  className="preview-floating-action"
+                  aria-label={t('preview.copy_image')}
+                  icon={<CopyOutlined />}
+                  shape="circle"
+                  size="small"
+                  onClick={handleCopyImage}
+                  disabled={loading || imageError || !taskDetail?.imagePath}
+                />
+              </Tooltip>
               {loading ? (
                 <Spin size="large" />
               ) : imageError || !taskDetail?.imagePath ? (
@@ -686,8 +731,21 @@ const Preview: React.FC = () => {
           </Splitter.Panel>
 
           {/* Markdown Panel */}
-          <Splitter.Panel style={{ overflow: "auto", minWidth: 0 }}>
-            <MarkdownPreview content={taskDetail?.content || ''} />
+          <Splitter.Panel style={{ overflow: "hidden", minWidth: 0 }}>
+            <div style={{ position: "relative", height: "100%" }}>
+              <Tooltip title={t('preview.copy_markdown_tooltip')}>
+                <Button
+                  className="preview-floating-action"
+                  aria-label={t('preview.copy_markdown')}
+                  icon={<CopyOutlined />}
+                  shape="circle"
+                  size="small"
+                  onClick={handleCopyMarkdown}
+                  disabled={!taskDetail?.content}
+                />
+              </Tooltip>
+              <MarkdownPreview content={taskDetail?.content || ''} />
+            </div>
           </Splitter.Panel>
         </Splitter>
 

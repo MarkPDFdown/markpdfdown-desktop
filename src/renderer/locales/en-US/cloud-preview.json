@@ -1,6 +1,7 @@
 {
   "back": "Back",
   "fetch_task_failed": "Failed to fetch task",
+  "download": "Download",
   "download_md": "Download MD",
   "download_pdf": "Download PDF",
   "download_success": "Downloaded successfully",
@@ -31,6 +32,14 @@
   "page_label": "Page {{page}} / {{total}}",
   "regenerate": "Regenerate",
   "regenerate_tooltip": "Retry conversion for this page",
+  "copy_markdown": "Copy Markdown",
+  "copy_markdown_tooltip": "Copy current page markdown",
+  "copy_markdown_success": "Markdown copied",
+  "copy_markdown_failed": "Failed to copy markdown",
+  "copy_image": "Copy Image",
+  "copy_image_tooltip": "Copy current page image",
+  "copy_image_success": "Image copied",
+  "copy_image_failed": "Failed to copy image",
   "page_status": {
     "pending": "Pending",
     "processing": "Processing",

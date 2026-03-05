@@ -10,8 +10,10 @@ const translate = (ns: string | undefined, key: string, params?: any) => {
   const dict: Record<string, string> = {
     back: 'Back',
     fetch_task_failed: 'Fetch task failed',
+    download: 'Download',
     fetch_pages_failed: 'Fetch pages failed',
     download_md: 'Download MD',
+    download_pdf: 'Download PDF',
     download_success: 'Download success',
     download_failed: 'Download failed',
     confirm_cancel: 'Confirm cancel',
@@ -39,6 +41,14 @@ const translate = (ns: string | undefined, key: string, params?: any) => {
     'page_status.failed': 'Failed',
     regenerate: 'Regenerate',
     regenerate_tooltip: 'Regenerate this page',
+    copy_markdown: 'Copy Markdown',
+    copy_markdown_tooltip: 'Copy current page markdown',
+    copy_markdown_success: 'Markdown copied',
+    copy_markdown_failed: 'Failed to copy markdown',
+    copy_image: 'Copy Image',
+    copy_image_tooltip: 'Copy current page image',
+    copy_image_success: 'Image copied',
+    copy_image_failed: 'Failed to copy image',
     no_page_data: 'No page data',
     page_label: `Page ${params?.page}/${params?.total}`,
     more_actions: 'More Actions',
@@ -1045,6 +1055,38 @@ describe('CloudPreview', () => {
     })
   })
 
+  it('copies current page markdown', async () => {
+    const ctx = buildContextValue()
+    renderPage(ctx)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('markdown-content')).toHaveTextContent('page-1')
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Markdown' }))
+
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('page-1')
+    })
+  })
+
+  it('copies current page image', async () => {
+    const ctx = buildContextValue()
+    renderPage(ctx)
+
+    await waitFor(() => {
+      const img = document.querySelector('img') as HTMLImageElement
+      expect(img).toBeInTheDocument()
+      expect(img.src).toContain('data:image/png;base64,abcd')
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Image' }))
+
+    await waitFor(() => {
+      expect(window.api.file.copyImageToClipboard).toHaveBeenCalledWith('data:image/png;base64,abcd')
+    })
+  })
+
   it('handles retry failed pages action from menu', async () => {
     const ctx = buildContextValue()
     renderPage(ctx)
@@ -1098,15 +1140,83 @@ describe('CloudPreview', () => {
     renderPage(ctx)
 
     await waitFor(() => {
-      expect(screen.getByText('Download MD')).toBeInTheDocument()
+      const downloadButton = screen.getByText('Download').closest('button')
+      expect(downloadButton).toBeInTheDocument()
     })
 
+    fireEvent.click(screen.getByText('Download').closest('button') as HTMLElement)
+    await waitFor(() => {
+      expect(screen.getByText('Download MD')).toBeInTheDocument()
+    })
     fireEvent.click(screen.getByText('Download MD'))
 
     await waitFor(() => {
       expect(ctx.getTaskResult).toHaveBeenCalledWith('task-1')
       expect(URL.createObjectURL).toHaveBeenCalled()
       expect(URL.revokeObjectURL).toHaveBeenCalled()
+    })
+  })
+
+  it('handles download pdf action', async () => {
+    const ctx = buildContextValue({
+      getTaskById: vi.fn().mockResolvedValue({
+        success: true,
+        data: {
+          id: 'task-1',
+          file_type: 'pdf',
+          file_name: 'done.pdf',
+          status: 6,
+          status_name: 'COMPLETED',
+          page_count: 1,
+          pages_completed: 1,
+          pages_failed: 0,
+          pdf_url: '/done.pdf',
+          credits_estimated: 5,
+          credits_consumed: 5,
+          created_at: '2026-03-03T00:00:00.000Z',
+        },
+      }),
+      getTaskPages: vi.fn().mockResolvedValue({
+        success: true,
+        data: [
+          {
+            page: 1,
+            status: 2,
+            status_name: 'COMPLETED',
+            markdown: 'one',
+            width_mm: 210,
+            height_mm: 297,
+            image_url: 'https://cdn.example.com/1.png',
+          },
+        ],
+      }),
+    })
+
+    renderPage(ctx)
+
+    await waitFor(() => {
+      const downloadButton = screen.getByText('Download').closest('button')
+      expect(downloadButton).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('Download').closest('button') as HTMLElement)
+    await waitFor(() => {
+      expect(screen.getByText('Download PDF')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('Download PDF'))
+
+    await waitFor(() => {
+      expect(ctx.downloadResult).toHaveBeenCalledWith('task-1')
+    })
+  })
+
+  it('disables download dropdown for non-completed task', async () => {
+    const ctx = buildContextValue()
+    renderPage(ctx)
+
+    await waitFor(() => {
+      const downloadButton = screen.getByText('Download').closest('button') as HTMLButtonElement
+      expect(downloadButton).toBeDisabled()
     })
   })
 

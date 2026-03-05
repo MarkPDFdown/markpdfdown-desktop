@@ -1,4 +1,4 @@
-import { ipcMain, dialog } from "electron";
+import { ipcMain, dialog, clipboard, nativeImage } from "electron";
 import path from "path";
 import fs from "fs";
 import taskRepository from "../../../core/domain/repositories/TaskRepository.js";
@@ -6,6 +6,23 @@ import fileLogic from "../../../core/infrastructure/services/FileService.js";
 import { ImagePathUtil } from "../../../core/infrastructure/adapters/split/index.js";
 import { IPC_CHANNELS } from "../../../shared/ipc/channels.js";
 import type { IpcResponse } from "../../../shared/ipc/responses.js";
+
+async function createImageFromSource(imageSource: string) {
+  if (imageSource.startsWith("data:image/")) {
+    return nativeImage.createFromDataURL(imageSource);
+  }
+
+  if (imageSource.startsWith("http://") || imageSource.startsWith("https://")) {
+    const response = await fetch(imageSource);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.status}`);
+    }
+    const buffer = Buffer.from(await response.arrayBuffer());
+    return nativeImage.createFromBuffer(buffer);
+  }
+
+  return nativeImage.createFromPath(imageSource);
+}
 
 /**
  * Register all file-related IPC handlers
@@ -92,6 +109,31 @@ export function registerFileHandlers() {
       } catch (error: any) {
         console.error("[IPC] file:downloadMarkdown error:", error);
         return { success: false, error: error.message };
+      }
+    }
+  );
+
+  /**
+   * Copy image to clipboard
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.FILE.COPY_IMAGE_TO_CLIPBOARD,
+    async (_, imageSource: string): Promise<IpcResponse> => {
+      try {
+        if (!imageSource) {
+          return { success: false, error: "Image source is required" };
+        }
+
+        const image = await createImageFromSource(imageSource);
+        if (image.isEmpty()) {
+          return { success: false, error: "Image data is empty or invalid" };
+        }
+
+        clipboard.writeImage(image);
+        return { success: true, data: { copied: true } };
+      } catch (error: any) {
+        console.error("[IPC] file:copyImageToClipboard error:", error);
+        return { success: false, error: error.message || "Failed to copy image" };
       }
     }
   );

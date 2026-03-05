@@ -15,6 +15,14 @@ const translations: Record<string, string> = {
   'preview.delete': 'Delete',
   'preview.regenerate': 'Regenerate',
   'preview.regenerate_tooltip': 'Regenerate this page',
+  'preview.copy_markdown': 'Copy Markdown',
+  'preview.copy_markdown_tooltip': 'Copy current page markdown',
+  'preview.copy_markdown_success': 'Markdown copied',
+  'preview.copy_markdown_failed': 'Failed to copy markdown',
+  'preview.copy_image': 'Copy Image',
+  'preview.copy_image_tooltip': 'Copy current page image',
+  'preview.copy_image_success': 'Image copied',
+  'preview.copy_image_failed': 'Failed to copy image',
   'preview.confirm_delete': 'Delete Task',
   'preview.confirm_delete_content': 'Are you sure you want to delete this task?',
   'preview.confirm_cancel': 'Cancel Task',
@@ -305,6 +313,47 @@ describe('Preview', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('markdown-preview')).toHaveTextContent('# Page 1 Content')
+      })
+    })
+  })
+
+  describe('Copy Actions', () => {
+    it('should copy current page markdown', async () => {
+      render(
+        <Wrapper>
+          <Preview />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('markdown-preview')).toHaveTextContent('# Page 1 Content')
+      })
+
+      const copyMarkdownButton = screen.getByRole('button', { name: 'Copy Markdown' })
+      fireEvent.click(copyMarkdownButton)
+
+      await waitFor(() => {
+        expect(navigator.clipboard.writeText).toHaveBeenCalledWith('# Page 1 Content\n\nThis is the content.')
+      })
+    })
+
+    it('should copy current page image', async () => {
+      render(
+        <Wrapper>
+          <Preview />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        const img = document.querySelector('img')
+        expect(img).toBeInTheDocument()
+      })
+
+      const copyImageButton = screen.getByRole('button', { name: 'Copy Image' })
+      fireEvent.click(copyImageButton)
+
+      await waitFor(() => {
+        expect(window.api.file.copyImageToClipboard).toHaveBeenCalledWith('C:\\images\\page1.png')
       })
     })
   })

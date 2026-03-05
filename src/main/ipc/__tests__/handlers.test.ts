@@ -152,6 +152,7 @@ vi.mock('../../../shared/ipc/channels.js', () => ({
     FILE: {
       GET_IMAGE_PATH: 'file:getImagePath',
       DOWNLOAD_MARKDOWN: 'file:downloadMarkdown',
+      COPY_IMAGE_TO_CLIPBOARD: 'file:copyImageToClipboard',
       SELECT_DIALOG: 'file:selectDialog',
       UPLOAD: 'file:upload',
       UPLOAD_FILE_CONTENT: 'file:uploadFileContent',

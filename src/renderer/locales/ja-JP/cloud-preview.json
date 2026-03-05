@@ -1,6 +1,7 @@
 {
   "back": "戻る",
   "fetch_task_failed": "タスクの取得に失敗しました",
+  "download": "ダウンロード",
   "download_md": "MD ダウンロード",
   "download_pdf": "PDF ダウンロード",
   "download_success": "ダウンロード成功",
@@ -31,6 +32,14 @@
   "page_label": "ページ {{page}} / {{total}}",
   "regenerate": "再生成",
   "regenerate_tooltip": "このページの変換を再試行",
+  "copy_markdown": "Markdownをコピー",
+  "copy_markdown_tooltip": "現在のページのMarkdownをコピー",
+  "copy_markdown_success": "Markdownをコピーしました",
+  "copy_markdown_failed": "Markdownのコピーに失敗しました",
+  "copy_image": "画像をコピー",
+  "copy_image_tooltip": "現在のページの画像をコピー",
+  "copy_image_success": "画像をコピーしました",
+  "copy_image_failed": "画像のコピーに失敗しました",
   "page_status": {
     "pending": "待機中",
     "processing": "処理中",
