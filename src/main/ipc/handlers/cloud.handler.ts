@@ -110,9 +110,10 @@ export function registerCloudHandlers() {
   /**
    * Retry task
    */
-  ipcMain.handle('cloud:retryTask', async (_, id: string) => {
+  ipcMain.handle('cloud:retryTask', async (_, params: string | { id: string; model?: 'lite' | 'pro' | 'ultra' }) => {
     try {
-      return await cloudService.retryTask(id);
+      const payload = typeof params === 'string' ? { id: params } : params;
+      return await cloudService.retryTask(payload.id, payload.model);
     } catch (error) {
       console.error('[IPC] cloud:retryTask error:', error);
       return {
@@ -140,9 +141,9 @@ export function registerCloudHandlers() {
   /**
    * Retry single page
    */
-  ipcMain.handle('cloud:retryPage', async (_, params: { taskId: string; pageNumber: number }) => {
+  ipcMain.handle('cloud:retryPage', async (_, params: { taskId: string; pageNumber: number; model?: 'lite' | 'pro' | 'ultra' }) => {
     try {
-      return await cloudService.retryPage(params.taskId, params.pageNumber);
+      return await cloudService.retryPage(params.taskId, params.pageNumber, params.model);
     } catch (error) {
       console.error('[IPC] cloud:retryPage error:', error);
       return {

@@ -7,6 +7,7 @@ import type {
   CloudTaskResult,
   PaymentProviderStatus,
   PaymentStatus,
+  CloudModelTier,
 } from '../../shared/types/cloud-api';
 
 export interface UserProfile {
@@ -120,9 +121,9 @@ export interface CloudContextType {
     error?: string;
   }>;
   cancelTask: (id: string) => Promise<{ success: boolean; error?: string }>;
-  retryTask: (id: string) => Promise<{ success: boolean; data?: { task_id: string }; error?: string }>;
+  retryTask: (id: string, model?: CloudModelTier) => Promise<{ success: boolean; data?: { task_id: string }; error?: string }>;
   deleteTask: (id: string) => Promise<{ success: boolean; data?: { id: string; message: string }; error?: string }>;
-  retryPage: (taskId: string, pageNumber: number) => Promise<{ success: boolean; error?: string }>;
+  retryPage: (taskId: string, pageNumber: number, model?: CloudModelTier) => Promise<{ success: boolean; error?: string }>;
   getTaskResult: (id: string) => Promise<{ success: boolean; data?: CloudTaskResult; error?: string }>;
   downloadResult: (id: string) => Promise<{ success: boolean; error?: string }>;
   createCheckout: (amountUsd: number) => Promise<{ success: boolean; data?: CheckoutSession; error?: string }>;

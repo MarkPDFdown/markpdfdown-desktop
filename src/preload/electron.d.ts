@@ -84,13 +84,14 @@ interface WindowAPI {
     getAll: (params: { page: number; pageSize: number }) => Promise<any>;
     getById: (id: string) => Promise<any>;
     update: (id: string, data: any) => Promise<any>;
+    retry: (params: { taskId: string; providerId?: number; modelId?: string }) => Promise<any>;
     delete: (id: string) => Promise<any>;
     hasRunningTasks: () => Promise<any>;
   };
   taskDetail: {
     getByPage: (taskId: string, page: number) => Promise<any>;
     getAllByTask: (taskId: string) => Promise<any>;
-    retry: (pageId: number) => Promise<any>;
+    retry: (params: number | { pageId: number; providerId?: number; modelId?: string }) => Promise<any>;
     retryFailed: (taskId: string) => Promise<any>;
   };
   file: {
@@ -117,9 +118,9 @@ interface WindowAPI {
     getTaskById: (id: string) => Promise<any>;
     getTaskPages: (params: { taskId: string; page?: number; pageSize?: number }) => Promise<any>;
     cancelTask: (id: string) => Promise<any>;
-    retryTask: (id: string) => Promise<any>;
+    retryTask: (params: string | { id: string; model?: 'lite' | 'pro' | 'ultra' }) => Promise<any>;
     deleteTask: (id: string) => Promise<any>;
-    retryPage: (params: { taskId: string; pageNumber: number }) => Promise<any>;
+    retryPage: (params: { taskId: string; pageNumber: number; model?: 'lite' | 'pro' | 'ultra' }) => Promise<any>;
     getTaskResult: (id: string) => Promise<any>;
     downloadPdf: (id: string) => Promise<any>;
     getPageImage: (params: { taskId: string; pageNumber: number }) => Promise<any>;

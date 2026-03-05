@@ -287,6 +287,51 @@ describe('TaskDetail Handler', () => {
         error: 'Task is cancelled, cannot retry'
       })
     })
+
+    it('should retry page with model override', async () => {
+      const mockPage = { id: 1, task: 'task-1', status: -1, provider: 1, model: 'gpt-4o' } // FAILED
+      const mockTask = { id: 'task-1', status: 6, progress: 90, pages: 10 }
+      const updatedPage = { ...mockPage, status: 0, provider: 2, model: 'claude-3-7-sonnet' }
+      const updatedTask = { ...mockTask, status: 3 } // PROCESSING
+
+      mockPrisma.$transaction.mockImplementation(async (callback: any) => {
+        const tx = {
+          taskDetail: {
+            findUnique: vi.fn().mockResolvedValue(mockPage),
+            update: vi.fn().mockResolvedValue(updatedPage)
+          },
+          task: {
+            findUnique: vi.fn().mockResolvedValue(mockTask),
+            update: vi.fn().mockResolvedValue(updatedTask)
+          },
+          provider: {
+            findUnique: vi.fn().mockResolvedValue({ id: 2, status: 0 }),
+          },
+          model: {
+            findUnique: vi.fn().mockResolvedValue({ id: 'claude-3-7-sonnet', provider: 2 }),
+          },
+        }
+        return callback(tx)
+      })
+
+      const handler = handlers.get('taskDetail:retry')
+      const result = await handler!({}, { pageId: 1, providerId: 2, modelId: 'claude-3-7-sonnet' })
+
+      expect(result).toEqual({
+        success: true,
+        data: updatedPage
+      })
+    })
+
+    it('should return error when model override params are incomplete', async () => {
+      const handler = handlers.get('taskDetail:retry')
+      const result = await handler!({}, { pageId: 1, providerId: 2 })
+
+      expect(result).toEqual({
+        success: false,
+        error: 'providerId and modelId must be provided together'
+      })
+    })
   })
 
   describe('taskDetail:retryFailed', () => {

@@ -39,6 +39,14 @@ vi.mock('react-i18next', () => ({
         'actions.cancel': 'Cancel',
         'actions.retry': 'Retry',
         'actions.delete': 'Delete',
+        'retry.confirm_with_model': 'Retry Task (Choose Model)',
+        'retry.confirm_cloud_with_model': 'Retry Cloud Task (Choose Model)',
+        'retry.select_model': 'Select retry model',
+        'retry.load_models_failed': 'Failed to load model list',
+        'retry.no_models_available': 'No available models',
+        'retry.model.lite': 'Fit Lite',
+        'retry.model.pro': 'Fit Pro',
+        'retry.model.ultra': 'Fit Ultra',
         'task_type.cloud': 'Cloud Task'
       }
       return translations[key] || key
@@ -53,7 +61,9 @@ vi.mock('react-i18next', () => ({
 const mockCloudContext = {
   user: { id: '', email: '', fullName: null, imageUrl: '', isLoaded: true, isSignedIn: false },
   isAuthenticated: false,
-  getTasks: vi.fn().mockResolvedValue({ success: false, error: 'Not authenticated' })
+  getTasks: vi.fn().mockResolvedValue({ success: false, error: 'Not authenticated' }),
+  cancelTask: vi.fn().mockResolvedValue({ success: true }),
+  retryTask: vi.fn().mockResolvedValue({ success: true }),
 }
 
 vi.mock('../../contexts/CloudContextDefinition', () => ({
@@ -290,6 +300,7 @@ describe('List', () => {
         expect(deleteButtons.length).toBeGreaterThan(0)
       })
     })
+
   })
 
   describe('Pagination', () => {

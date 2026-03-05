@@ -5,6 +5,7 @@ import fileLogic from "../../../core/infrastructure/services/FileService.js";
 import { eventBus, TaskEventType } from '../../../core/shared/events/EventBus.js';
 import { prisma } from '../../../core/infrastructure/db/index.js';
 import { TaskStatus } from '../../../shared/types/TaskStatus.js';
+import { PageStatus } from '../../../shared/types/PageStatus.js';
 import { IPC_CHANNELS } from "../../../shared/ipc/channels.js";
 import type { IpcResponse } from "../../../shared/ipc/responses.js";
 
@@ -113,6 +114,150 @@ export function registerTaskHandlers() {
         return { success: true, data: updatedTask };
       } catch (error: any) {
         console.error("[IPC] task:update error:", error);
+        return { success: false, error: error.message };
+      }
+    }
+  );
+
+  /**
+   * Retry task with optional model override
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.TASK.RETRY,
+    async (
+      _,
+      params: string | { taskId: string; providerId?: number; modelId?: string }
+    ): Promise<IpcResponse> => {
+      try {
+        const payload = typeof params === 'string' ? { taskId: params } : params;
+        const taskId = payload?.taskId;
+
+        if (!taskId) {
+          return { success: false, error: "Task ID is required" };
+        }
+
+        const hasProviderOverride = payload?.providerId !== undefined;
+        const hasModelOverride = payload?.modelId !== undefined;
+        const hasAnyModelOverride = hasProviderOverride || hasModelOverride;
+
+        if (hasAnyModelOverride && (!hasProviderOverride || !hasModelOverride)) {
+          return { success: false, error: "providerId and modelId must be provided together" };
+        }
+
+        const updatedTask = await prisma.$transaction(async (tx) => {
+          const task = await tx.task.findUnique({
+            where: { id: taskId },
+          });
+
+          if (!task) {
+            throw new Error("Task not found");
+          }
+
+          const retryableStatuses = [
+            TaskStatus.FAILED,
+            TaskStatus.COMPLETED,
+            TaskStatus.CANCELLED,
+            TaskStatus.PARTIAL_FAILED,
+          ];
+
+          if (!retryableStatuses.includes(task.status)) {
+            throw new Error("Task is not retryable");
+          }
+
+          let targetProvider = task.provider;
+          let targetModel = task.model;
+          let targetModelName = task.model_name;
+
+          if (hasAnyModelOverride) {
+            const providerId = payload.providerId as number;
+            const modelId = payload.modelId as string;
+
+            const provider = await tx.provider.findUnique({
+              where: { id: providerId },
+              select: { id: true, name: true, status: true },
+            });
+
+            if (!provider || provider.status !== 0) {
+              throw new Error("Provider not found or disabled");
+            }
+
+            const model = await tx.model.findUnique({
+              where: {
+                id_provider: {
+                  id: modelId,
+                  provider: providerId,
+                },
+              },
+              select: { id: true, name: true, provider: true },
+            });
+
+            if (!model) {
+              throw new Error("Model not found for provider");
+            }
+
+            targetProvider = providerId;
+            targetModel = modelId;
+            targetModelName = `${model.name} | ${provider.name}`;
+          }
+
+          const detailCount = await tx.taskDetail.count({
+            where: { task: taskId },
+          });
+
+          if (detailCount > 0) {
+            await tx.taskDetail.updateMany({
+              where: { task: taskId },
+              data: {
+                status: PageStatus.PENDING,
+                retry_count: 0,
+                error: null,
+                worker_id: null,
+                started_at: null,
+                completed_at: null,
+                input_tokens: 0,
+                output_tokens: 0,
+                conversion_time: 0,
+                content: "",
+                provider: targetProvider,
+                model: targetModel,
+              },
+            });
+          }
+
+          return await tx.task.update({
+            where: { id: taskId },
+            data: {
+              provider: targetProvider,
+              model: targetModel,
+              model_name: targetModelName,
+              status: detailCount > 0 ? TaskStatus.PROCESSING : TaskStatus.PENDING,
+              progress: 0,
+              completed_count: 0,
+              failed_count: 0,
+              error: null,
+              merged_path: null,
+              worker_id: null,
+            },
+          });
+        }, {
+          isolationLevel: 'Serializable',
+        });
+
+        eventBus.emitTaskEvent(TaskEventType.TASK_UPDATED, {
+          taskId,
+          task: updatedTask,
+          timestamp: Date.now(),
+        });
+
+        eventBus.emitTaskEvent(TaskEventType.TASK_STATUS_CHANGED, {
+          taskId,
+          task: { status: updatedTask.status },
+          timestamp: Date.now(),
+        });
+
+        return { success: true, data: updatedTask };
+      } catch (error: any) {
+        console.error("[IPC] task:retry error:", error);
         return { success: false, error: error.message };
       }
     }

@@ -13,6 +13,9 @@
   "cancel_task": "取消",
   "confirm_retry": "重试任务",
   "confirm_retry_content": "这将创建一个新任务，确定继续吗？",
+  "confirm_retry_with_model": "重试任务（可切换模型）",
+  "confirm_page_retry_with_model": "重试当前页（可切换模型）",
+  "select_retry_model": "选择重试模型",
   "retry_success": "重试已开始",
   "retry_failed": "重试失败",
   "retry_all": "全部重试",
@@ -40,6 +43,11 @@
   "copy_image_tooltip": "复制当前页图片",
   "copy_image_success": "图片已复制",
   "copy_image_failed": "复制图片失败",
+  "retry_model": {
+    "lite": "Fit Lite（约10积分/页）",
+    "pro": "Fit Pro（约20积分/页）",
+    "ultra": "Fit Ultra（约60积分/页）"
+  },
   "page_status": {
     "pending": "待处理",
     "processing": "处理中",

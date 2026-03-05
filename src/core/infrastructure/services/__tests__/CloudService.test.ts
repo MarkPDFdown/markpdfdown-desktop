@@ -205,6 +205,37 @@ describe('CloudService', () => {
     })
   })
 
+  it('retryTask/retryPage send model override payload when model is provided', async () => {
+    const cloudService = (await import('../CloudService.js')).default
+
+    mockAuthManager.fetchWithAuth
+      .mockResolvedValueOnce(makeJsonResponse(200, { success: true, data: { task_id: 'task-2', events_url: '/events' } }))
+      .mockResolvedValueOnce(makeJsonResponse(200, { success: true, data: { task_id: 'task-1', page: 3, status: 'queued' } }))
+
+    await cloudService.retryTask('task-1', 'pro')
+    await cloudService.retryPage('task-1', 3, 'ultra')
+
+    const retryTaskCall = mockAuthManager.fetchWithAuth.mock.calls[0]
+    expect(retryTaskCall[0]).toContain('/api/v1/tasks/task-1/retry')
+    expect(retryTaskCall[1]).toEqual(
+      expect.objectContaining({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'pro' }),
+      })
+    )
+
+    const retryPageCall = mockAuthManager.fetchWithAuth.mock.calls[1]
+    expect(retryPageCall[0]).toContain('/api/v1/tasks/task-1/pages/3/retry')
+    expect(retryPageCall[1]).toEqual(
+      expect.objectContaining({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'ultra' }),
+      })
+    )
+  })
+
   it('cancelTask/retryTask/retryPage/deleteTask return API errors when non-OK', async () => {
     const cloudService = (await import('../CloudService.js')).default
     mockAuthManager.fetchWithAuth

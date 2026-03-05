@@ -170,8 +170,19 @@ describe('cloud.handler', () => {
 
     expect(mockCloudService.getTasks).toHaveBeenCalledWith(2, 20)
     expect(mockCloudService.getTaskById).toHaveBeenCalledWith('t1')
-    expect(mockCloudService.retryTask).toHaveBeenCalledWith('t1')
+    expect(mockCloudService.retryTask).toHaveBeenCalledWith('t1', undefined)
     expect(mockCloudService.deleteTask).toHaveBeenCalledWith('t1')
+  })
+
+  it('passes model override for retryTask and retryPage', async () => {
+    mockCloudService.retryTask.mockResolvedValueOnce({ success: true, data: { task_id: 'new' } })
+    mockCloudService.retryPage.mockResolvedValueOnce({ success: true, data: { task_id: 't1', page: 1, status: 1 } })
+
+    await handlers.get('cloud:retryTask')!({}, { id: 't1', model: 'pro' })
+    await handlers.get('cloud:retryPage')!({}, { taskId: 't1', pageNumber: 1, model: 'ultra' })
+
+    expect(mockCloudService.retryTask).toHaveBeenCalledWith('t1', 'pro')
+    expect(mockCloudService.retryPage).toHaveBeenCalledWith('t1', 1, 'ultra')
   })
 
   describe('cloud:downloadPdf', () => {

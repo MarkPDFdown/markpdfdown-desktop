@@ -39,6 +39,18 @@
     "action_success": "{{action}}成功",
     "action_failed": "{{action}}失败"
   },
+  "retry": {
+    "confirm_with_model": "重试任务（可切换模型）",
+    "confirm_cloud_with_model": "重试云端任务（可切换模型）",
+    "select_model": "选择重试模型",
+    "load_models_failed": "加载模型列表失败",
+    "no_models_available": "暂无可用模型，请先在设置中配置模型",
+    "model": {
+      "lite": "Fit Lite",
+      "pro": "Fit Pro",
+      "ultra": "Fit Ultra"
+    }
+  },
   "task_type": {
     "cloud": "云端任务",
     "local": "本地任务"

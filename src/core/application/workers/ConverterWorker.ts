@@ -370,7 +370,14 @@ export class ConverterWorker extends WorkerBase {
             // Step 2: Check task is not cancelled
             const task = await tx.task.findUnique({
               where: { id: page.task },
-              select: { status: true, pages: true, completed_count: true, failed_count: true },
+              select: {
+                status: true,
+                pages: true,
+                completed_count: true,
+                failed_count: true,
+                provider: true,
+                model: true,
+              },
             });
 
             if (!task) {
@@ -393,6 +400,8 @@ export class ConverterWorker extends WorkerBase {
                 completed_at: new Date(),
                 worker_id: null, // Release worker
                 error: null,
+                provider: task.provider,
+                model: task.model,
               },
             });
 
@@ -475,7 +484,14 @@ export class ConverterWorker extends WorkerBase {
             // Step 2: Check task is not cancelled
             const task = await tx.task.findUnique({
               where: { id: page.task },
-              select: { status: true, pages: true, completed_count: true, failed_count: true },
+              select: {
+                status: true,
+                pages: true,
+                completed_count: true,
+                failed_count: true,
+                provider: true,
+                model: true,
+              },
             });
 
             if (!task) {
@@ -494,6 +510,8 @@ export class ConverterWorker extends WorkerBase {
                 error: errorMessage,
                 completed_at: new Date(),
                 worker_id: null, // Release worker
+                provider: task.provider,
+                model: task.model,
               },
             });
 
