@@ -119,7 +119,7 @@ describe('File Handler', () => {
         data: { copied: true },
       })
       expect(mockNativeImage.createFromPath).toHaveBeenCalledWith('/tmp/page.png')
-      expect(mockClipboard.writeImage).toHaveBeenCalled()
+      expect(mockClipboard.writeImage).toHaveBeenCalledTimes(1)
     })
 
     it('should copy image from data URL successfully', async () => {
@@ -128,7 +128,16 @@ describe('File Handler', () => {
 
       expect(result.success).toBe(true)
       expect(mockNativeImage.createFromDataURL).toHaveBeenCalledWith('data:image/png;base64,abcd')
-      expect(mockClipboard.writeImage).toHaveBeenCalled()
+      expect(mockClipboard.writeImage).toHaveBeenCalledTimes(1)
+    })
+
+    it('should copy image from file URL successfully', async () => {
+      const handler = handlers.get('file:copyImageToClipboard')
+      const result = await handler!({}, 'file:///tmp/page.png')
+
+      expect(result.success).toBe(true)
+      expect(mockNativeImage.createFromPath).toHaveBeenCalledWith(expect.stringContaining('page.png'))
+      expect(mockClipboard.writeImage).toHaveBeenCalledTimes(1)
     })
 
     it('should return error when image source is missing', async () => {
@@ -139,6 +148,17 @@ describe('File Handler', () => {
         success: false,
         error: 'Image source is required',
       })
+    })
+
+    it('should reject remote image URLs', async () => {
+      const handler = handlers.get('file:copyImageToClipboard')
+      const result = await handler!({}, 'https://cdn.example.com/page.png')
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Remote image URLs are not allowed',
+      })
+      expect(mockClipboard.writeImage).not.toHaveBeenCalled()
     })
 
     it('should return error when image is empty', async () => {
@@ -154,6 +174,35 @@ describe('File Handler', () => {
         error: 'Image data is empty or invalid',
       })
       expect(mockClipboard.writeImage).not.toHaveBeenCalled()
+    })
+
+    it('should return error when nativeImage creation throws', async () => {
+      mockNativeImage.createFromPath.mockImplementationOnce(() => {
+        throw new Error('createFromPath failed')
+      })
+
+      const handler = handlers.get('file:copyImageToClipboard')
+      const result = await handler!({}, '/tmp/bad.png')
+
+      expect(result).toEqual({
+        success: false,
+        error: 'createFromPath failed',
+      })
+      expect(mockClipboard.writeImage).not.toHaveBeenCalled()
+    })
+
+    it('should return error when clipboard write throws', async () => {
+      mockClipboard.writeImage.mockImplementationOnce(() => {
+        throw new Error('clipboard failed')
+      })
+
+      const handler = handlers.get('file:copyImageToClipboard')
+      const result = await handler!({}, '/tmp/page.png')
+
+      expect(result).toEqual({
+        success: false,
+        error: 'clipboard failed',
+      })
     })
   })
 

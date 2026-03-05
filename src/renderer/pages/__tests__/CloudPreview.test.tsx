@@ -86,6 +86,18 @@ vi.mock('../../components/MarkdownPreview', () => ({
 
 type EventCb = (event: any) => void
 let cloudEventCb: EventCb | undefined
+const mockMessageApi = {
+  success: vi.fn(),
+  error: vi.fn(),
+  warning: vi.fn(),
+  info: vi.fn(),
+  loading: vi.fn(),
+  open: vi.fn(),
+  destroy: vi.fn(),
+}
+const mockModalApi = {
+  confirm: vi.fn(({ onOk }: any) => onOk?.()),
+}
 
 const buildContextValue = (overrides: Partial<CloudContextType> = {}): CloudContextType => ({
   user: {
@@ -206,6 +218,7 @@ describe('CloudPreview', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     cloudEventCb = undefined
+    mockModalApi.confirm.mockImplementation(({ onOk }: any) => onOk?.())
 
     vi.mocked(window.api.events.onCloudTaskEvent).mockImplementation((cb: any) => {
       cloudEventCb = cb
@@ -223,18 +236,8 @@ describe('CloudPreview', () => {
     vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
 
     vi.spyOn(App, 'useApp').mockReturnValue({
-      message: {
-        success: vi.fn(),
-        error: vi.fn(),
-        warning: vi.fn(),
-        info: vi.fn(),
-        loading: vi.fn(),
-        open: vi.fn(),
-        destroy: vi.fn(),
-      } as any,
-      modal: {
-        confirm: ({ onOk }: any) => onOk?.(),
-      } as any,
+      message: mockMessageApi as any,
+      modal: mockModalApi as any,
       notification: {} as any,
     } as any)
   })
@@ -1028,7 +1031,7 @@ describe('CloudPreview', () => {
     renderPage(ctx)
 
     await waitFor(() => {
-      const img = document.querySelector('img') as HTMLImageElement
+      const img = screen.getByRole('img', { name: 'Page 1' }) as HTMLImageElement
       expect(img).toBeInTheDocument()
       expect(img.src).toContain('https://cdn.example.com/p1.png')
     })
@@ -1075,7 +1078,7 @@ describe('CloudPreview', () => {
     renderPage(ctx)
 
     await waitFor(() => {
-      const img = document.querySelector('img') as HTMLImageElement
+      const img = screen.getByRole('img', { name: 'Page 1' }) as HTMLImageElement
       expect(img).toBeInTheDocument()
       expect(img.src).toContain('data:image/png;base64,abcd')
     })
@@ -1084,6 +1087,108 @@ describe('CloudPreview', () => {
 
     await waitFor(() => {
       expect(window.api.file.copyImageToClipboard).toHaveBeenCalledWith('data:image/png;base64,abcd')
+    })
+  })
+
+  it('shows error message when copying markdown fails', async () => {
+    vi.mocked(navigator.clipboard.writeText).mockRejectedValueOnce(new Error('clipboard denied'))
+    const ctx = buildContextValue()
+    renderPage(ctx)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('markdown-content')).toHaveTextContent('page-1')
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Markdown' }))
+
+    await waitFor(() => {
+      expect(mockMessageApi.error).toHaveBeenCalledWith('Failed to copy markdown')
+    })
+  })
+
+  it('shows backend error when image copy returns failure', async () => {
+    vi.mocked(window.api.file.copyImageToClipboard).mockResolvedValueOnce({ success: false, error: 'copy denied' })
+    const ctx = buildContextValue()
+    renderPage(ctx)
+
+    await waitFor(() => {
+      expect(screen.getByRole('img', { name: 'Page 1' })).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Image' }))
+
+    await waitFor(() => {
+      expect(mockMessageApi.error).toHaveBeenCalledWith('copy denied')
+    })
+  })
+
+  it('copies presigned image via cloud proxy source', async () => {
+    vi.mocked(window.api.cloud.getPageImage).mockResolvedValueOnce({
+      success: true,
+      data: { dataUrl: 'data:image/png;base64,proxy' },
+    })
+    const ctx = buildContextValue({
+      getTaskPages: vi.fn().mockResolvedValue({
+        success: true,
+        data: [
+          {
+            page: 1,
+            status: 2,
+            status_name: 'COMPLETED',
+            markdown: 'page-1',
+            width_mm: 210,
+            height_mm: 297,
+            image_url: 'https://cdn.example.com/p1.png',
+          },
+        ],
+      }),
+    })
+    renderPage(ctx)
+
+    await waitFor(() => {
+      expect(screen.getByRole('img', { name: 'Page 1' })).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Image' }))
+
+    await waitFor(() => {
+      expect(window.api.cloud.getPageImage).toHaveBeenCalledWith({ taskId: 'task-1', pageNumber: 1 })
+      expect(window.api.file.copyImageToClipboard).toHaveBeenCalledWith('data:image/png;base64,proxy')
+    })
+  })
+
+  it('shows proxy error when presigned image proxy fetch fails', async () => {
+    vi.mocked(window.api.cloud.getPageImage).mockResolvedValueOnce({
+      success: false,
+      error: 'proxy failed',
+    })
+    const ctx = buildContextValue({
+      getTaskPages: vi.fn().mockResolvedValue({
+        success: true,
+        data: [
+          {
+            page: 1,
+            status: 2,
+            status_name: 'COMPLETED',
+            markdown: 'page-1',
+            width_mm: 210,
+            height_mm: 297,
+            image_url: 'https://cdn.example.com/p1.png',
+          },
+        ],
+      }),
+    })
+    renderPage(ctx)
+
+    await waitFor(() => {
+      expect(screen.getByRole('img', { name: 'Page 1' })).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Image' }))
+
+    await waitFor(() => {
+      expect(mockMessageApi.error).toHaveBeenCalledWith('proxy failed')
+      expect(window.api.file.copyImageToClipboard).not.toHaveBeenCalled()
     })
   })
 

@@ -490,7 +490,24 @@ const CloudPreview: React.FC = () => {
     if (!imageUrl) return;
 
     try {
-      const result = await window.api.file.copyImageToClipboard(imageUrl);
+      let sourceForClipboard = imageUrl;
+      const isRemoteImage = imageUrl.startsWith('http://') || imageUrl.startsWith('https://');
+
+      if (isRemoteImage) {
+        if (!id || !currentPageData) {
+          message.error(t('copy_image_failed'));
+          return;
+        }
+
+        const proxyImageResult = await window.api.cloud.getPageImage({ taskId: id, pageNumber: currentPageData.page });
+        if (!proxyImageResult.success || !proxyImageResult.data?.dataUrl) {
+          message.error(proxyImageResult.error || t('copy_image_failed'));
+          return;
+        }
+        sourceForClipboard = proxyImageResult.data.dataUrl;
+      }
+
+      const result = await window.api.file.copyImageToClipboard(sourceForClipboard);
       if (result.success) {
         message.success(t('copy_image_success'));
       } else {

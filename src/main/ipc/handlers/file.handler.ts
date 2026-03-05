@@ -1,6 +1,7 @@
 import { ipcMain, dialog, clipboard, nativeImage } from "electron";
 import path from "path";
 import fs from "fs";
+import { fileURLToPath } from "url";
 import taskRepository from "../../../core/domain/repositories/TaskRepository.js";
 import fileLogic from "../../../core/infrastructure/services/FileService.js";
 import { ImagePathUtil } from "../../../core/infrastructure/adapters/split/index.js";
@@ -8,20 +9,23 @@ import { IPC_CHANNELS } from "../../../shared/ipc/channels.js";
 import type { IpcResponse } from "../../../shared/ipc/responses.js";
 
 async function createImageFromSource(imageSource: string) {
-  if (imageSource.startsWith("data:image/")) {
-    return nativeImage.createFromDataURL(imageSource);
+  const normalizedSource = imageSource.trim();
+  const lowerSource = normalizedSource.toLowerCase();
+
+  if (lowerSource.startsWith("data:image/")) {
+    return nativeImage.createFromDataURL(normalizedSource);
   }
 
-  if (imageSource.startsWith("http://") || imageSource.startsWith("https://")) {
-    const response = await fetch(imageSource);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch image: ${response.status}`);
-    }
-    const buffer = Buffer.from(await response.arrayBuffer());
-    return nativeImage.createFromBuffer(buffer);
+  // Do not allow renderer-provided remote URLs to avoid SSRF/network abuse.
+  if (lowerSource.startsWith("http://") || lowerSource.startsWith("https://")) {
+    throw new Error("Remote image URLs are not allowed");
   }
 
-  return nativeImage.createFromPath(imageSource);
+  if (lowerSource.startsWith("file://")) {
+    return nativeImage.createFromPath(fileURLToPath(normalizedSource));
+  }
+
+  return nativeImage.createFromPath(normalizedSource);
 }
 
 /**

@@ -296,6 +296,39 @@ describe('CloudService', () => {
     expect(result.data?.fileName).toBe('中文技术手册.pdf')
   })
 
+  it('downloadPdf decodes RFC5987 latin1 filename* values', async () => {
+    const cloudService = (await import('../CloudService.js')).default
+    const response = makeJsonResponse(200, {})
+    response.headers.get.mockReturnValue("attachment; filename*=ISO-8859-1''caf%E9.pdf")
+    response.arrayBuffer.mockResolvedValue(new Uint8Array([1]).buffer)
+    mockAuthManager.fetchWithAuth.mockResolvedValueOnce(response)
+
+    const result = await cloudService.downloadPdf('task-latin1')
+    expect(result.data?.fileName).toBe('café.pdf')
+  })
+
+  it('downloadPdf falls back to task file name on malformed RFC5987 value', async () => {
+    const cloudService = (await import('../CloudService.js')).default
+    const response = makeJsonResponse(200, {})
+    response.headers.get.mockReturnValue("attachment; filename*=UTF-8''bad%ZZ.pdf")
+    response.arrayBuffer.mockResolvedValue(new Uint8Array([1]).buffer)
+    mockAuthManager.fetchWithAuth.mockResolvedValueOnce(response)
+
+    const result = await cloudService.downloadPdf('task-malformed')
+    expect(result.data?.fileName).toBe('task-task-malformed.pdf')
+  })
+
+  it('downloadPdf falls back to utf8 decode for unknown RFC5987 charset', async () => {
+    const cloudService = (await import('../CloudService.js')).default
+    const response = makeJsonResponse(200, {})
+    response.headers.get.mockReturnValue("attachment; filename*=X-UNKNOWN''%E4%B8%AD%E6%96%87.pdf")
+    response.arrayBuffer.mockResolvedValue(new Uint8Array([1]).buffer)
+    mockAuthManager.fetchWithAuth.mockResolvedValueOnce(response)
+
+    const result = await cloudService.downloadPdf('task-unknown-charset')
+    expect(result.data?.fileName).toBe('中文.pdf')
+  })
+
   it('downloadPdf repairs common UTF-8 mojibake in filename', async () => {
     const cloudService = (await import('../CloudService.js')).default
     const response = makeJsonResponse(200, {})

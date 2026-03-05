@@ -83,6 +83,26 @@ const Wrapper = ({ children }: { children: React.ReactNode }) => (
   </MemoryRouter>
 )
 
+const mockUseApp = () => {
+  const message = {
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+    info: vi.fn(),
+    loading: vi.fn(),
+    open: vi.fn(),
+    destroy: vi.fn(),
+  }
+  const useAppSpy = vi.spyOn(App, 'useApp').mockReturnValue({
+    message: message as any,
+    modal: {
+      confirm: ({ onOk }: any) => onOk?.(),
+    } as any,
+    notification: {} as any,
+  } as any)
+  return { useAppSpy, message }
+}
+
 describe('Preview', () => {
   const mockTask = {
     id: 'task-1',
@@ -267,7 +287,7 @@ describe('Preview', () => {
       )
 
       await waitFor(() => {
-        const img = document.querySelector('img')
+        const img = screen.getByRole('img', { name: 'Page 1' })
         expect(img).toBeInTheDocument()
         expect(img?.alt).toBe('Page 1')
       })
@@ -345,7 +365,7 @@ describe('Preview', () => {
       )
 
       await waitFor(() => {
-        const img = document.querySelector('img')
+        const img = screen.getByRole('img', { name: 'Page 1' })
         expect(img).toBeInTheDocument()
       })
 
@@ -355,6 +375,53 @@ describe('Preview', () => {
       await waitFor(() => {
         expect(window.api.file.copyImageToClipboard).toHaveBeenCalledWith('C:\\images\\page1.png')
       })
+    })
+
+    it('should show error when markdown copy fails', async () => {
+      const { useAppSpy, message } = mockUseApp()
+      vi.mocked(navigator.clipboard.writeText).mockRejectedValueOnce(new Error('clipboard denied'))
+
+      render(
+        <Wrapper>
+          <Preview />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('markdown-preview')).toHaveTextContent('# Page 1 Content')
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: 'Copy Markdown' }))
+
+      await waitFor(() => {
+        expect(message.error).toHaveBeenCalledWith('Failed to copy markdown')
+      })
+      useAppSpy.mockRestore()
+    })
+
+    it('should show error when image copy IPC fails', async () => {
+      const { useAppSpy, message } = mockUseApp()
+      vi.mocked(window.api.file.copyImageToClipboard).mockResolvedValueOnce({
+        success: false,
+        error: 'copy denied',
+      })
+
+      render(
+        <Wrapper>
+          <Preview />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByRole('img', { name: 'Page 1' })).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: 'Copy Image' }))
+
+      await waitFor(() => {
+        expect(message.error).toHaveBeenCalledWith('copy denied')
+      })
+      useAppSpy.mockRestore()
     })
   })
 
