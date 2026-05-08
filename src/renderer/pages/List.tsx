@@ -165,7 +165,31 @@ const List: React.FC = () => {
       const startIndex = (page - 1) * pageSize;
       const paginatedList = combinedList.slice(startIndex, startIndex + pageSize);
 
-      setData(paginatedList);
+      setData(prevData => {
+        // Build a map of existing cloud tasks' real-time progress (driven by SSE)
+        const existingMap = new Map<string, any>();
+        for (const item of prevData) {
+          if ((item as any).isCloud && item.id) {
+            existingMap.set(item.id, item);
+          }
+        }
+        // Merge: for cloud tasks already in state, take Math.max of progress fields
+        // to prevent API lag from overwriting SSE real-time updates
+        return paginatedList.map(task => {
+          if ((task as any).isCloud && task.id) {
+            const existing = existingMap.get(task.id);
+            if (existing) {
+              return {
+                ...task,
+                progress: Math.max(task.progress || 0, existing.progress || 0),
+                completed_count: Math.max(task.completed_count || 0, existing.completed_count || 0),
+                failed_count: Math.max(task.failed_count || 0, existing.failed_count || 0),
+              };
+            }
+          }
+          return task;
+        });
+      });
       setPagination(prev => ({
         ...prev,
         current: page,
