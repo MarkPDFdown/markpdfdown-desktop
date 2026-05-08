@@ -13,32 +13,40 @@ jobs:
   review:
     runs-on: ubuntu-latest
     env:
-      OPENAI_API_KEY: ${{ secrets.ZENMUX_API_KEY }}
+      LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
     steps:
-      - name: Check OPENAI_API_KEY
-        if: ${{ env.OPENAI_API_KEY == '' }}
-        run: echo "OPENAI_API_KEY is not set. Skip review run."
+      - name: Checkout Current Branch
+        uses: actions/checkout@v4
 
-      - name: Run AI Code Review Action
-        if: ${{ env.OPENAI_API_KEY != '' }}
-        uses: TiyAgents/code-review-agent-action@v1
+      - name: Check LLM_API_KEY
+        if: ${{ env.LLM_API_KEY == '' }}
+        run: echo "LLM_API_KEY is not set. Skip self-test run."
+
+      - name: Run Action From Current Branch
+        if: ${{ env.LLM_API_KEY != '' }}
+        uses: TiyAgents/code-review-agent-action@v3
         with:
-          # [Required] GitHub token with pull-requests:write and issues:write permissions
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Provider 配置（新字段）
+          ai_provider: ${{ vars.LLM_PROVIDER_PROTOCOL }}
+          api_key: ${{ env.LLM_API_KEY }}
+          api_base: ${{ vars.LLM_API_BASE }}
 
-          # [Conditionally required] OpenAI key. If not provided here,
-          # it must be available via OPENAI_API_KEY environment variable
-          openai_api_key: ${{ env.OPENAI_API_KEY }}
+          # [可选] Planner 使用模型；默认 gpt-5.3-codex
+          # 可选值：任意可用模型名（字符串）
+          planner_model: ${{ vars.PLANNER_MODEL }}
 
-          # [Optional] OpenAI base URL; any OpenAI-compatible API base URL
-          # If omitted, default official base is used; can also come from OPENAI_API_BASE
-          openai_api_base: ${{ vars.OPENAI_API_BASE }}
+          # [可选] SubAgent 使用模型；默认 gpt-5.3-codex
+          # 可选值：任意可用模型名（字符串）
+          reviewer_model: ${{ vars.DEFAULT_MODEL }}
 
-          # [Optional] Allowed hosts for openai_api_base (comma/newline separated); default api.openai.com
-          # Required when using a custom OpenAI-compatible gateway host
-          openai_api_base_allowlist: |
+          api_base_allowlist: |
             api.openai.com
             zenmux.ai
+            opencode.ai
+            openrouter.ai
+            tokenhub.tencentmaas.com
+            api.lkeap.cloud.tencent.com
 
           # [Optional] Include globs (comma or newline separated); default is ** (all files)
           # Allowed values: any valid glob patterns
@@ -46,6 +54,7 @@ jobs:
             **/*.js
             **/*.ts
             **/*.tsx
+            **/*.json
 
           # [Optional] Exclude globs (comma or newline separated); default is empty
           # Allowed values: any valid glob patterns
@@ -54,14 +63,8 @@ jobs:
             **/dist/**
             **/*.min.js
             **/release/**
-
-          # [Optional] Planner model; default is gpt-5.3-codex
-          # Allowed values: any available model name (string)
-          planner_model: ${{ vars.PLANNER_OPENAI_MODEL }}
-
-          # [Optional] Sub-agent model; default is gpt-5.3-codex
-          # Allowed values: any available model name (string)
-          reviewer_model: ${{ vars.DEFAULT_OPENAI_MODEL }}
+            **/node_modules/**
+            **/*.log
 
           # [Optional] Review dimensions (comma or newline separated);
           # default is general,security,performance,testing
@@ -74,7 +77,7 @@ jobs:
 
           # [Optional] Minimum confidence to keep a finding; default is 0.72
           # Allowed range: 0.0 - 1.0 (float)
-          min_finding_confidence: 0.72
+          min_finding_confidence: 0.85
 
           # [Optional] Round-1 coverage-first mode; default is true
           # Allowed values: true, false
