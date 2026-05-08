@@ -346,11 +346,18 @@ const List: React.FC = () => {
           case 'page_completed': {
             const pageNumber = (data as any).page;
             const totalPages = (data as any).total_pages || task.pages || 1;
-            // Use page number directly to avoid duplicate counting from replayed events
-            // page is 1-based, so completed_count = page number when pages complete in order
-            const completed = Math.max(task.completed_count || 0, pageNumber || 0);
-            task.completed_count = completed;
-            task.progress = Math.round((completed / totalPages) * 100);
+
+            if (task.status === 8) {
+              // Retry scenario (PARTIAL_FAILED): increment completed, decrement failed
+              task.completed_count = (task.completed_count || 0) + 1;
+              task.failed_count = Math.max(0, (task.failed_count || 0) - 1);
+            } else {
+              // Normal processing: use page number as progress indicator
+              // page is 1-based, so completed_count = page number when pages complete in order
+              task.completed_count = Math.max(task.completed_count || 0, pageNumber || 0);
+            }
+
+            task.progress = Math.round(((task.completed_count || 0) / totalPages) * 100);
             task.status = 3; // PROCESSING
             break;
           }

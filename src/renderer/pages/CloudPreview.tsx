@@ -250,13 +250,21 @@ const CloudPreview: React.FC = () => {
             }
             return [...prev, { page, status: 2, status_name: 'COMPLETED', markdown, width_mm: 210, height_mm: 297 }];
           });
-          setTask(prev => prev ? {
-            ...prev,
-            pages_completed: (prev.pages_completed || 0) + 1,
-          } : null);
+          setTask(prev => {
+            if (!prev) return null;
+            const updates: Partial<typeof prev> = {
+              pages_completed: (prev.pages_completed || 0) + 1,
+            };
+            // During retry (PARTIAL_FAILED), decrement failed count
+            if (prev.status === 8) {
+              updates.pages_failed = Math.max(0, (prev.pages_failed || 0) - 1);
+            }
+            return { ...prev, ...updates };
+          });
           break;
         }
-        case 'page_started': {
+        case 'page_started':
+        case 'page_retry_started': {
           const { page } = event.data as any;
           setPages(prev => {
             const idx = prev.findIndex(p => p.page === page);
@@ -294,6 +302,10 @@ const CloudPreview: React.FC = () => {
             pages_completed: data.pages_completed,
             pages_failed: data.pages_failed,
           } : null);
+          // When all pages completed (e.g. after retry), mark remaining pages as completed
+          if (data.pages_failed === 0) {
+            setPages(prev => prev.map(p => p.status !== 2 ? { ...p, status: 2, status_name: 'COMPLETED' } : p));
+          }
           break;
         }
         case 'error': {
