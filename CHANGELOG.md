@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.7] - 2026-05-08
+### :bug: Bug Fixes
+- [`b4752fd`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/b4752fd3f7fb64308d7fb36613b68ce7c5cac3d4) - **cloud**: 🐛 optimize context and debounce SSE refresh *(PR [#70](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/70) by [@jorben](https://github.com/jorben))*
+
+
 ## [0.4.6] - 2026-05-08
 ### :bug: Bug Fixes
 - [`15b5436`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/15b54363e2f2567dd55fb9a525312de416953017) - **list**: 🐛 prevent API lag from overwriting SSE real-time progress for cloud tasks *(PR [#65](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/65) by [@jorben](https://github.com/jorben))*
@@ -189,3 +194,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.4.3]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.4.2...0.4.3
 [0.4.5]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.4.3...0.4.5
 [0.4.6]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.4.5...0.4.6
+[0.4.7]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.4.6...0.4.7
