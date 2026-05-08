@@ -50,6 +50,8 @@ const List: React.FC = () => {
   const { t } = useTranslation('list');
   const { t: tCommon } = useTranslation('common');
   const cloudContext = useContext(CloudContext);
+  const cloudIsAuthenticated = cloudContext?.isAuthenticated ?? false;
+  const cloudGetTasks = cloudContext?.getTasks;
 
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<(Task | CloudTask)[]>([]);
@@ -65,6 +67,12 @@ const List: React.FC = () => {
   // 使用 ref 存储 pagination，避免 useEffect 无限循环
   const paginationRef = useRef(pagination);
   paginationRef.current = pagination;
+
+  // Refs for debounced cloud SSE refresh
+  const pendingRefreshRef = useRef(false);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dataRef = useRef(data);
+  dataRef.current = data;
 
   // Max items to fetch for unified sorting and local pagination
   const MAX_FETCH_ITEMS = 100;
@@ -127,8 +135,8 @@ const List: React.FC = () => {
       ];
 
       // Only fetch cloud tasks if authenticated
-      if (cloudContext?.isAuthenticated) {
-        promises.push(cloudContext.getTasks(1, MAX_FETCH_ITEMS));
+      if (cloudIsAuthenticated && cloudGetTasks) {
+        promises.push(cloudGetTasks(1, MAX_FETCH_ITEMS));
       }
 
       const results = await Promise.all(promises);
@@ -240,7 +248,7 @@ const List: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [message, t, cloudContext]);
+  }, [message, t, cloudIsAuthenticated, cloudGetTasks]);
 
   const handleTaskEvent = useCallback((event: any) => {
     const { type, taskId, task } = event;
@@ -306,36 +314,44 @@ const List: React.FC = () => {
 
     console.log('[List] Registering cloud SSE event listener');
 
-    // Track tasks not found in list to trigger a single refresh
-    let pendingRefresh = false;
-
     const handleCloudEvent = (event: CloudSSEEvent) => {
-      const { type, data } = event;
+      const { type, data: eventData } = event;
 
       // Skip non-business events
       if (type === 'heartbeat' || type === 'connected') return;
 
-      const taskId = (data as any).task_id;
+      const taskId = (eventData as any).task_id;
       if (!taskId) return;
 
       console.log(`[List] Cloud SSE event: type=${type}, task_id=${taskId}`);
 
-      setData(prevData => {
-        const index = prevData.findIndex(t => t.id === taskId);
-        if (index === -1) {
-          // Task not in list, schedule a refresh outside of setState
-          if (!pendingRefresh) {
-            pendingRefresh = true;
-            queueMicrotask(() => {
-              pendingRefresh = false;
-              fetchTasks(paginationRef.current.current, paginationRef.current.pageSize);
-            });
-          }
-          return prevData;
+      // Check if task is in current list using ref (avoids scheduling inside setState)
+      const currentData = dataRef.current;
+      const index = currentData.findIndex(t => t.id === taskId);
+
+      if (index === -1) {
+        // Task not in list — debounced refresh (500ms merge window)
+        if (!pendingRefreshRef.current) {
+          pendingRefreshRef.current = true;
+          refreshTimerRef.current = setTimeout(async () => {
+            try {
+              await fetchTasks(paginationRef.current.current, paginationRef.current.pageSize);
+            } finally {
+              pendingRefreshRef.current = false;
+              refreshTimerRef.current = null;
+            }
+          }, 500);
         }
+        return;
+      }
+
+      // Task found in list — apply incremental update
+      setData(prevData => {
+        const idx = prevData.findIndex(t => t.id === taskId);
+        if (idx === -1) return prevData;
 
         const newData = [...prevData];
-        const task = { ...newData[index] };
+        const task = { ...newData[idx] };
 
         switch (type) {
           case 'page_started':
@@ -344,8 +360,8 @@ const List: React.FC = () => {
             break;
           }
           case 'page_completed': {
-            const pageNumber = (data as any).page;
-            const totalPages = (data as any).total_pages || task.pages || 1;
+            const pageNumber = (eventData as any).page;
+            const totalPages = (eventData as any).total_pages || task.pages || 1;
 
             if (task.status === 8) {
               // Retry scenario (PARTIAL_FAILED): increment completed, decrement failed
@@ -353,7 +369,6 @@ const List: React.FC = () => {
               task.failed_count = Math.max(0, (task.failed_count || 0) - 1);
             } else {
               // Normal processing: use page number as progress indicator
-              // page is 1-based, so completed_count = page number when pages complete in order
               task.completed_count = Math.max(task.completed_count || 0, pageNumber || 0);
             }
 
@@ -362,20 +377,19 @@ const List: React.FC = () => {
             break;
           }
           case 'page_failed': {
-            // Increment as approximation; the 'completed' event provides authoritative pages_failed
             task.failed_count = (task.failed_count || 0) + 1;
             break;
           }
           case 'completed': {
-            task.status = (data as any).status || 6;
+            task.status = (eventData as any).status || 6;
             task.progress = 100;
-            task.completed_count = (data as any).pages_completed;
-            task.failed_count = (data as any).pages_failed;
+            task.completed_count = (eventData as any).pages_completed;
+            task.failed_count = (eventData as any).pages_failed;
             break;
           }
           case 'error': {
             task.status = 0; // FAILED
-            task.error = (data as any).error;
+            task.error = (eventData as any).error;
             break;
           }
           case 'cancelled': {
@@ -384,14 +398,14 @@ const List: React.FC = () => {
           }
           case 'pdf_ready': {
             task.status = 3; // PROCESSING (splitting done, pages ready for conversion)
-            task.pages = (data as any).page_count;
+            task.pages = (eventData as any).page_count;
             break;
           }
           default:
             return prevData;
         }
 
-        newData[index] = task;
+        newData[idx] = task;
         // Sync module-level progress cache so it survives component remount
         if (task.id) {
           const terminalStatuses = [0, 6, 7, 8]; // FAILED, COMPLETED, CANCELLED, PARTIAL_FAILED
@@ -415,6 +429,12 @@ const List: React.FC = () => {
     return () => {
       console.log('[List] Cleaning up cloud SSE event listener');
       cleanup();
+      // Clear any pending debounced refresh
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+        pendingRefreshRef.current = false;
+      }
     };
   }, [fetchTasks]);
 
