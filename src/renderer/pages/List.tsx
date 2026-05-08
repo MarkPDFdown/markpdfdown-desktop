@@ -19,6 +19,18 @@ import type { CloudModelTier, CloudSSEEvent } from "../../shared/types/cloud-api
 const { Text } = Typography;
 const CLOUD_MODEL_TIERS: CloudModelTier[] = ['lite', 'pro', 'ultra'];
 
+/**
+ * Module-level progress cache for cloud tasks.
+ * Persists across component mount/unmount cycles within the same session,
+ * preventing progress regression when the API returns stale data.
+ */
+const cloudProgressCache = new Map<string, {
+  progress: number;
+  completed_count: number;
+  failed_count: number;
+  status: number;
+}>();
+
 interface LocalModelOption {
   value: string;
   label: string;
@@ -166,24 +178,49 @@ const List: React.FC = () => {
       const paginatedList = combinedList.slice(startIndex, startIndex + pageSize);
 
       setData(prevData => {
-        // Build a map of existing cloud tasks' real-time progress (driven by SSE)
+        // Build a map of existing cloud tasks' real-time progress from both:
+        // 1. Current React state (prevData) - covers same-mount SSE updates
+        // 2. Module-level cache (cloudProgressCache) - covers cross-mount SSE updates
         const existingMap = new Map<string, any>();
         for (const item of prevData) {
           if ((item as any).isCloud && item.id) {
             existingMap.set(item.id, item);
           }
         }
-        // Merge: for cloud tasks already in state, take Math.max of progress fields
+        // Merge: for cloud tasks, take Math.max of progress fields from API, state, and cache
         // to prevent API lag from overwriting SSE real-time updates
         return paginatedList.map(task => {
           if ((task as any).isCloud && task.id) {
-            const existing = existingMap.get(task.id);
-            if (existing) {
+            const fromState = existingMap.get(task.id);
+            const fromCache = cloudProgressCache.get(task.id);
+            const maxProgress = Math.max(
+              task.progress || 0,
+              fromState?.progress || 0,
+              fromCache?.progress || 0
+            );
+            const maxCompleted = Math.max(
+              task.completed_count || 0,
+              fromState?.completed_count || 0,
+              fromCache?.completed_count || 0
+            );
+            const maxFailed = Math.max(
+              task.failed_count || 0,
+              fromState?.failed_count || 0,
+              fromCache?.failed_count || 0
+            );
+            // Update cache with merged values
+            cloudProgressCache.set(task.id, {
+              progress: maxProgress,
+              completed_count: maxCompleted,
+              failed_count: maxFailed,
+              status: task.status ?? fromCache?.status ?? 0,
+            });
+            if (maxProgress > (task.progress || 0) || maxCompleted > (task.completed_count || 0)) {
               return {
                 ...task,
-                progress: Math.max(task.progress || 0, existing.progress || 0),
-                completed_count: Math.max(task.completed_count || 0, existing.completed_count || 0),
-                failed_count: Math.max(task.failed_count || 0, existing.failed_count || 0),
+                progress: maxProgress,
+                completed_count: maxCompleted,
+                failed_count: maxFailed,
               };
             }
           }
@@ -348,6 +385,21 @@ const List: React.FC = () => {
         }
 
         newData[index] = task;
+        // Sync module-level progress cache so it survives component remount
+        if (task.id) {
+          const terminalStatuses = [0, 6, 7, 8]; // FAILED, COMPLETED, CANCELLED, PARTIAL_FAILED
+          if (terminalStatuses.includes(task.status ?? -1)) {
+            // Terminal state: remove from cache, API is authoritative
+            cloudProgressCache.delete(task.id);
+          } else {
+            cloudProgressCache.set(task.id, {
+              progress: task.progress || 0,
+              completed_count: task.completed_count || 0,
+              failed_count: task.failed_count || 0,
+              status: task.status ?? 0,
+            });
+          }
+        }
         return newData;
       });
     };
