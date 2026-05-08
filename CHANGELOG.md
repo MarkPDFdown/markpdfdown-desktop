@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.6] - 2026-05-08
+### :bug: Bug Fixes
+- [`15b5436`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/15b54363e2f2567dd55fb9a525312de416953017) - **list**: 🐛 prevent API lag from overwriting SSE real-time progress for cloud tasks *(PR [#65](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/65) by [@jorben](https://github.com/jorben))*
+- [`d4c62bc`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/d4c62bcaca71eb059506d6a4934fb5a261b8b76b) - **list**: 🐛 Prevent cloud task progress regression on page navigation *(PR [#66](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/66) by [@jorben](https://github.com/jorben))*
+- [`c3ce5d4`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/c3ce5d42588517e5962ef096fbcdfa3d40dd3c83) - **cloud**: 🐛 correct retry count tracking for partial failures *(PR [#67](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/67) by [@jorben](https://github.com/jorben))*
+
+
 ## [0.4.5] - 2026-03-05
 ### :sparkles: New Features
 - [`9d28004`](https://github.com/MarkPDFdown/markpdfdown-desktop/commit/9d280049e1d201ac408cfdc454f59081e2d0b0ec) - **retry**: ✨ Add model-switch retry for task/page flows *(PR [#63](https://github.com/MarkPDFdown/markpdfdown-desktop/pull/63) by [@jorben](https://github.com/jorben))*
@@ -181,3 +188,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.4.2]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.4.1...0.4.2
 [0.4.3]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.4.2...0.4.3
 [0.4.5]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.4.3...0.4.5
+[0.4.6]: https://github.com/MarkPDFdown/markpdfdown-desktop/compare/0.4.5...0.4.6
