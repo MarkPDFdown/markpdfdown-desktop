@@ -1,4 +1,4 @@
-import React, { useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import {
   CloudContext,
   UserProfile,
@@ -501,38 +501,45 @@ export const CloudProvider: React.FC<CloudProviderProps> = ({ children }) => {
     return cleanup;
   }, [isAuthenticated, refreshCredits]);
 
+  const contextValue = useMemo(() => ({
+    user,
+    credits,
+    isAuthenticated,
+    isLoading,
+    deviceFlowStatus,
+    userCode,
+    verificationUrl,
+    authError,
+    login,
+    logout,
+    cancelLogin,
+    refreshCredits,
+    convertFile,
+    getTasks,
+    getTaskById,
+    getTaskPages,
+    cancelTask,
+    retryTask,
+    deleteTask,
+    retryPage,
+    getTaskResult,
+    downloadResult,
+    createCheckout,
+    getCheckoutStatus,
+    reconcileCheckout,
+    getCreditHistory,
+    getPaymentHistory
+  }), [
+    user, credits, isAuthenticated, isLoading, deviceFlowStatus,
+    userCode, verificationUrl, authError, login, logout, cancelLogin,
+    refreshCredits, convertFile, getTasks, getTaskById, getTaskPages,
+    cancelTask, retryTask, deleteTask, retryPage, getTaskResult,
+    downloadResult, createCheckout, getCheckoutStatus, reconcileCheckout,
+    getCreditHistory, getPaymentHistory
+  ]);
+
   return (
-    <CloudContext.Provider
-      value={{
-        user,
-        credits,
-        isAuthenticated,
-        isLoading,
-        deviceFlowStatus,
-        userCode,
-        verificationUrl,
-        authError,
-        login,
-        logout,
-        cancelLogin,
-        refreshCredits,
-        convertFile,
-        getTasks,
-        getTaskById,
-        getTaskPages,
-        cancelTask,
-        retryTask,
-        deleteTask,
-        retryPage,
-        getTaskResult,
-        downloadResult,
-        createCheckout,
-        getCheckoutStatus,
-        reconcileCheckout,
-        getCreditHistory,
-        getPaymentHistory
-      }}
-    >
+    <CloudContext.Provider value={contextValue}>
       {children}
     </CloudContext.Provider>
   );
