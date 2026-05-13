@@ -21,6 +21,10 @@ vi.mock('react-i18next', () => ({
         'model_config.id_placeholder': 'Model ID',
         'model_config.add_button': 'Add Model',
         'model_config.warning': 'Warning: Make sure the model ID matches the provider API',
+        'ad_banner.title': 'ZenMux: reliable enterprise-grade LLM API service',
+        'ad_banner.description': 'Get an extra 5–8% bonus on your first top-up',
+        'ad_banner.cta': 'Get it now',
+        'ad_banner.cta_aria': 'Get ZenMux enterprise-grade LLM API service',
         'actions.delete_provider': 'Delete Provider',
         'messages.update_success': 'Updated successfully',
         'messages.update_failed': 'Update failed',
@@ -159,6 +163,26 @@ describe('Provider', () => {
       await waitFor(() => {
         expect(screen.getByText(/Protocol:.*openai/)).toBeInTheDocument()
       })
+    })
+
+    it('should display ZenMux ad banner with external link', async () => {
+      render(
+        <Wrapper>
+          <Provider providerId={1} />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('ZenMux: reliable enterprise-grade LLM API service')).toBeInTheDocument()
+      })
+
+      expect(screen.getByText('Get an extra 5–8% bonus on your first top-up')).toBeInTheDocument()
+      const adLink = screen.getByRole('link', {
+        name: 'Get ZenMux enterprise-grade LLM API service'
+      })
+      expect(adLink).toHaveAttribute('href', 'https://zenmux.ai/invite/9H70CU')
+      expect(adLink).toHaveAttribute('target', '_blank')
+      expect(adLink).toHaveAttribute('rel', 'noreferrer')
     })
   })
 

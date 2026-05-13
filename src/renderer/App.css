@@ -116,6 +116,83 @@
   }
 }
 
+/* Provider ZenMux promotion banner */
+.provider-ad-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid rgba(22, 119, 255, 0.22);
+  border-radius: 12px;
+  background:
+    linear-gradient(135deg, rgba(22, 119, 255, 0.1), rgba(114, 46, 209, 0.08)),
+    #ffffff;
+  box-shadow: 0 6px 18px rgba(22, 119, 255, 0.08);
+}
+
+.provider-ad-banner__content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.provider-ad-banner__brand {
+  color: #0958d9;
+  font-weight: 600;
+}
+
+.provider-ad-banner__text {
+  color: #5a6072;
+}
+
+.provider-ad-banner__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-height: 30px;
+  padding: 3px 12px;
+  border: 1px solid rgba(22, 119, 255, 0.28);
+  border-radius: 999px;
+  color: #0958d9;
+  font-weight: 500;
+  line-height: 1.4;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: none;
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease,
+    background 0.2s ease;
+}
+
+.provider-ad-banner__link:hover,
+.provider-ad-banner__link:focus {
+  color: #1677ff;
+  text-decoration: none;
+  border-color: rgba(22, 119, 255, 0.45);
+  background: rgba(22, 119, 255, 0.08);
+}
+
+.provider-ad-banner__link:focus-visible {
+  outline: 3px solid rgba(22, 119, 255, 0.22);
+  outline-offset: 2px;
+}
+
+@media (max-width: 720px) {
+  .provider-ad-banner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .provider-ad-banner__link {
+    width: 100%;
+  }
+}
+
 /* Settings Tabs - tab栏固定，内容区域滚动 */
 .settings-tabs .ant-tabs-content-holder {
   flex: 1 1 auto;

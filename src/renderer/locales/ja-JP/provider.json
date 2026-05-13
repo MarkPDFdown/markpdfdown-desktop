@@ -16,6 +16,12 @@
     "add_button": "モデルを追加",
     "warning": "注意: 視覚認識に対応しているモデルを追加し、モデルIDが正確であることを確認してください。さもなければモデルは正常に動作しません！"
   },
+  "ad_banner": {
+    "title": "ZenMux：信頼できるエンタープライズ向け大規模モデルAPIサービス",
+    "description": "初回チャージで5～8%の追加特典をプレゼント",
+    "cta": "今すぐ入手",
+    "cta_aria": "ZenMux のエンタープライズ向け大規模モデルAPIサービスを入手"
+  },
   "actions": {
     "delete_provider": "プロバイダーを削除",
     "delete_model_title": "削除",
