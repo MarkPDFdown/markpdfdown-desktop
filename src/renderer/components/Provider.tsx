@@ -490,6 +490,26 @@ const Provider: React.FC<ProviderProps> = ({
         </Flex>
       </div>
 
+      <div className="provider-ad-banner">
+        <div className="provider-ad-banner__content">
+          <Typography.Text className="provider-ad-banner__brand">
+            {t('ad_banner.title')}
+          </Typography.Text>
+          <Typography.Text className="provider-ad-banner__text">
+            {t('ad_banner.description')}
+          </Typography.Text>
+        </div>
+        <a
+          className="provider-ad-banner__link"
+          href="https://zenmux.ai/invite/9H70CU"
+          target="_blank"
+          rel="noreferrer"
+          aria-label={t('ad_banner.cta_aria')}
+        >
+          {t('ad_banner.cta')}
+        </a>
+      </div>
+
       <Divider variant="dashed" dashed plain={true}>
         {t('model_config.title')}
       </Divider>

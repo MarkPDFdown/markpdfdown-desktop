@@ -16,6 +16,12 @@
     "add_button": "Add Model",
     "warning": "Note: Please add models that support vision recognition and ensure the Model ID is correct, otherwise the model will not work properly!"
   },
+  "ad_banner": {
+    "title": "ZenMux: reliable enterprise-grade LLM API service",
+    "description": "Get an extra 5–8% bonus on your first top-up",
+    "cta": "Get it now",
+    "cta_aria": "Get ZenMux enterprise-grade LLM API service"
+  },
   "actions": {
     "delete_provider": "Delete Provider",
     "delete_model_title": "Delete",
