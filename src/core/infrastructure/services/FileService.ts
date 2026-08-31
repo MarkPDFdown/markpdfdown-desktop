@@ -7,13 +7,16 @@ import fs from "fs";
 const getUploadDir = () => {
   // DEV目录
   if (isDev) {
+    const userFiles = path.join(app.getPath('userData'), 'files');
+    if (fs.existsSync(userFiles)) {
+      return userFiles;
+    }
     return path.join(process.cwd(), 'files');
   }
   // 打包目录
   const userDataPath = app.getPath('userData');
   return path.join(userDataPath, 'files');
 };
-
 // 获取临时目录
 const getTempDir = () => {
   // DEV目录
