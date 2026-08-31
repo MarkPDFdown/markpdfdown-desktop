@@ -218,14 +218,31 @@ export function registerTaskDetailHandlers() {
   );
 
   /**
-   * Retry all failed pages
+   * Retry all failed pages (with optional model override)
    */
   ipcMain.handle(
     IPC_CHANNELS.TASK_DETAIL.RETRY_FAILED,
-    async (_, taskId: string): Promise<IpcResponse> => {
+    async (
+      _,
+      params: string | { taskId: string; providerId?: number; modelId?: string }
+    ): Promise<IpcResponse> => {
       try {
+        const payload = typeof params === "string" ? { taskId: params } : params;
+        const taskId = payload?.taskId;
+
         if (!taskId) {
           return { success: false, error: "Task ID is required" };
+        }
+
+        const hasProviderOverride = payload?.providerId !== undefined;
+        const hasModelOverride = payload?.modelId !== undefined;
+        const hasAnyModelOverride = hasProviderOverride || hasModelOverride;
+
+        if (hasAnyModelOverride && (!hasProviderOverride || !hasModelOverride)) {
+          return {
+            success: false,
+            error: "providerId and modelId must be provided together",
+          };
         }
 
         const result = await prisma.$transaction(async (tx) => {
@@ -242,6 +259,41 @@ export function registerTaskDetailHandlers() {
             throw new Error("Task is cancelled, cannot retry");
           }
 
+          let targetProvider = task.provider;
+          let targetModel = task.model;
+          let targetModelName = task.model_name;
+
+          if (hasAnyModelOverride) {
+            const providerId = payload.providerId as number;
+            const modelId = payload.modelId as string;
+
+            const provider = await tx.provider.findUnique({
+              where: { id: providerId },
+              select: { id: true, name: true, status: true },
+            });
+
+            if (!provider || provider.status !== 0) {
+              throw new Error("Provider not found or disabled");
+            }
+
+            const model = await tx.model.findUnique({
+              where: {
+                id_provider: {
+                  id: modelId,
+                  provider: providerId,
+                },
+              },
+              select: { id: true, name: true },
+            });
+
+            if (!model) {
+              throw new Error("Model not found for provider");
+            }
+
+            targetProvider = providerId;
+            targetModel = modelId;
+            targetModelName = `${model.name} | ${provider.name}`;
+          }
           // Step 2: Count failed pages
           const failedCount = await tx.taskDetail.count({
             where: {
@@ -254,7 +306,7 @@ export function registerTaskDetailHandlers() {
             throw new Error("No failed pages to retry");
           }
 
-          // Step 3: Update all failed pages
+          // Step 3: Update all failed pages with new or existing model
           await tx.taskDetail.updateMany({
             where: {
               task: taskId,
@@ -271,6 +323,8 @@ export function registerTaskDetailHandlers() {
               output_tokens: 0,
               conversion_time: 0,
               content: "",
+              provider: targetProvider,
+              model: targetModel,
             },
           });
 
@@ -281,9 +335,11 @@ export function registerTaskDetailHandlers() {
               failed_count: 0,
               status: TaskStatus.PROCESSING,
               progress: Math.round((task.completed_count / task.pages) * 100),
+              provider: targetProvider,
+              model: targetModel,
+              model_name: targetModelName,
             },
           });
-
           return { updatedCount: failedCount, task: updatedTask };
         }, {
           isolationLevel: 'Serializable',

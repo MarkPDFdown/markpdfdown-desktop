@@ -879,7 +879,7 @@ const List: React.FC = () => {
           })()}
           {(() => {
             const isCloud = record.provider === -1;
-            if (record.status === 0) {
+            if (record.status === 0 || record.status === 8) {
               return (
                 <Text
                   type="warning"

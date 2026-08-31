@@ -228,7 +228,7 @@ interface ElectronAPI {
     getByPage: (taskId: string, page: number) => Promise<IpcResponse<TaskDetailWithImage>>;
     getAllByTask: (taskId: string) => Promise<IpcResponse<TaskDetail[]>>;
     retry: (params: number | RetryTaskDetailDTO) => Promise<IpcResponse<TaskDetail>>;
-    retryFailed: (taskId: string) => Promise<IpcResponse<{ retried: number }>>;
+    retryFailed: (params: string | RetryTaskDTO) => Promise<IpcResponse<{ retried: number }>>;
   };
 
   file: {

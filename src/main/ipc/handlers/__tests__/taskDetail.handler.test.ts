@@ -361,6 +361,50 @@ describe('TaskDetail Handler', () => {
         data: { retried: 2 }
       })
     })
+    it('should retry failed pages with model override', async () => {
+      const mockTask = { id: 'task-1', status: 6, completed_count: 8, pages: 10, provider: 1, model: 'old-model' }
+      const mockProvider = { id: 2, name: 'OpenAI', status: 0 }
+      const mockModel = { id: 'gpt-4o', name: 'GPT-4o', provider: 2 }
+      const updatedTask = { ...mockTask, status: 3, failed_count: 0, provider: 2, model: 'gpt-4o', model_name: 'GPT-4o | OpenAI' }
+
+      mockPrisma.$transaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
+        const tx = {
+          task: {
+            findUnique: vi.fn().mockResolvedValue(mockTask),
+            update: vi.fn().mockResolvedValue(updatedTask)
+          },
+          provider: {
+            findUnique: vi.fn().mockResolvedValue(mockProvider)
+          },
+          model: {
+            findUnique: vi.fn().mockResolvedValue(mockModel)
+          },
+          taskDetail: {
+            count: vi.fn().mockResolvedValue(2),
+            updateMany: vi.fn().mockResolvedValue({ count: 2 })
+          }
+        }
+        return callback(tx)
+      })
+
+      const handler = handlers.get('taskDetail:retryFailed')
+      const result = await handler!({}, { taskId: 'task-1', providerId: 2, modelId: 'gpt-4o' })
+
+      expect(result).toEqual({
+        success: true,
+        data: { retried: 2 }
+      })
+    })
+
+    it('should return error when model override params are incomplete in retryFailed', async () => {
+      const handler = handlers.get('taskDetail:retryFailed')
+      const result = await handler!({}, { taskId: 'task-1', providerId: 2 })
+
+      expect(result).toEqual({
+        success: false,
+        error: 'providerId and modelId must be provided together'
+      })
+    })
 
     it('should return error when taskId is missing', async () => {
       const handler = handlers.get('taskDetail:retryFailed')
