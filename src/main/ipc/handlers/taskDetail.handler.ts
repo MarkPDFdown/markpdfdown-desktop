@@ -294,24 +294,23 @@ export function registerTaskDetailHandlers() {
             targetModel = modelId;
             targetModelName = `${model.name} | ${provider.name}`;
           }
-          // Step 2: Count failed pages
-          const failedCount = await tx.taskDetail.count({
-            where: {
-              task: taskId,
-              status: PageStatus.FAILED,
-            },
+          // Step 2: Count unfinished pages (FAILED + leftover PENDING orphans)
+          const unfinishedWhere = {
+            task: taskId,
+            status: { in: [PageStatus.FAILED, PageStatus.PENDING] },
+          };
+
+          const unfinishedCount = await tx.taskDetail.count({
+            where: unfinishedWhere,
           });
 
-          if (failedCount === 0) {
+          if (unfinishedCount === 0) {
             throw new Error("No failed pages to retry");
           }
 
-          // Step 3: Update all failed pages with new or existing model
+          // Step 3: Re-queue unfinished pages with new or existing model
           await tx.taskDetail.updateMany({
-            where: {
-              task: taskId,
-              status: PageStatus.FAILED,
-            },
+            where: unfinishedWhere,
             data: {
               status: PageStatus.PENDING,
               retry_count: 0,
@@ -328,7 +327,7 @@ export function registerTaskDetailHandlers() {
             },
           });
 
-          // Step 4: Update task
+          // Step 4: Update task — keep completed_count, clear failed_count
           const updatedTask = await tx.task.update({
             where: { id: taskId },
             data: {
@@ -340,7 +339,7 @@ export function registerTaskDetailHandlers() {
               model_name: targetModelName,
             },
           });
-          return { updatedCount: failedCount, task: updatedTask };
+          return { updatedCount: unfinishedCount, task: updatedTask };
         }, {
           isolationLevel: 'Serializable',
         });

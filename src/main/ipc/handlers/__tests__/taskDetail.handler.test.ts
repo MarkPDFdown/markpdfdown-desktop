@@ -338,8 +338,9 @@ describe('TaskDetail Handler', () => {
     it('should retry all failed pages', async () => {
       const mockTask = { id: 'task-1', status: 6, completed_count: 8, pages: 10 }
       const updatedTask = { ...mockTask, status: 3, failed_count: 0 }
+      const updateMany = vi.fn().mockResolvedValue({ count: 2 })
 
-      mockPrisma.$transaction.mockImplementation(async (callback: any) => {
+      mockPrisma.$transaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
         const tx = {
           task: {
             findUnique: vi.fn().mockResolvedValue(mockTask),
@@ -347,7 +348,7 @@ describe('TaskDetail Handler', () => {
           },
           taskDetail: {
             count: vi.fn().mockResolvedValue(2),
-            updateMany: vi.fn().mockResolvedValue({ count: 2 })
+            updateMany
           }
         }
         return callback(tx)
@@ -359,6 +360,15 @@ describe('TaskDetail Handler', () => {
       expect(result).toEqual({
         success: true,
         data: { retried: 2 }
+      })
+      expect(updateMany).toHaveBeenCalledWith({
+        where: {
+          task: 'task-1',
+          status: { in: [-1, 0] },
+        },
+        data: expect.objectContaining({
+          status: 0,
+        }),
       })
     })
     it('should retry failed pages with model override', async () => {

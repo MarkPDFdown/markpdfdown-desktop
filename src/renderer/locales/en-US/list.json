@@ -41,10 +41,12 @@
   },
   "retry": {
     "confirm_with_model": "Retry Task (Choose Model)",
+    "confirm_failed_with_model": "Retry Failed Pages (Choose Model)",
     "confirm_cloud_with_model": "Retry Cloud Task (Choose Model)",
     "select_model": "Select retry model",
     "load_models_failed": "Failed to load model list",
     "no_models_available": "No available models. Please configure models in settings first.",
+    "failed_success": "{{count}} failed pages have been added to retry queue",
     "model": {
       "lite": "Fit Lite",
       "pro": "Fit Pro",

@@ -542,8 +542,11 @@ const List: React.FC = () => {
   };
 
   // 本地任务重试（支持切换模型）
+  // PARTIAL_FAILED(8): only retry failed pages; FAILED(0)/others: full restart
   const handleRetryTask = async (task: Task | CloudTask) => {
     if (!task.id) return;
+
+    const isPartialFailed = task.status === 8;
 
     try {
       const modelOptions = await loadLocalModelOptions();
@@ -563,7 +566,9 @@ const List: React.FC = () => {
         : modelOptions[0].value;
 
       modal.confirm({
-        title: t('retry.confirm_with_model'),
+        title: isPartialFailed
+          ? t('retry.confirm_failed_with_model')
+          : t('retry.confirm_with_model'),
         content: (
           <div>
             <div style={{ marginBottom: 8 }}>{t('retry.select_model')}</div>
@@ -587,14 +592,33 @@ const List: React.FC = () => {
           }
 
           const { modelId, providerId } = parsedModel;
+          const shouldOverride = selectedModelValue !== defaultModelValue;
           try {
-            const result = await window.api.task.retry({
-              taskId: task.id as string,
-              providerId,
-              modelId,
-            });
+            const result = isPartialFailed
+              ? await window.api.taskDetail.retryFailed(
+                  shouldOverride
+                    ? { taskId: task.id as string, providerId, modelId }
+                    : (task.id as string)
+                )
+              : await window.api.task.retry({
+                  taskId: task.id as string,
+                  ...(shouldOverride ? { providerId, modelId } : {}),
+                });
+
             if (result.success) {
-              message.success(t('messages.action_success', { action: t('actions.retry') }));
+              const retried =
+                isPartialFailed &&
+                result.data &&
+                typeof result.data === 'object' &&
+                'retried' in result.data &&
+                typeof result.data.retried === 'number'
+                  ? result.data.retried
+                  : undefined;
+              message.success(
+                typeof retried === 'number'
+                  ? t('retry.failed_success', { count: retried })
+                  : t('messages.action_success', { action: t('actions.retry') })
+              );
               fetchTasks(pagination.current, pagination.pageSize);
             } else {
               message.error(result.error || t('messages.action_failed', { action: t('actions.retry') }));

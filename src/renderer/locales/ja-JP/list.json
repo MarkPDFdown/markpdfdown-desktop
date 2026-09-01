@@ -42,5 +42,19 @@
   "task_type": {
     "cloud": "クラウドタスク",
     "local": "ローカルタスク"
+  },
+  "retry": {
+    "confirm_with_model": "タスクを再試行（モデル選択）",
+    "confirm_failed_with_model": "失敗ページを再試行（モデル選択）",
+    "confirm_cloud_with_model": "クラウドタスクを再試行（モデル選択）",
+    "select_model": "再試行モデルを選択",
+    "load_models_failed": "モデル一覧の読み込みに失敗しました",
+    "no_models_available": "利用可能なモデルがありません。先に設定でモデルを構成してください。",
+    "failed_success": "{{count}}個の失敗ページが再試行キューに追加されました",
+    "model": {
+      "lite": "Fit Lite",
+      "pro": "Fit Pro",
+      "ultra": "Fit Ultra"
+    }
   }
 }

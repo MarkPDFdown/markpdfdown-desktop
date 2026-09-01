@@ -37,10 +37,12 @@ const tMock = (key: string, params?: any) => {
     'actions.retry': 'Retry',
     'actions.delete': 'Delete',
     'retry.confirm_with_model': 'Retry Task (Choose Model)',
+    'retry.confirm_failed_with_model': 'Retry Failed Pages (Choose Model)',
     'retry.confirm_cloud_with_model': 'Retry Cloud Task (Choose Model)',
     'retry.select_model': 'Select retry model',
     'retry.load_models_failed': 'Failed to load model list',
     'retry.no_models_available': 'No available models',
+    'retry.failed_success': `${params?.count} failed pages have been added to retry queue`,
     'retry.model.lite': 'Fit Lite',
     'retry.model.pro': 'Fit Pro',
     'retry.model.ultra': 'Fit Ultra',
@@ -102,7 +104,8 @@ describe('List', () => {
   const mockTasks = [
     { id: 'task-1', filename: 'document.pdf', type: 'pdf', pages: 10, model_name: 'GPT-4o', progress: 50, status: 3 },
     { id: 'task-2', filename: 'image.png', type: 'png', pages: 1, model_name: 'Claude 3.5', progress: 100, status: 6 },
-    { id: 'task-3', filename: 'failed.pdf', type: 'pdf', pages: 5, model_name: 'GPT-4o', progress: 20, status: 0, error: 'API error' }
+    { id: 'task-3', filename: 'failed.pdf', type: 'pdf', pages: 5, model_name: 'GPT-4o', progress: 20, status: 0, error: 'API error' },
+    { id: 'task-4', filename: 'partial.pdf', type: 'pdf', pages: 10, model_name: 'GPT-4o', progress: 50, status: 8, completed_count: 5, failed_count: 5, provider: 9, model: 'vendor@model' },
   ]
 
   beforeEach(() => {
@@ -110,7 +113,7 @@ describe('List', () => {
 
     vi.mocked(window.api.task.getAll).mockResolvedValue({
       success: true,
-      data: { list: mockTasks, total: 3 }
+      data: { list: mockTasks, total: 4 }
     })
 
     vi.mocked(window.api.task.delete).mockResolvedValue({
@@ -189,7 +192,7 @@ describe('List', () => {
       // Check for table rows - filenames are inside nested components
       await waitFor(() => {
         const tableRows = document.querySelectorAll('.ant-table-row')
-        expect(tableRows.length).toBe(3)
+        expect(tableRows.length).toBe(4)
       }, { timeout: 3000 })
     })
 
@@ -286,7 +289,7 @@ describe('List', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText('Retry')).toBeInTheDocument()
+        expect(screen.getAllByText('Retry').length).toBeGreaterThan(0)
       })
     })
 
@@ -313,8 +316,8 @@ describe('List', () => {
             models: [{ id: 'vendor@model', name: 'Vendor@Model' }],
           },
         ],
-      } as any)
-      vi.mocked(window.api.task.retry).mockResolvedValue({ success: true, data: {} } as any)
+      } as never)
+      vi.mocked(window.api.task.retry).mockResolvedValue({ success: true, data: {} } as never)
 
       render(
         <Wrapper>
@@ -323,10 +326,10 @@ describe('List', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText('Retry')).toBeInTheDocument()
+        expect(screen.getAllByText('Retry').length).toBeGreaterThan(0)
       })
 
-      fireEvent.click(screen.getByText('Retry'))
+      fireEvent.click(screen.getAllByText('Retry')[0])
 
       await waitFor(() => {
         expect(screen.getAllByText('Retry Task (Choose Model)').length).toBeGreaterThan(0)
@@ -337,9 +340,47 @@ describe('List', () => {
       await waitFor(() => {
         expect(window.api.task.retry).toHaveBeenCalledWith({
           taskId: 'task-3',
-          providerId: 9,
-          modelId: 'vendor@model',
         })
+      })
+    })
+
+    it('should retry only failed pages for partial failed local tasks', async () => {
+      vi.mocked(window.api.model.getAll).mockResolvedValue({
+        success: true,
+        data: [
+          {
+            provider: 9,
+            providerName: 'Custom',
+            models: [{ id: 'vendor@model', name: 'Vendor@Model' }],
+          },
+        ],
+      } as never)
+      vi.mocked(window.api.taskDetail.retryFailed).mockResolvedValue({
+        success: true,
+        data: { retried: 5 },
+      } as never)
+
+      render(
+        <Wrapper>
+          <List />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getAllByText('Retry').length).toBeGreaterThan(1)
+      })
+
+      fireEvent.click(screen.getAllByText('Retry')[1])
+
+      await waitFor(() => {
+        expect(screen.getAllByText('Retry Failed Pages (Choose Model)').length).toBeGreaterThan(0)
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: 'OK' }))
+
+      await waitFor(() => {
+        expect(window.api.taskDetail.retryFailed).toHaveBeenCalledWith('task-4')
+        expect(window.api.task.retry).not.toHaveBeenCalled()
       })
     })
 
@@ -356,13 +397,14 @@ describe('List', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText('Retry')).toBeInTheDocument()
+        expect(screen.getAllByText('Retry').length).toBeGreaterThan(0)
       })
 
-      fireEvent.click(screen.getByText('Retry'))
+      fireEvent.click(screen.getAllByText('Retry')[0])
 
       await waitFor(() => {
         expect(window.api.task.retry).not.toHaveBeenCalled()
+        expect(window.api.taskDetail.retryFailed).not.toHaveBeenCalled()
       })
     })
 

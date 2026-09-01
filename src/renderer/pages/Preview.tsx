@@ -454,6 +454,22 @@ const Preview: React.FC = () => {
 
             if (result.success) {
               message.success(t('preview.retry_failed_success', { count: result.data?.retried || 0 }));
+              await fetchTask();
+
+              // Jump to first incomplete page so retry doesn't look like a restart from page 1
+              const pagesResult = await window.api.taskDetail.getAllByTask(id);
+              if (pagesResult.success && pagesResult.data?.length) {
+                const nextPage = pagesResult.data
+                  .filter((page) => page.status !== 2)
+                  .sort((a, b) => a.page - b.page)[0]?.page;
+                if (nextPage) {
+                  setCurrentPage(nextPage);
+                } else {
+                  await fetchPageDetail(currentPage);
+                }
+              } else {
+                await fetchPageDetail(currentPage);
+              }
             } else {
               message.error(result.error || t('preview.retry_failed'));
             }
@@ -676,13 +692,18 @@ const Preview: React.FC = () => {
           </div>
 
           <Space>
-            {/* 下载: 始终显示，但仅在 COMPLETED(6) 且有 merged_path 时启用 */}
+            {/* 下载: COMPLETED with merged_path, or any task that already has completed pages */}
             <Button
               color="primary"
               icon={<FileMarkdownOutlined />}
               variant="filled"
               onClick={handleDownload}
-              disabled={!task?.merged_path || task?.status !== 6}
+              disabled={
+                !(
+                  (task?.merged_path && task?.status === 6) ||
+                  (task?.completed_count ?? 0) > 0
+                )
+              }
             >
               {t('preview.download')}
             </Button>
