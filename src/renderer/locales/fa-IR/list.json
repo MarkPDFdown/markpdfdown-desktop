@@ -42,5 +42,19 @@
   "task_type": {
     "cloud": "تسک ابری",
     "local": "تسک محلی"
+  },
+  "retry": {
+    "confirm_with_model": "تلاش مجدد وظیفه (انتخاب مدل)",
+    "confirm_failed_with_model": "تلاش مجدد صفحات ناموفق (انتخاب مدل)",
+    "confirm_cloud_with_model": "تلاش مجدد وظیفه ابری (انتخاب مدل)",
+    "select_model": "مدل تلاش مجدد را انتخاب کنید",
+    "load_models_failed": "بارگذاری فهرست مدل‌ها ناموفق بود",
+    "no_models_available": "مدلی در دسترس نیست. ابتدا مدل‌ها را در تنظیمات پیکربندی کنید.",
+    "failed_success": "{{count}} صفحه ناموفق به صف تلاش مجدد اضافه شد",
+    "model": {
+      "lite": "Fit Lite",
+      "pro": "Fit Pro",
+      "ultra": "Fit Ultra"
+    }
   }
 }

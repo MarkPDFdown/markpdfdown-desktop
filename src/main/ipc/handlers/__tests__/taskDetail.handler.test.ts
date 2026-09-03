@@ -59,8 +59,10 @@ vi.mock('../../../../core/infrastructure/db/index.js', () => ({
 
 vi.mock('../../../../shared/types/TaskStatus.js', () => ({
   TaskStatus: {
+    FAILED: 0,
     PROCESSING: 3,
-    CANCELLED: 7
+    CANCELLED: 7,
+    PARTIAL_FAILED: 8
   }
 }))
 
@@ -336,10 +338,11 @@ describe('TaskDetail Handler', () => {
 
   describe('taskDetail:retryFailed', () => {
     it('should retry all failed pages', async () => {
-      const mockTask = { id: 'task-1', status: 6, completed_count: 8, pages: 10 }
+      const mockTask = { id: 'task-1', status: 0, completed_count: 8, pages: 10 }
       const updatedTask = { ...mockTask, status: 3, failed_count: 0 }
+      const updateMany = vi.fn().mockResolvedValue({ count: 2 })
 
-      mockPrisma.$transaction.mockImplementation(async (callback: any) => {
+      mockPrisma.$transaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
         const tx = {
           task: {
             findUnique: vi.fn().mockResolvedValue(mockTask),
@@ -347,7 +350,7 @@ describe('TaskDetail Handler', () => {
           },
           taskDetail: {
             count: vi.fn().mockResolvedValue(2),
-            updateMany: vi.fn().mockResolvedValue({ count: 2 })
+            updateMany
           }
         }
         return callback(tx)
@@ -359,6 +362,87 @@ describe('TaskDetail Handler', () => {
       expect(result).toEqual({
         success: true,
         data: { retried: 2 }
+      })
+      expect(updateMany).toHaveBeenCalledWith({
+        where: {
+          task: 'task-1',
+          status: { in: [-1, 0] },
+        },
+        data: expect.objectContaining({
+          status: 0,
+        }),
+      })
+    })
+    it('should retry failed pages with model override', async () => {
+      const mockTask = { id: 'task-1', status: 8, completed_count: 8, pages: 10, provider: 1, model: 'old-model' }
+      const mockProvider = { id: 2, name: 'OpenAI', status: 0 }
+      const mockModel = { id: 'gpt-4o', name: 'GPT-4o', provider: 2 }
+      const updatedTask = { ...mockTask, status: 3, failed_count: 0, provider: 2, model: 'gpt-4o', model_name: 'GPT-4o | OpenAI' }
+
+      mockPrisma.$transaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
+        const tx = {
+          task: {
+            findUnique: vi.fn().mockResolvedValue(mockTask),
+            update: vi.fn().mockResolvedValue(updatedTask)
+          },
+          provider: {
+            findUnique: vi.fn().mockResolvedValue(mockProvider)
+          },
+          model: {
+            findUnique: vi.fn().mockResolvedValue(mockModel)
+          },
+          taskDetail: {
+            count: vi.fn().mockResolvedValue(2),
+            updateMany: vi.fn().mockResolvedValue({ count: 2 })
+          }
+        }
+        return callback(tx)
+      })
+
+      const handler = handlers.get('taskDetail:retryFailed')
+      const result = await handler!({}, { taskId: 'task-1', providerId: 2, modelId: 'gpt-4o' })
+
+      expect(result).toEqual({
+        success: true,
+        data: { retried: 2 }
+      })
+    })
+
+    it.each([
+      ['created', -1],
+      ['pending', 1],
+      ['splitting', 2],
+      ['processing', 3],
+      ['ready to merge', 4],
+      ['merging', 5],
+      ['completed', 6],
+      ['cancelled', 7],
+    ])('should reject %s tasks', async (_statusName, status) => {
+      mockPrisma.$transaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
+        const tx = {
+          task: {
+            findUnique: vi.fn().mockResolvedValue({ id: 'task-1', status }),
+          },
+        }
+        return callback(tx)
+      })
+
+      const handler = handlers.get('taskDetail:retryFailed')
+      const result = await handler!({}, 'task-1')
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Can only retry failed or partially failed tasks'
+      })
+    })
+
+    it('should return error when model override params are incomplete in retryFailed', async () => {
+      const handler = handlers.get('taskDetail:retryFailed')
+      const result = await handler!({}, { taskId: 'task-1', providerId: 2 })
+
+      expect(result).toEqual({
+        success: false,
+        error: 'providerId and modelId must be provided together'
       })
     })
 
@@ -373,7 +457,7 @@ describe('TaskDetail Handler', () => {
     })
 
     it('should return error when no failed pages exist', async () => {
-      const mockTask = { id: 'task-1', status: 6 }
+      const mockTask = { id: 'task-1', status: 8 }
 
       mockPrisma.$transaction.mockImplementation(async (callback: any) => {
         const tx = {

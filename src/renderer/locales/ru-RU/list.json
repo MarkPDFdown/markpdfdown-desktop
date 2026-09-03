@@ -42,5 +42,19 @@
   "task_type": {
     "cloud": "Облачная задача",
     "local": "Локальная задача"
+  },
+  "retry": {
+    "confirm_with_model": "Повторить задачу (выбор модели)",
+    "confirm_failed_with_model": "Повторить неудачные (выбор модели)",
+    "confirm_cloud_with_model": "Повторить облачную задачу (выбор модели)",
+    "select_model": "Выберите модель для повтора",
+    "load_models_failed": "Не удалось загрузить список моделей",
+    "no_models_available": "Нет доступных моделей. Сначала настройте модели в параметрах.",
+    "failed_success": "{{count}} неудачных страниц добавлено в очередь на повтор",
+    "model": {
+      "lite": "Fit Lite",
+      "pro": "Fit Pro",
+      "ultra": "Fit Ultra"
+    }
   }
 }

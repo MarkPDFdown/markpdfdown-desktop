@@ -42,5 +42,19 @@
   "task_type": {
     "cloud": "مهمة سحابية",
     "local": "مهمة محلية"
+  },
+  "retry": {
+    "confirm_with_model": "إعادة محاولة المهمة (اختيار النموذج)",
+    "confirm_failed_with_model": "إعادة محاولة الصفحات الفاشلة (اختيار النموذج)",
+    "confirm_cloud_with_model": "إعادة محاولة مهمة السحابة (اختيار النموذج)",
+    "select_model": "اختر نموذج إعادة المحاولة",
+    "load_models_failed": "فشل تحميل قائمة النماذج",
+    "no_models_available": "لا توجد نماذج متاحة. يرجى تكوين النماذج في الإعدادات أولاً.",
+    "failed_success": "تمت إضافة {{count}} صفحة فاشلة إلى قائمة إعادة المحاولة",
+    "model": {
+      "lite": "Fit Lite",
+      "pro": "Fit Pro",
+      "ultra": "Fit Ultra"
+    }
   }
 }

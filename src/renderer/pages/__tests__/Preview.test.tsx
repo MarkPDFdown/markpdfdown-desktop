@@ -128,6 +128,7 @@ describe('Preview', () => {
     ...mockTask,
     status: 8, // PARTIAL_FAILED - has some failed pages, but task itself is viewable
     progress: 80,
+    completed_count: 4,
     failed_count: 1
   }
 
@@ -188,6 +189,19 @@ describe('Preview', () => {
     vi.mocked(window.api.taskDetail.retry).mockResolvedValue({
       success: true,
       data: { id: 1 }
+    })
+
+    vi.mocked(window.api.taskDetail.retryFailed).mockResolvedValue({
+      success: true,
+      data: { retried: 1 }
+    })
+
+    vi.mocked(window.api.taskDetail.getAllByTask).mockResolvedValue({
+      success: true,
+      data: [
+        { id: 1, task: 'task-1', page: 1, status: 2 },
+        { id: 2, task: 'task-1', page: 2, status: -1 },
+      ]
     })
 
     vi.mocked(window.api.model.getAll).mockResolvedValue({
@@ -594,7 +608,7 @@ describe('Preview', () => {
         })
       })
 
-      it('should disable download for non-completed tasks', async () => {
+      it('should disable download for non-completed tasks without completed pages', async () => {
         render(
           <Wrapper>
             <Preview />
@@ -604,6 +618,24 @@ describe('Preview', () => {
         await waitFor(() => {
           const downloadButton = screen.getByText('Download').closest('button')
           expect(downloadButton).toBeDisabled()
+        })
+      })
+
+      it('should enable download for partial failed tasks with completed pages', async () => {
+        vi.mocked(window.api.task.getById).mockResolvedValue({
+          success: true,
+          data: mockFailedTask
+        })
+
+        render(
+          <Wrapper>
+            <Preview />
+          </Wrapper>
+        )
+
+        await waitFor(() => {
+          const downloadButton = screen.getByText('Download').closest('button')
+          expect(downloadButton).not.toBeDisabled()
         })
       })
 

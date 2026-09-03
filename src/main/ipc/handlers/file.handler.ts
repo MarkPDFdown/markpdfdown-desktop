@@ -3,8 +3,10 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import taskRepository from "../../../core/domain/repositories/TaskRepository.js";
+import taskDetailRepository from "../../../core/domain/repositories/TaskDetailRepository.js";
 import fileLogic from "../../../core/infrastructure/services/FileService.js";
 import { ImagePathUtil } from "../../../core/infrastructure/adapters/split/index.js";
+import { PageStatus } from "../../../shared/types/PageStatus.js";
 import { IPC_CHANNELS } from "../../../shared/ipc/channels.js";
 import type { IpcResponse } from "../../../shared/ipc/responses.js";
 
@@ -62,7 +64,9 @@ export function registerFileHandlers() {
   );
 
   /**
-   * Download merged Markdown file
+   * Download Markdown file.
+   * Prefers merged_path when present; otherwise assembles completed pages
+   * so partial/failed tasks can still export finished work.
    */
   ipcMain.handle(
     IPC_CHANNELS.FILE.DOWNLOAD_MARKDOWN,
@@ -72,43 +76,56 @@ export function registerFileHandlers() {
           return { success: false, error: "Task ID is required" };
         }
 
-        // Get task info
         const task = await taskRepository.findById(taskId);
 
         if (!task) {
           return { success: false, error: "Task not found" };
         }
 
-        if (!task.merged_path) {
-          return { success: false, error: "Merged file does not exist, task may not be completed" };
-        }
-
-        // Check if file exists
-        if (!fs.existsSync(task.merged_path)) {
-          return { success: false, error: "Merged file is missing" };
-        }
-
-        // Open save dialog
-        const result = await dialog.showSaveDialog({
+        const defaultPath = task.filename.replace(/\.[^/.]+$/, ".md");
+        const saveResult = await dialog.showSaveDialog({
           title: "Save Markdown File",
-          defaultPath: task.filename.replace(/\.[^/.]+$/, ".md"),
+          defaultPath,
           filters: [
             { name: "Markdown Files", extensions: ["md"] },
             { name: "All Files", extensions: ["*"] },
           ],
         });
 
-        // User cancelled
-        if (result.canceled || !result.filePath) {
+        if (saveResult.canceled || !saveResult.filePath) {
           return { success: false, error: "User cancelled save" };
         }
 
-        // Copy file to destination
-        fs.copyFileSync(task.merged_path, result.filePath);
+        if (task.merged_path && fs.existsSync(task.merged_path)) {
+          fs.copyFileSync(task.merged_path, saveResult.filePath);
+          return {
+            success: true,
+            data: { savedPath: saveResult.filePath },
+          };
+        }
+
+        // Fallback: assemble completed pages for partial downloads
+        const details = await taskDetailRepository.findByTaskId(taskId);
+        const completedPages = details
+          .filter((detail) => detail.status === PageStatus.COMPLETED && detail.content)
+          .sort((a, b) => a.page - b.page);
+
+        if (completedPages.length === 0) {
+          return {
+            success: false,
+            error: "No completed pages available to download",
+          };
+        }
+
+        const markdown = completedPages
+          .map((page) => `<!-- Page ${page.page} -->\n\n${page.content}`)
+          .join("\n\n---\n\n");
+
+        fs.writeFileSync(saveResult.filePath, markdown, { encoding: "utf-8" });
 
         return {
           success: true,
-          data: { savedPath: result.filePath },
+          data: { savedPath: saveResult.filePath, pages: completedPages.length },
         };
       } catch (error: any) {
         console.error("[IPC] file:downloadMarkdown error:", error);

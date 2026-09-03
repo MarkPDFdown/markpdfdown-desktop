@@ -92,7 +92,7 @@ interface WindowAPI {
     getByPage: (taskId: string, page: number) => Promise<any>;
     getAllByTask: (taskId: string) => Promise<any>;
     retry: (params: number | { pageId: number; providerId?: number; modelId?: string }) => Promise<any>;
-    retryFailed: (taskId: string) => Promise<any>;
+    retryFailed: (params: string | { taskId: string; providerId?: number; modelId?: string }) => Promise<any>;
   };
   file: {
     selectDialog: (allowOffice?: boolean) => Promise<any>;

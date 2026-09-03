@@ -399,35 +399,92 @@ const Preview: React.FC = () => {
     }
   };
 
-  // 重试失败页
+  // 重试失败页（支持切换模型）
   const handleRetryFailed = async () => {
-    if (!id) return;
+    if (!id || !task) return;
 
-    modal.confirm({
-      title: t('preview.confirm_retry_failed'),
-      content: t('preview.confirm_retry_failed_content'),
-      okText: tCommon('common.confirm'),
-      cancelText: tCommon('common.cancel'),
-      onOk: async () => {
-        setRetryingFailed(true);
-        try {
-          const result = await window.api.taskDetail.retryFailed(id);
-
-          if (result.success) {
-            message.success(t('preview.retry_failed_success', { count: result.data?.retried || 0 }));
-          } else {
-            message.error(result.error || t('preview.retry_failed'));
-          }
-        } catch (error) {
-          console.error('重试失败页失败:', error);
-          message.error(t('preview.retry_failed'));
-        } finally {
-          setRetryingFailed(false);
-        }
+    try {
+      const modelOptions = await loadLocalModelOptions();
+      if (modelOptions.length === 0) {
+        message.error(t('preview.no_models_available'));
+        return;
       }
-    });
-  };
 
+      const defaultModelValue = buildModelValue(task.model || '', task.provider || 0);
+      let selectedModelValue = modelOptions.some((opt) => opt.value === defaultModelValue)
+        ? defaultModelValue
+        : modelOptions[0].value;
+
+      modal.confirm({
+        title: t('preview.confirm_retry_failed'),
+        content: (
+          <div style={{ marginTop: 8 }}>
+            <div style={{ marginBottom: 8 }}>{t('preview.select_retry_model')}</div>
+            <Select
+              style={{ width: '100%' }}
+              options={modelOptions}
+              defaultValue={selectedModelValue}
+              onChange={(value) => {
+                selectedModelValue = value;
+              }}
+            />
+          </div>
+        ),
+        okText: tCommon('common.confirm'),
+        cancelText: tCommon('common.cancel'),
+        onOk: async () => {
+          setRetryingFailed(true);
+          try {
+            const shouldOverride = selectedModelValue !== defaultModelValue;
+            let overridePayload: { providerId: number; modelId: string } | null = null;
+            if (shouldOverride) {
+              const parsedModel = parseModelValue(selectedModelValue);
+              if (!parsedModel) {
+                message.error(t('preview.retry_failed'));
+                return;
+              }
+              overridePayload = parsedModel;
+            }
+
+            const result = await window.api.taskDetail.retryFailed(
+              overridePayload
+                ? { taskId: id, ...overridePayload }
+                : id
+            );
+
+            if (result.success) {
+              message.success(t('preview.retry_failed_success', { count: result.data?.retried || 0 }));
+              await fetchTask();
+
+              // Jump to first incomplete page so retry doesn't look like a restart from page 1
+              const pagesResult = await window.api.taskDetail.getAllByTask(id);
+              if (pagesResult.success && pagesResult.data?.length) {
+                const nextPage = pagesResult.data
+                  .filter((page: TaskDetailWithImage) => page.status !== 2)
+                  .sort((a: TaskDetailWithImage, b: TaskDetailWithImage) => a.page - b.page)[0]?.page;
+                if (nextPage) {
+                  setCurrentPage(nextPage);
+                } else {
+                  await fetchPageDetail(currentPage);
+                }
+              } else {
+                await fetchPageDetail(currentPage);
+              }
+            } else {
+              message.error(result.error || t('preview.retry_failed'));
+            }
+          } catch (error) {
+            console.error('重试失败页失败:', error);
+            message.error(t('preview.retry_failed'));
+          } finally {
+            setRetryingFailed(false);
+          }
+        },
+      });
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : t('preview.load_models_failed'));
+    }
+  };
   // 分页处理
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -635,13 +692,18 @@ const Preview: React.FC = () => {
           </div>
 
           <Space>
-            {/* 下载: 始终显示，但仅在 COMPLETED(6) 且有 merged_path 时启用 */}
+            {/* 下载: COMPLETED with merged_path, or any task that already has completed pages */}
             <Button
               color="primary"
               icon={<FileMarkdownOutlined />}
               variant="filled"
               onClick={handleDownload}
-              disabled={!task?.merged_path || task?.status !== 6}
+              disabled={
+                !(
+                  (task?.merged_path && task?.status === 6) ||
+                  (task?.completed_count ?? 0) > 0
+                )
+              }
             >
               {t('preview.download')}
             </Button>

@@ -5,6 +5,10 @@ const mockTaskRepository = {
   findById: vi.fn()
 }
 
+const mockTaskDetailRepository = {
+  findByTaskId: vi.fn()
+}
+
 const mockFileLogic = {
   getUploadDir: vi.fn()
 }
@@ -61,6 +65,10 @@ vi.mock('fs', () => ({
 
 vi.mock('../../../../core/domain/repositories/TaskRepository.js', () => ({
   default: mockTaskRepository
+}))
+
+vi.mock('../../../../core/domain/repositories/TaskDetailRepository.js', () => ({
+  default: mockTaskDetailRepository
 }))
 
 vi.mock('../../../../core/infrastructure/services/FileService.js', () => ({
@@ -291,15 +299,56 @@ describe('File Handler', () => {
       })
     })
 
-    it('should return error when merged_path is missing', async () => {
-      mockTaskRepository.findById.mockResolvedValue({ id: 'task-1', merged_path: null })
+    it('should assemble completed pages when merged_path is missing', async () => {
+      mockTaskRepository.findById.mockResolvedValue({
+        id: 'task-1',
+        filename: 'document.pdf',
+        merged_path: null,
+      })
+      mockTaskDetailRepository.findByTaskId.mockResolvedValue([
+        { page: 2, status: 2, content: '## Page 2' },
+        { page: 1, status: 2, content: '# Page 1' },
+        { page: 3, status: -1, content: '' },
+      ])
+      mockDialog.showSaveDialog.mockResolvedValue({
+        canceled: false,
+        filePath: '/downloads/document.md',
+      })
+
+      const handler = handlers.get('file:downloadMarkdown')
+      const result = await handler!({}, 'task-1')
+
+      expect(result).toEqual({
+        success: true,
+        data: { savedPath: '/downloads/document.md', pages: 2 },
+      })
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(
+        '/downloads/document.md',
+        '<!-- Page 1 -->\n\n# Page 1\n\n---\n\n<!-- Page 2 -->\n\n## Page 2',
+        { encoding: 'utf-8' }
+      )
+    })
+
+    it('should return error when no completed pages are available', async () => {
+      mockTaskRepository.findById.mockResolvedValue({
+        id: 'task-1',
+        filename: 'document.pdf',
+        merged_path: null,
+      })
+      mockTaskDetailRepository.findByTaskId.mockResolvedValue([
+        { page: 1, status: -1, content: '' },
+      ])
+      mockDialog.showSaveDialog.mockResolvedValue({
+        canceled: false,
+        filePath: '/downloads/document.md',
+      })
 
       const handler = handlers.get('file:downloadMarkdown')
       const result = await handler!({}, 'task-1')
 
       expect(result).toEqual({
         success: false,
-        error: 'Merged file does not exist, task may not be completed'
+        error: 'No completed pages available to download',
       })
     })
 
