@@ -10,22 +10,15 @@ import isDev from "electron-is-dev";
 let prismaInstance: InstanceType<typeof PrismaClient> | null = null;
 let cachedDbUrl: string | null = null;
 
-// 设置和获取数据库URL
+// 设置和获取数据库URL（懒加载，确保 app.setName 已执行）
 function getDatabaseUrl(): string {
   if (cachedDbUrl) {
     return cachedDbUrl;
   }
 
-  const userDataPath = app.getPath("userData");
-  const userDb = path.join(userDataPath, "db", "app.db");
-
-  if (fs.existsSync(userDb)) {
-    cachedDbUrl = `file:${userDb}`;
-    console.log("Using existing database path:", cachedDbUrl);
-    return cachedDbUrl;
-  }
-
+  // 否则，为打包应用生成一个默认路径
   if (!isDev) {
+    const userDataPath = app.getPath("userData");
     const dbDir = path.join(userDataPath, "db");
     if (!fs.existsSync(dbDir)) {
       fs.mkdirSync(dbDir, { recursive: true });

@@ -255,8 +255,12 @@ export function registerTaskDetailHandlers() {
             throw new Error("Task not found");
           }
 
-          if (task.status === TaskStatus.CANCELLED) {
-            throw new Error("Task is cancelled, cannot retry");
+          const retryableStatuses: TaskStatus[] = [
+            TaskStatus.FAILED,
+            TaskStatus.PARTIAL_FAILED,
+          ];
+          if (!retryableStatuses.includes(task.status)) {
+            throw new Error("Can only retry failed or partially failed tasks");
           }
 
           let targetProvider = task.provider;

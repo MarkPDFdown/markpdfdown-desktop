@@ -460,8 +460,8 @@ const Preview: React.FC = () => {
               const pagesResult = await window.api.taskDetail.getAllByTask(id);
               if (pagesResult.success && pagesResult.data?.length) {
                 const nextPage = pagesResult.data
-                  .filter((page) => page.status !== 2)
-                  .sort((a, b) => a.page - b.page)[0]?.page;
+                  .filter((page: TaskDetailWithImage) => page.status !== 2)
+                  .sort((a: TaskDetailWithImage, b: TaskDetailWithImage) => a.page - b.page)[0]?.page;
                 if (nextPage) {
                   setCurrentPage(nextPage);
                 } else {
