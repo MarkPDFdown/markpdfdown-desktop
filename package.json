@@ -168,7 +168,7 @@
     "electron-updater": "^6.7.3",
     "katex": "^0.16.21",
     "pdf-lib": "^1.17.1",
-    "pdf-to-png-converter": "^3.11.0",
+    "pdf-to-png-converter": "3.11.0",
     "prisma": "^6.5.0",
     "prismjs": "^1.30.0",
     "react": "^18.2.0",
