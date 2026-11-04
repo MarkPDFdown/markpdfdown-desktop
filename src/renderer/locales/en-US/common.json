@@ -32,5 +32,10 @@
   },
   "auth": {
     "not_signed_in": "Not Signed In"
+  },
+  "databaseError": {
+    "title": "The database failed to initialize",
+    "description": "Local features such as providers and tasks are unavailable. Restart the app. If this keeps happening, report it with the details below.",
+    "details": "Error details"
   }
 }

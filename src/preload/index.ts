@@ -247,6 +247,7 @@ contextBridge.exposeInMainWorld("api", {
   // ==================== App APIs ====================
   app: {
     getVersion: () => ipcRenderer.invoke("app:getVersion"),
+    getDatabaseStatus: () => ipcRenderer.invoke("app:getDatabaseStatus"),
   },
 });
 

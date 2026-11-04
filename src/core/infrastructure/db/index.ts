@@ -6,9 +6,12 @@ import { app } from "electron";
 import fs from "fs";
 import isDev from "electron-is-dev";
 
+type DatabaseInitResult = { success: true } | { success: false; error: string };
+
 // 懒加载的 Prisma 实例和数据库 URL
 let prismaInstance: InstanceType<typeof PrismaClient> | null = null;
 let cachedDbUrl: string | null = null;
+let initResult: Promise<DatabaseInitResult> | null = null;
 
 // 设置和获取数据库URL（懒加载，确保 app.setName 已执行）
 function getDatabaseUrl(): string {
@@ -56,8 +59,7 @@ const prisma = new Proxy({} as InstanceType<typeof PrismaClient>, {
   },
 });
 
-// 初始化数据库，包括运行迁移
-const initDatabase = async (): Promise<boolean> => {
+const connectAndMigrate = async (): Promise<DatabaseInitResult> => {
   try {
     const dbUrl = getDatabaseUrl();
     const client = getPrismaClient();
@@ -69,11 +71,21 @@ const initDatabase = async (): Promise<boolean> => {
     // 运行迁移，传递现有的prisma实例
     await runMigrations(client);
 
-    return true;
+    return { success: true };
   } catch (error) {
     console.error("Database initialization error:", error);
-    return false;
+    // Prisma 的错误信息首尾带空行
+    return { success: false, error: (error instanceof Error ? error.message : String(error)).trim() };
   }
+};
+
+/**
+ * 初始化数据库，包括运行迁移。只执行一次，重复调用得到同一个结果，
+ * 所以渲染进程无论何时加载，都能等到并拿到这次初始化的结果。
+ */
+const initDatabase = (): Promise<DatabaseInitResult> => {
+  initResult ??= connectAndMigrate();
+  return initResult;
 };
 
 /**
@@ -84,8 +96,10 @@ const disconnect = async (): Promise<void> => {
     await prismaInstance.$disconnect();
     prismaInstance = null;
     cachedDbUrl = null;
+    initResult = null;
     console.log("Database connection has been closed");
   }
 };
 
 export { prisma, disconnect, initDatabase };
+export type { DatabaseInitResult };

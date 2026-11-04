@@ -328,6 +328,7 @@ interface ElectronAPI {
 
   app: {
     getVersion: () => Promise<IpcResponse<string>>;
+    getDatabaseStatus: () => Promise<IpcResponse>;
   };
 }
 

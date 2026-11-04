@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { useLanguage } from "../hooks/useLanguage";
 import ImgLogo from "../assets/MarkPDFdown.png";
 import { CloudContext } from "../contexts/CloudContextDefinition";
+import DatabaseStatusAlert from "./DatabaseStatusAlert";
 
 const { Header, Sider, Content, Footer } = Layout;
 
@@ -322,6 +323,7 @@ const AppLayout: React.FC = () => {
             ...(isNotMac ? { WebkitAppRegion: 'drag' as const } : {})
           }}>
           </Header>
+          <DatabaseStatusAlert />
           <Content
             style={{
               margin: "20px 16px 0",
