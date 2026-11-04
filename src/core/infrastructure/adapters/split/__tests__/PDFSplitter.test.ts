@@ -27,7 +27,7 @@ vi.mock('../FileWaitUtil.js', () => ({
 vi.mock('fs', () => ({
   promises: {
     mkdir: vi.fn(),
-    rename: vi.fn(),
+    writeFile: vi.fn(),
     rm: vi.fn(),
     unlink: vi.fn(),
     readFile: vi.fn(),
@@ -60,6 +60,9 @@ describe('PDFSplitter', () => {
 
     // Setup default mocks for PDFDocument
     vi.mocked(fs.readFile).mockResolvedValue(Buffer.from('mock-pdf-bytes'));
+    vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+    vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+    vi.mocked(fs.access).mockResolvedValue(undefined);
     vi.mocked(PDFDocument.load).mockResolvedValue({
       getPageCount: () => 3,
     } as any);
@@ -85,7 +88,6 @@ describe('PDFSplitter', () => {
       ]);
 
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-      vi.mocked(fs.rename).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
@@ -115,7 +117,6 @@ describe('PDFSplitter', () => {
       ]);
 
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-      vi.mocked(fs.rename).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
@@ -125,7 +126,7 @@ describe('PDFSplitter', () => {
       expect(result.pages[1].pageSource).toBe(3);
     });
 
-    it('should rename files to page-{N}.png format', async () => {
+    it('should write page images as page-{N}.png in the task split dir', async () => {
       const task = {
         id: 'task789',
         filename: 'document.pdf',
@@ -138,24 +139,35 @@ describe('PDFSplitter', () => {
       } as any);
 
       vi.mocked(pdfToPng).mockResolvedValueOnce([
-        { path: '/tmp/temp-1.png', name: 'temp-1.png', page: 1, content: Buffer.from('') },
-        { path: '/tmp/temp-2.png', name: 'temp-2.png', page: 2, content: Buffer.from('') },
+        { path: '', name: 'temp-1.png', pageNumber: 1, content: Buffer.from('png-1') },
+        { path: '', name: 'temp-2.png', pageNumber: 2, content: Buffer.from('png-2') },
       ]);
 
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-      vi.mocked(fs.rename).mockResolvedValue(undefined);
 
       await splitter.split(task);
 
-      // Verify rename was called with correct paths
-      expect(fs.rename).toHaveBeenCalledWith(
-        '/tmp/temp-1.png',
-        path.join(uploadsDir, 'task789', 'split', 'page-1.png')
+      expect(fs.mkdir).toHaveBeenCalledWith(path.join(uploadsDir, 'task789', 'split'), {
+        recursive: true,
+      });
+      expect(fs.writeFile).toHaveBeenCalledWith(
+        path.join(uploadsDir, 'task789', 'split', 'page-1.png'),
+        Buffer.from('png-1')
       );
-      expect(fs.rename).toHaveBeenCalledWith(
-        '/tmp/temp-2.png',
-        path.join(uploadsDir, 'task789', 'split', 'page-2.png')
+      expect(fs.writeFile).toHaveBeenCalledWith(
+        path.join(uploadsDir, 'task789', 'split', 'page-2.png'),
+        Buffer.from('png-2')
       );
+    });
+
+    it('should not hand an output folder to the converter', async () => {
+      vi.mocked(pdfToPng).mockResolvedValueOnce([
+        { path: '', name: 'temp-1.png', pageNumber: 1, content: Buffer.from('png-1') },
+      ] as any);
+
+      await splitter.split({ id: 'task789', filename: 'document.pdf', page_range: '' });
+
+      expect(vi.mocked(pdfToPng).mock.calls[0][1]).not.toHaveProperty('outputFolder');
     });
 
     it('should throw error for missing task ID', async () => {
@@ -214,6 +226,98 @@ describe('PDFSplitter', () => {
     });
   });
 
+  describe('error reporting', () => {
+    const task = { id: 'task123', filename: 'document.pdf', page_range: '' };
+    const splitDir = path.join(uploadsDir, 'task123', 'split');
+    const sourcePath = path.join(uploadsDir, 'task123', 'document.pdf');
+    const MISSING_FILE_HINT = /moved or deleted/;
+
+    const systemError = (code: string, syscall: string, target: string) =>
+      Object.assign(new Error(`${code}: no such file or directory, ${syscall} '${target}'`), {
+        code,
+        path: target,
+      });
+
+    beforeEach(() => {
+      vi.spyOn(splitter as any, 'sleep').mockResolvedValue(undefined);
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      vi.mocked(pdfToPng).mockResolvedValue([
+        { path: '', name: 'temp-1.png', pageNumber: 1, content: Buffer.from('png-1') },
+      ] as any);
+    });
+
+    afterEach(() => {
+      vi.mocked(pdfToPng).mockReset();
+      vi.restoreAllMocks();
+    });
+
+    it('should report a failure to create the output dir as an output problem', async () => {
+      const error = systemError('ENOENT', 'mkdir', splitDir);
+      vi.mocked(fs.mkdir).mockRejectedValue(error);
+
+      const failure = splitter.split(task);
+
+      await expect(failure).rejects.toThrow(`Failed to write split images to ${splitDir}`);
+      await expect(failure).rejects.toThrow(error.message);
+      await expect(failure).rejects.not.toThrow(MISSING_FILE_HINT);
+    });
+
+    it('should retry a failed write without rendering the PDF again', async () => {
+      vi.mocked(fs.writeFile).mockRejectedValueOnce(systemError('EBUSY', 'open', splitDir));
+
+      const result = await splitter.split(task);
+
+      expect(result.totalPages).toBe(1);
+      expect(fs.writeFile).toHaveBeenCalledTimes(2);
+      expect(pdfToPng).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not blame the source when writing a page keeps failing, even if it is ENOENT', async () => {
+      const target = path.join(splitDir, 'page-1.png');
+      vi.mocked(fs.writeFile).mockRejectedValue(systemError('ENOENT', 'open', target));
+
+      const failure = splitter.split(task);
+
+      await expect(failure).rejects.toThrow(`Failed to write split images to ${splitDir}`);
+      await expect(failure).rejects.toThrow(target);
+      await expect(failure).rejects.not.toThrow(MISSING_FILE_HINT);
+      expect(fs.writeFile).toHaveBeenCalledTimes(3);
+    });
+
+    it('should not blame the source for an ENOENT on another file while it still exists', async () => {
+      const fontPath = '/resources/standard_fonts/missing.pfb';
+      vi.mocked(pdfToPng).mockRejectedValue(systemError('ENOENT', 'open', fontPath));
+
+      const failure = splitter.split(task);
+
+      await expect(failure).rejects.toThrow(`Failed to split PDF document.pdf`);
+      await expect(failure).rejects.toThrow(fontPath);
+      await expect(failure).rejects.not.toThrow(MISSING_FILE_HINT);
+      expect(fs.access).toHaveBeenCalledWith(sourcePath);
+    });
+
+    it('should report a missing source when the PDF disappears after the pre-check', async () => {
+      const error = systemError('ENOENT', 'open', sourcePath);
+      vi.mocked(fs.readFile).mockRejectedValue(error);
+      vi.mocked(fs.access).mockRejectedValue(error);
+
+      await expect(splitter.split(task)).rejects.toThrow(
+        'PDF file not found: document.pdf. The file may have been moved or deleted.'
+      );
+    });
+
+    it('should not call an unreadable source missing', async () => {
+      const error = systemError('EACCES', 'open', sourcePath);
+      vi.mocked(fs.readFile).mockRejectedValue(error);
+      vi.mocked(fs.access).mockRejectedValue(error);
+
+      const failure = splitter.split(task);
+
+      await expect(failure).rejects.toThrow(`Failed to split PDF document.pdf`);
+      await expect(failure).rejects.not.toThrow(MISSING_FILE_HINT);
+    });
+  });
+
   describe('cleanup()', () => {
     it('should remove task directory', async () => {
       vi.mocked(fs.rm).mockResolvedValue(undefined);
@@ -260,7 +364,6 @@ describe('PDFSplitter', () => {
       ]);
 
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-      vi.mocked(fs.rename).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
@@ -318,7 +421,6 @@ describe('PDFSplitter', () => {
       ]);
 
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-      vi.mocked(fs.rename).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
@@ -348,7 +450,6 @@ describe('PDFSplitter', () => {
 
       vi.mocked(pdfToPng).mockResolvedValueOnce(pages);
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-      vi.mocked(fs.rename).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
