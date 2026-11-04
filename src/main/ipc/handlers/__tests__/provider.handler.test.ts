@@ -75,6 +75,7 @@ vi.mock('../../../../core/infrastructure/config/providerPresets.js', () => ({
       { name: 'OpenAI', type: 'openai-responses', apiBase: 'https://api.openai.com/v1', modelListApi: '/models', modelNameField: 'id', modelIdField: 'id' },
       { name: 'Anthropic', type: 'anthropic', apiBase: 'https://api.anthropic.com/v1', modelListApi: '/models', modelNameField: 'display_name', modelIdField: 'id', capabilityField: 'input_modalities', capabilityFilter: 'image' },
       { name: 'OpenRouter', type: 'openai', apiBase: 'https://openrouter.ai/api/v1', modelListApi: '/models', modelNameField: 'name', modelIdField: 'id', capabilityField: 'architecture.input_modalities', capabilityFilter: 'image' },
+      { name: 'Ollama', type: 'ollama', apiBase: 'http://localhost:11434/api', modelListApi: '/tags', modelNameField: 'name', modelIdField: 'name' },
     ]
     return presets.find(p => p.type === type && p.name === name)
   },
@@ -597,6 +598,46 @@ describe('Provider Handler', () => {
 
       expect(result.success).toBe(true)
       expect(result.data).toHaveLength(2)
+    })
+
+    describe('ollama', () => {
+      const listModels = async (provider: { name: string; api_key: string; base_url: string }) => {
+        mockProviderRepository.findById.mockResolvedValue({ id: 1, type: 'ollama', ...provider })
+        vi.mocked(global.fetch).mockResolvedValue({
+          ok: true,
+          json: vi.fn().mockResolvedValue({ models: [{ name: 'llava:latest' }] }),
+          text: vi.fn()
+        } as any)
+
+        const handler = handlers.get('provider:fetchModelList')
+        const result = await handler!({}, 1)
+        const [url, init] = vi.mocked(global.fetch).mock.calls[0]
+        return { result, url, headers: init?.headers as Record<string, string> }
+      }
+
+      it.each(['Ollama', 'My Proxy'])('should list models of "%s" via /tags with a Bearer token', async (name) => {
+        const { result, url, headers } = await listModels({
+          name,
+          api_key: 'proxy-key',
+          base_url: 'https://proxy.test/api'
+        })
+
+        expect(url).toBe('https://proxy.test/api/tags')
+        expect(headers.Authorization).toBe('Bearer proxy-key')
+        expect(result.data).toEqual([{ id: 'llava:latest', name: 'llava:latest' }])
+      })
+
+      it('should not send a Bearer token without an API key', async () => {
+        const { headers } = await listModels({ name: 'My Proxy', api_key: '', base_url: 'https://proxy.test/api' })
+
+        expect(headers).not.toHaveProperty('Authorization')
+      })
+
+      it('should use the default base URL for a custom-named provider without one', async () => {
+        const { url } = await listModels({ name: 'My Proxy', api_key: '', base_url: '' })
+
+        expect(url).toBe('http://localhost:11434/api/tags')
+      })
     })
 
     it('should not filter for custom providers without preset', async () => {
