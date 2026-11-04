@@ -94,6 +94,8 @@ npm install pdf-to-png-converter
 
 **基本用法**:
 
+> ⚠️ `outputFolder` 会被库按 `path.join(process.cwd(), outputFolder)` 解析，无法指向 Windows 上其他盘符或 UNC 路径下的目录（见 #75）。实际实现（`PDFSplitter.ts`）不传 `outputFolder`，而是取返回的 `content` 自行写入 `{uploadsDir}/{taskId}/split/`。本文档中传 `outputFolder` 的示例仅用于说明库的 API 或早期设计。
+
 ```typescript
 import { pdfToPng } from "pdf-to-png-converter";
 

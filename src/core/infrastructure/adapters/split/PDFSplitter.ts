@@ -9,6 +9,19 @@ import { ImagePathUtil } from './ImagePathUtil.js';
 import { FileWaitUtil } from './FileWaitUtil.js';
 import { WORKER_CONFIG } from '../../config/worker.config.js';
 
+/** A rendered page, held in memory until it is written to the split directory. */
+type RenderedPage = Omit<PageInfo, 'imagePath'> & { content: Buffer };
+
+/** PDF errors that a retry cannot fix: the document itself is protected or invalid. */
+function isRetryablePdfError(error: Error): boolean {
+  const message = error.message.toLowerCase();
+  return !(
+    message.includes('password') ||
+    message.includes('encrypted') ||
+    message.includes('invalid pdf')
+  );
+}
+
 /**
  * PDF splitter implementation using pdf-to-png-converter.
  *
@@ -17,6 +30,8 @@ import { WORKER_CONFIG } from '../../config/worker.config.js';
  * - Retry logic for transient errors (3 attempts with exponential backoff)
  * - Graceful handling of non-retryable errors (password-protected PDFs)
  * - Sequential page numbering (page-1.png, page-2.png, ...)
+ * - Output location independent of process.cwd() (pages are written by this class,
+ *   see renderPagesWithRetry)
  */
 export class PDFSplitter implements ISplitter {
   private readonly uploadsDir: string;
@@ -48,6 +63,7 @@ export class PDFSplitter implements ISplitter {
     // Retry with short delays to handle antivirus scanning or filesystem sync delays
     await FileWaitUtil.waitForFile(sourcePath, this.uploadsDir, taskId, filename, 'PDFSplitter');
 
+    let renderedPages: RenderedPage[];
     try {
       // Step 1: Get total page count with retry
       const totalPages = await this.getPDFPageCountWithRetry(sourcePath);
@@ -55,22 +71,21 @@ export class PDFSplitter implements ISplitter {
       // Step 2: Parse page range (defaults to all pages if not specified)
       const pageNumbers = PageRangeParser.parse(task.page_range, totalPages);
 
-      // Step 3: Convert specified pages with retry
+      // Step 3: Render specified pages with retry
       // Pass the page_range string to determine if user explicitly specified pages
-      const pages = await this.convertPagesWithRetry(
-        sourcePath,
-        taskId,
-        pageNumbers,
-        task.page_range
-      );
-
-      return {
-        pages,
-        totalPages: pages.length,
-      };
+      renderedPages = await this.renderPagesWithRetry(sourcePath, pageNumbers, task.page_range);
     } catch (error) {
-      throw this.wrapError(error, taskId, filename);
+      throw await this.wrapError(error, sourcePath, filename);
     }
+
+    // Step 4: Write the images. Kept apart from the steps above so that an output
+    // failure is never reported as a problem with the source PDF.
+    const pages = await this.writePagesWithRetry(taskId, renderedPages);
+
+    return {
+      pages,
+      totalPages: pages.length,
+    };
   }
 
   /**
@@ -99,28 +114,19 @@ export class PDFSplitter implements ISplitter {
   }
 
   /**
-   * Convert specified pages with retry logic.
+   * Render specified pages to in-memory PNGs with retry logic.
    */
-  private async convertPagesWithRetry(
+  private async renderPagesWithRetry(
     pdfPath: string,
-    taskId: string,
     pageNumbers: number[],
     pageRange?: string | null
-  ): Promise<PageInfo[]> {
-    const taskDir = ImagePathUtil.getTaskDir(taskId);
-
-    // Ensure task directory exists
-    await fs.mkdir(taskDir, { recursive: true });
-
+  ): Promise<RenderedPage[]> {
     return this.withRetry(async () => {
-      // Convert all specified pages
-      // IMPORTANT: pdf-to-png-converter expects a RELATIVE path
-      // It will internally do: path.join(process.cwd(), outputFolder)
-      // So we must convert absolute path to relative path
-      const relativeOutputFolder = path.relative(process.cwd(), taskDir);
-
+      // IMPORTANT: do not pass outputFolder to pdf-to-png-converter. It resolves it with
+      // path.join(process.cwd(), outputFolder), which cannot address a directory on another
+      // Windows drive or UNC share (#75). We take the PNG buffers and write them ourselves.
       const options: any = {
-        outputFolder: relativeOutputFolder,
+        returnPageContent: true,
         viewportScale: WORKER_CONFIG.splitter.viewportScale,
         strictPagesToProcess: false,
         verbosityLevel: 0,
@@ -128,7 +134,8 @@ export class PDFSplitter implements ISplitter {
 
       // Only add pagesToProcess if user explicitly specified a page range
       // If pageRange is empty/null, let pdf-to-png-converter process all pages
-      if (pageRange && pageRange.trim() !== '') {
+      const hasPageRange = Boolean(pageRange && pageRange.trim() !== '');
+      if (hasPageRange) {
         options.pagesToProcess = pageNumbers; // Array of page numbers
       }
       // Otherwise, don't specify pagesToProcess to convert all pages
@@ -139,29 +146,46 @@ export class PDFSplitter implements ISplitter {
         throw new Error('PDF conversion produced no output');
       }
 
-      // Rename files to page-{N}.png format and build PageInfo array
-      const pages: PageInfo[] = [];
-
-      for (let i = 0; i < result.length; i++) {
-        const pageNum = i + 1; // Sequential numbering
-        // If page range was specified, use the mapped page numbers; otherwise use sequential numbering
-        const sourcePageNum = pageRange && pageRange.trim() !== '' ? pageNumbers[i] : pageNum;
-        const targetPath = ImagePathUtil.getPath(taskId, pageNum);
-
-        // Rename from temporary name to standard format
-        if (result[i].path !== targetPath) {
-          await fs.rename(result[i].path, targetPath);
+      return result.map((output, i) => {
+        const page = i + 1; // Sequential numbering
+        if (!output.content) {
+          throw new Error(`PDF conversion produced no image for page ${page}`);
         }
-
-        pages.push({
-          page: pageNum,
-          pageSource: sourcePageNum,
-          imagePath: targetPath,
-        });
-      }
-
-      return pages;
+        return {
+          page,
+          // If page range was specified, use the mapped page numbers; otherwise use sequential numbering
+          pageSource: hasPageRange ? pageNumbers[i] : page,
+          content: output.content,
+        };
+      });
     }, 'convert PDF pages');
+  }
+
+  /**
+   * Write rendered pages to the task split directory as page-{N}.png with retry logic.
+   */
+  private async writePagesWithRetry(
+    taskId: string,
+    renderedPages: RenderedPage[]
+  ): Promise<PageInfo[]> {
+    const taskDir = ImagePathUtil.getTaskDir(taskId);
+
+    try {
+      // Retry whatever the error says: its message embeds the output path, which can hold any word.
+      return await this.withRetry(async () => {
+        await fs.mkdir(taskDir, { recursive: true });
+
+        const pages: PageInfo[] = [];
+        for (const { page, pageSource, content } of renderedPages) {
+          const imagePath = ImagePathUtil.getPath(taskId, page);
+          await fs.writeFile(imagePath, content);
+          pages.push({ page, pageSource, imagePath });
+        }
+        return pages;
+      }, 'write page images', () => true);
+    } catch (error) {
+      throw new Error(`Failed to write split images to ${taskDir}: ${(error as Error).message}`);
+    }
   }
 
   /**
@@ -169,11 +193,13 @@ export class PDFSplitter implements ISplitter {
    *
    * @param operation - Async operation to retry
    * @param operationName - Name for logging
+   * @param isRetryable - Whether a failure is worth another attempt (default: PDF errors)
    * @returns Operation result
    */
   private async withRetry<T>(
     operation: () => Promise<T>,
-    operationName: string
+    operationName: string,
+    isRetryable: (error: Error) => boolean = isRetryablePdfError
   ): Promise<T> {
     const maxRetries = WORKER_CONFIG.splitter.maxRetries;
     const baseDelay = WORKER_CONFIG.splitter.retryDelayBase;
@@ -186,14 +212,7 @@ export class PDFSplitter implements ISplitter {
       } catch (error) {
         lastError = error as Error;
 
-        // Check for non-retryable errors
-        const errorMessage = lastError.message.toLowerCase();
-        if (
-          errorMessage.includes('password') ||
-          errorMessage.includes('encrypted') ||
-          errorMessage.includes('invalid pdf')
-        ) {
-          // Don't retry for these errors
+        if (!isRetryable(lastError)) {
           throw lastError;
         }
 
@@ -215,10 +234,19 @@ export class PDFSplitter implements ISplitter {
   }
 
   /**
-   * Wrap errors with friendly, actionable messages.
+   * Wrap source read/render errors with friendly, actionable messages.
    */
-  private wrapError(error: unknown, _taskId: string, filename: string): Error {
+  private async wrapError(error: unknown, sourcePath: string, filename: string): Promise<Error> {
     const err = error as Error;
+
+    // Ask the file system instead of matching ENOENT in the message: an ENOENT can
+    // also come from other files, and the message embeds paths with arbitrary words.
+    if (await this.isFileMissing(sourcePath)) {
+      return new Error(
+        `PDF file not found: ${filename}. The file may have been moved or deleted.`
+      );
+    }
+
     const message = err.message.toLowerCase();
 
     if (message.includes('password') || message.includes('encrypted')) {
@@ -233,14 +261,17 @@ export class PDFSplitter implements ISplitter {
       );
     }
 
-    if (message.includes('enoent') || message.includes('file not found')) {
-      return new Error(
-        `PDF file not found: ${filename}. The file may have been moved or deleted.`
-      );
-    }
-
     // Generic error with context
     return new Error(`Failed to split PDF ${filename}: ${err.message}`);
+  }
+
+  private async isFileMissing(filePath: string): Promise<boolean> {
+    try {
+      await fs.access(filePath);
+      return false;
+    } catch (error) {
+      return (error as NodeJS.ErrnoException).code === 'ENOENT';
+    }
   }
 
   /**

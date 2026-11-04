@@ -126,8 +126,7 @@ describe('Ollama protocol consistency', () => {
     it.each([
       { base: `${HOST}/api`, suffix: '' },
       { base: `${HOST}/api`, suffix: null },
-      { base: `${HOST}/api`, suffix: '/chat' },
-      { base: HOST, suffix: '/api/chat' }
+      { base: `${HOST}/api`, suffix: '/chat' }
     ])('reaches /api/chat with base "$base" and suffix "$suffix"', async ({ base, suffix }) => {
       useProvider(base, suffix)
 

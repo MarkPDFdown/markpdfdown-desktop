@@ -82,11 +82,16 @@ export class OllamaClient extends LLMClient {
         const decoder = new TextDecoder('utf-8');
         let content = '';
         let model = '';
+        let hasMessage = false;
 
         const processStream = async (): Promise<CompletionResponse> => {
           const { done, value } = await reader.read();
 
           if (done) {
+            if (!hasMessage) {
+              throw this.missingMessageError();
+            }
+
             return {
               content,
               model: model || normalizedOptions.model || 'llama3',
@@ -100,53 +105,67 @@ export class OllamaClient extends LLMClient {
           const lines = chunk.split('\n').filter(line => line.trim() !== '');
 
           for (const line of lines) {
+            let data: any;
             try {
-              const data = JSON.parse(line);
-
-              // 存储模型名称
-              if (data.model && !model) {
-                model = data.model;
-              }
-
-              // 提取消息内容
-              if (data.message && data.message.content) {
-                if (!data.done) {
-                  // 累加流式内容
-                  content += data.message.content;
-                  if (normalizedOptions.onUpdate) {
-                    normalizedOptions.onUpdate(content);
-                  }
-                }
-              }
-
-              // 如果是最后一条消息，可以直接返回结果
-              if (data.done === true) {
-                return {
-                  content,
-                  model: data.model || normalizedOptions.model || 'llama3',
-                  finishReason: 'stop',
-                  responseFormat: normalizedOptions.response_format?.type,
-                  rawResponse: data
-                };
-              }
+              data = JSON.parse(line);
             } catch {
               // 忽略解析错误
+              continue;
+            }
+
+            this.assertNoResponseError(data);
+
+            // 存储模型名称
+            if (data.model && !model) {
+              model = data.model;
+            }
+
+            if (data.message) {
+              hasMessage = true;
+            }
+
+            // 提取消息内容
+            if (data.message && data.message.content) {
+              if (!data.done) {
+                // 累加流式内容
+                content += data.message.content;
+                if (normalizedOptions.onUpdate) {
+                  normalizedOptions.onUpdate(content);
+                }
+              }
+            }
+
+            // 如果是最后一条消息，可以直接返回结果
+            if (data.done === true) {
+              if (!hasMessage) {
+                throw this.missingMessageError();
+              }
+
+              return {
+                content,
+                model: data.model || normalizedOptions.model || 'llama3',
+                finishReason: 'stop',
+                responseFormat: normalizedOptions.response_format?.type,
+                rawResponse: data
+              };
             }
           }
 
           return processStream();
         };
 
-        return processStream();
+        // 需要 await：流中抛出的错误要经过下方 catch 统一包装
+        return await processStream();
       } else {
         // 处理非流式响应
         const data = await response.json().catch((error: Error) => {
           throw new Error(`Ollama 返回了非 JSON 响应 (HTTP ${response.status}): ${error.message}`);
         });
 
-        // 没有 message 说明响应不是 /api/chat 协议（如 /api/generate），不能当作模型返回了空内容
+        this.assertNoResponseError(data);
+
         if (!data.message) {
-          throw new Error(`Ollama 响应缺少 message 字段，请确认 API 地址指向 /api/chat: ${this.baseUrl}`);
+          throw this.missingMessageError();
         }
 
         return {
@@ -161,6 +180,23 @@ export class OllamaClient extends LLMClient {
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Ollama补全请求失败: ${errorMessage}`);
     }
+  }
+
+  /**
+   * HTTP 200 的响应体也可能带 error（如流式响应开始后模型崩溃）
+   */
+  private assertNoResponseError(data: any): void {
+    if (data.error) {
+      const detail = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
+      throw new Error(`Ollama 返回错误: ${detail}`);
+    }
+  }
+
+  /**
+   * 没有 message 说明响应不是 /api/chat 协议（如 /api/generate），不能当作模型返回了空内容
+   */
+  private missingMessageError(): Error {
+    return new Error(`Ollama 响应缺少 message 字段，请确认 API 地址指向 /api/chat: ${this.baseUrl}`);
   }
 
   /**
