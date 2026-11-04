@@ -530,6 +530,64 @@ describe('Provider', () => {
       )
       expect(suffixSelect).toBeInTheDocument()
     })
+
+    describe('ollama', () => {
+      const mockOllama = (suffix: string) => {
+        vi.mocked(window.api.provider.getById).mockResolvedValue({
+          success: true,
+          data: {
+            ...mockProvider,
+            name: 'Ollama',
+            type: 'ollama',
+            api_key: '',
+            base_url: 'http://localhost:11434/api',
+            suffix
+          }
+        })
+      }
+
+      const findSelectedSuffix = (text: string) =>
+        Array.from(document.querySelectorAll('.ant-select-selection-item'))
+          .find(el => el.textContent === text)
+
+      it('should default an unset suffix to the chat endpoint', async () => {
+        mockOllama('')
+
+        render(
+          <Wrapper>
+            <Provider providerId={1} />
+          </Wrapper>
+        )
+
+        await waitFor(() => {
+          expect(findSelectedSuffix('/chat')).toBeInTheDocument()
+        })
+      })
+
+      it('should only offer suffixes that reach the chat endpoint', async () => {
+        mockOllama('/chat')
+
+        render(
+          <Wrapper>
+            <Provider providerId={1} />
+          </Wrapper>
+        )
+
+        await waitFor(() => {
+          expect(findSelectedSuffix('/chat')).toBeInTheDocument()
+        })
+
+        fireEvent.mouseDown(findSelectedSuffix('/chat')!.closest('.ant-select-selector')!)
+
+        await waitFor(() => {
+          expect(document.querySelector('.ant-select-item-option')).toBeInTheDocument()
+        })
+
+        const options = Array.from(document.querySelectorAll('.ant-select-item-option-content'))
+          .map(el => el.textContent)
+        expect(options).toEqual(['/chat', '/api/chat'])
+      })
+    })
   })
 
   describe('Callbacks', () => {
