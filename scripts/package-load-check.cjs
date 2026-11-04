@@ -13,17 +13,18 @@ const path = require('node:path');
 const appModules = path.join(process.argv[2], 'app.asar', 'node_modules');
 const loadFromApp = (name) => require(path.join(appModules, name));
 
-async function checkSharp() {
-  const sharp = loadFromApp('sharp');
-  await sharp({ create: { width: 1, height: 1, channels: 3, background: '#000' } }).png().toBuffer();
-  return `libvips ${sharp.versions.vips}`;
-}
-
 async function checkCanvas() {
   const { createCanvas } = loadFromApp('@napi-rs/canvas');
   createCanvas(1, 1).getContext('2d');
   // The app reaches canvas through this module, which requires it at load time.
   loadFromApp('pdf-to-png-converter');
+}
+
+/** Linux only: the engine Prisma really picked, which verify-package-distros.mjs checks. */
+function loadedPrismaEngine() {
+  if (process.platform !== 'linux') return undefined;
+  const engine = fs.readFileSync('/proc/self/maps', 'utf8').match(/libquery_engine-[^/\s]+\.so\.node/);
+  return engine?.[0];
 }
 
 async function checkPrisma() {
@@ -34,6 +35,7 @@ async function checkPrisma() {
   });
   try {
     await client.$queryRaw`SELECT 1`;
+    return loadedPrismaEngine();
   } finally {
     await client.$disconnect();
     fs.rmSync(tempDir, { recursive: true, force: true });
@@ -41,7 +43,7 @@ async function checkPrisma() {
 }
 
 async function main() {
-  const checks = { sharp: checkSharp, '@napi-rs/canvas': checkCanvas, 'Prisma query engine': checkPrisma };
+  const checks = { '@napi-rs/canvas': checkCanvas, 'Prisma query engine': checkPrisma };
   let failed = false;
   for (const [name, check] of Object.entries(checks)) {
     try {

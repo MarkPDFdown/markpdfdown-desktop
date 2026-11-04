@@ -96,3 +96,6 @@ jobs:
 
       - name: Verify packaged native modules
         run: npm run verify:package -- --platform linux --arch x64
+
+      - name: Verify the package loads on other distros
+        run: npm run verify:package:distros

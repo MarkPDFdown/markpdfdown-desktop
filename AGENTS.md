@@ -15,6 +15,7 @@ npm run build:win              # Build Windows NSIS installer
 npm run build:mac              # Build macOS DMG
 npm run build:linux            # Build Linux AppImage
 npm run verify:package         # Check the packaged native modules (arch, presence, load test)
+npm run verify:package:distros # Load the Linux package on other distros (needs Docker)
 
 # Database
 npm run generate               # Generate Prisma client (required after schema changes)
@@ -299,8 +300,10 @@ For detailed instructions on adding new features, including step-by-step develop
 - **Artifact Naming**: `${productName}-${version}-${arch}.${ext}` (e.g., `MarkPDFdown-1.0.0-x64.exe`)
 
 ### Native Modules and Packaging
-- **Build on the target architecture**: sharp, `@napi-rs/canvas` and the Prisma engine ship as prebuilt binaries that `npm ci` and `prisma generate` install for the host only, and electron-builder does not fetch those of another arch. Packaging `--x64` on an arm64 machine produces an app that crashes at startup, so `release.yml` runs one job per arch on a native runner.
+- **Build on the target architecture**: `@napi-rs/canvas` and the Prisma engine ship as prebuilt binaries that `npm ci` and `prisma generate` install for the host only, and electron-builder does not fetch those of another arch. Packaging `--x64` on an arm64 machine produces an app that crashes at startup, so `release.yml` runs one job per arch on a native runner.
 - **`npm run verify:package`** (`scripts/verify-package-arch.mjs`) checks an unpacked package: binary architectures, required modules, and, when the host can run the package, a real load test in the packaged Electron. Pass `-- --platform <mac|win|linux> --arch <x64|arm64>` for another target. CI fails on any problem.
+- **Linux Prisma engines**: Prisma picks its engine at runtime from the user's distro family and libssl, so a Linux package carries one per combination (`scripts/prisma-engines.mjs`). `binaryTargets` comes from `PRISMA_BINARY_TARGETS`, so a list in the schema can't put the other arch's engines in a package: run Prisma through `npm run generate` / `npm run migrate:*` (`scripts/prisma-cli.mjs`). A bare `npx prisma generate` stops with an error about the missing variable. `npm run verify:package:distros` (`scripts/verify-package-distros.mjs`) checks in containers that each distro loads the engine meant for it.
+- **No sharp in Electron on Linux**: its libvips bundles and exports glib, while Electron links the system's, so the two mix and sharp segfaults inside `g_object_unref` (seen on Fedora 44, glib 2.88). `RTLD_DEEPBIND` doesn't help. `@napi-rs/canvas` has no such clash.
 - **New native dependency**: add it to `requiredModules` in the verify script and to `scripts/package-load-check.cjs`.
 - **Windows is x64 only**: Prisma has no Windows arm64 engine, and an arm64 process can't load the x64 one. Windows on Arm runs the x64 build under emulation.
 - **`latest-mac.yml`**: each mac job writes its own, and the `upload-manifests` job in `release.yml` merges them, x64 first.

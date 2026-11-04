@@ -1,6 +1,6 @@
 import providerRepository from '../../domain/repositories/ProviderRepository.js';
 import { LLMClientFactory, CompletionOptions, Message } from '../../infrastructure/adapters/llm/LLMClient.js';
-import sharp from 'sharp';
+import { promises as fs } from 'fs';
 
 
 // 根据服务商ID获取LLM客户端
@@ -59,8 +59,7 @@ const completion = async (providerId: number, options: CompletionOptions) => {
 
 // 输入图片文件路径，返回图片的base64编码字符串
 const getImageBase64 = async (imagePath: string): Promise<string> => {
-    const image = sharp(imagePath);
-    const buffer = await image.toBuffer();
+    const buffer = await fs.readFile(imagePath);
     return buffer.toString('base64');
 }
 

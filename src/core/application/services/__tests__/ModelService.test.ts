@@ -9,10 +9,7 @@ const mockLLMClientFactory = {
   createClient: vi.fn()
 }
 
-const mockToBuffer = vi.fn().mockResolvedValue(Buffer.from('mock-image-data'))
-const mockSharp = vi.fn(() => ({
-  toBuffer: mockToBuffer
-}))
+const mockReadFile = vi.fn().mockResolvedValue(Buffer.from('mock-image-data'))
 
 vi.mock('../../../domain/repositories/ProviderRepository.js', () => ({
   default: mockProviderRepository
@@ -22,8 +19,8 @@ vi.mock('../../../infrastructure/adapters/llm/LLMClient.js', () => ({
   LLMClientFactory: mockLLMClientFactory
 }))
 
-vi.mock('sharp', () => ({
-  default: mockSharp
+vi.mock('fs', () => ({
+  promises: { readFile: mockReadFile }
 }))
 
 describe('Model Logic', () => {
@@ -31,7 +28,7 @@ describe('Model Logic', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
-    mockToBuffer.mockClear()
+    mockReadFile.mockClear()
     const module = await import('../ModelService.js')
     modelLogic = module.default
   })
@@ -284,11 +281,21 @@ describe('Model Logic', () => {
       expect(imageContent.image_url.url).toMatch(/^data:image\/jpeg;base64,/)
     })
 
-    it('should call sharp to process image', async () => {
-      await modelLogic.transformImageMessage('/path/to/test.jpg')
+    it('should send the bytes of the image file', async () => {
+      mockReadFile.mockResolvedValueOnce(Buffer.from('page-image'))
 
-      expect(mockSharp).toHaveBeenCalledWith('/path/to/test.jpg')
-      expect(mockToBuffer).toHaveBeenCalled()
+      const result = await modelLogic.transformImageMessage('/path/to/test.jpg')
+
+      expect(mockReadFile).toHaveBeenCalledWith('/path/to/test.jpg')
+      expect(result[1].content[1].image_url.url).toBe(
+        `data:image/jpeg;base64,${Buffer.from('page-image').toString('base64')}`
+      )
+    })
+
+    it('should fail when the image file cannot be read', async () => {
+      mockReadFile.mockRejectedValueOnce(new Error('ENOENT'))
+
+      await expect(modelLogic.transformImageMessage('/missing.png')).rejects.toThrow('ENOENT')
     })
 
     it('should handle different image paths', async () => {
@@ -299,9 +306,9 @@ describe('Model Logic', () => {
       ]
 
       for (const imagePath of paths) {
-        mockSharp.mockClear()
+        mockReadFile.mockClear()
         await modelLogic.transformImageMessage(imagePath)
-        expect(mockSharp).toHaveBeenCalledWith(imagePath)
+        expect(mockReadFile).toHaveBeenCalledWith(imagePath)
       }
     })
   })
