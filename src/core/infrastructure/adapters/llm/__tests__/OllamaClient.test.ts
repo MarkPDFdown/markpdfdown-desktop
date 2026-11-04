@@ -18,7 +18,7 @@ describe('OllamaClient', () => {
 
     it('should use default base URL if not provided', () => {
       const defaultClient = new OllamaClient('')
-      expect(defaultClient['baseUrl']).toBe('http://localhost:11434/api')
+      expect(defaultClient['baseUrl']).toBe('http://localhost:11434/api/chat')
     })
   })
 
@@ -268,22 +268,71 @@ describe('OllamaClient', () => {
       ).rejects.toThrow('Ollama补全请求失败')
     })
 
-    it('should handle API error with error message', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 500,
-        statusText: 'Internal Server Error',
-        json: async () => ({ error: 'Model not found' })
-      })
+    const completeText = () => client.completion({
+      messages: [
+        { role: 'user', content: { type: 'text', text: 'Test' } }
+      ],
+      stream: false
+    })
 
-      await expect(
-        client.completion({
-          messages: [
-            { role: 'user', content: { type: 'text', text: 'Test' } }
-          ],
-          stream: false
+    it('should handle API error with error message', async () => {
+      global.fetch = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ error: 'Model not found' }), {
+          status: 500,
+          statusText: 'Internal Server Error'
         })
-      ).rejects.toThrow('Model not found')
+      )
+
+      await expect(completeText()).rejects.toThrow('Model not found')
+    })
+
+    it('should show the status code alongside a JSON error message', async () => {
+      global.fetch = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ error: "model 'x' not found" }), {
+          status: 404,
+          statusText: 'Not Found'
+        })
+      )
+
+      await expect(completeText()).rejects.toThrow(/HTTP 404.*model 'x' not found/)
+    })
+
+    it('should show the status code and body for a non-JSON error response', async () => {
+      global.fetch = vi.fn().mockResolvedValue(
+        new Response('404 page not found', { status: 404, statusText: 'Not Found' })
+      )
+
+      await expect(completeText()).rejects.toThrow(/HTTP 404.*404 page not found/)
+    })
+
+    it('should show the status code when the error response has no body', async () => {
+      global.fetch = vi.fn().mockResolvedValue(
+        new Response('', { status: 502, statusText: 'Bad Gateway' })
+      )
+
+      await expect(completeText()).rejects.toThrow(/HTTP 502.*Bad Gateway/)
+    })
+
+    it('should use the JSON body as is when it has no error field', async () => {
+      global.fetch = vi.fn().mockResolvedValue(
+        new Response('{"detail":"blocked by proxy"}', { status: 403, statusText: 'Forbidden' })
+      )
+
+      await expect(completeText()).rejects.toThrow(/HTTP 403.*blocked by proxy/)
+    })
+
+    it('should report a successful response that is not JSON', async () => {
+      global.fetch = vi.fn().mockResolvedValue(
+        new Response('<html>login</html>', { status: 200, statusText: 'OK' })
+      )
+
+      await expect(completeText()).rejects.toThrow(/HTTP 200/)
+    })
+
+    it('should report a response without a message instead of returning empty content', async () => {
+      mockFetchSuccess({ model: 'llama2', response: '', done: true, done_reason: 'load' })
+
+      await expect(completeText()).rejects.toThrow(/\/api\/chat/)
     })
 
     it('should handle network errors', async () => {
@@ -351,6 +400,42 @@ describe('OllamaClient', () => {
       const callArgs = (global.fetch as any).mock.calls[0][1]
       const body = JSON.parse(callArgs.body)
       expect(body.model).toBe('llama3')
+    })
+
+    it('should not request a stream when there is no onUpdate to consume it', async () => {
+      mockFetchSuccess(createMockOllamaResponse('Response'))
+
+      const result = await client.completion({
+        messages: [
+          { role: 'user', content: { type: 'text', text: 'Test' } }
+        ]
+      })
+
+      const body = JSON.parse((global.fetch as any).mock.calls[0][1].body)
+      expect(body.stream).toBe(false)
+      expect(result.content).toBe('Response')
+    })
+
+    it('should request a stream when onUpdate is provided without a stream option', async () => {
+      const encoder = new TextEncoder()
+      global.fetch = vi.fn().mockResolvedValue(new Response(new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode('{"model":"llama3","message":{"content":"test"},"done":false}\n'))
+          controller.enqueue(encoder.encode('{"model":"llama3","done":true}\n'))
+          controller.close()
+        }
+      })))
+
+      const result = await client.completion({
+        messages: [
+          { role: 'user', content: { type: 'text', text: 'Test' } }
+        ],
+        onUpdate: vi.fn()
+      })
+
+      const body = JSON.parse((global.fetch as any).mock.calls[0][1].body)
+      expect(body.stream).toBe(true)
+      expect(result.content).toBe('test')
     })
 
     it('should default stream to true when onUpdate is provided', async () => {

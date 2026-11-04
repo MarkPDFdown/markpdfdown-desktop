@@ -12,10 +12,11 @@ import {
 
 /**
  * Ollama客户端实现
+ * baseUrl 是完整的 /api/chat 地址：请求体（messages）和响应解析（message.content）都遵循该端点的协议
  */
 export class OllamaClient extends LLMClient {
   constructor(apiKey: string, baseUrl?: string) {
-    super(apiKey, baseUrl || 'http://localhost:11434/api');
+    super(apiKey, baseUrl || 'http://localhost:11434/api/chat');
   }
 
   /**
@@ -29,10 +30,13 @@ export class OllamaClient extends LLMClient {
       // 转换消息格式为Ollama格式
       const ollamaMessages = this.convertMessagesToOllamaFormat(normalizedOptions.messages);
 
+      // 只有调用方能消费增量内容时才请求流式：流式响应是 NDJSON，不能按单个 JSON 解析
+      const shouldStream = normalizedOptions.stream !== false && Boolean(normalizedOptions.onUpdate);
+
       const requestBody: any = {
         model: normalizedOptions.model || 'llama3',
         messages: ollamaMessages,
-        stream: normalizedOptions.stream !== false, // 默认为流式响应
+        stream: shouldStream,
         options: {}
       };
 
@@ -69,11 +73,10 @@ export class OllamaClient extends LLMClient {
       // console.log(JSON.stringify(requestBody));
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`Ollama API错误: ${error.error || response.statusText}`);
+        throw new Error(`Ollama API错误 (HTTP ${response.status}): ${await this.readErrorDetail(response)}`);
       }
 
-      if (normalizedOptions.stream && response.body && normalizedOptions.onUpdate) {
+      if (shouldStream && response.body) {
         // 处理流式响应
         const reader = response.body.getReader();
         const decoder = new TextDecoder('utf-8');
@@ -137,10 +140,17 @@ export class OllamaClient extends LLMClient {
         return processStream();
       } else {
         // 处理非流式响应
-        const data = await response.json();
+        const data = await response.json().catch((error: Error) => {
+          throw new Error(`Ollama 返回了非 JSON 响应 (HTTP ${response.status}): ${error.message}`);
+        });
+
+        // 没有 message 说明响应不是 /api/chat 协议（如 /api/generate），不能当作模型返回了空内容
+        if (!data.message) {
+          throw new Error(`Ollama 响应缺少 message 字段，请确认 API 地址指向 /api/chat: ${this.baseUrl}`);
+        }
 
         return {
-          content: data.message?.content || '',
+          content: data.message.content || '',
           model: data.model,
           finishReason: data.done ? 'stop' : undefined,
           responseFormat: normalizedOptions.response_format?.type,
@@ -151,6 +161,25 @@ export class OllamaClient extends LLMClient {
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Ollama补全请求失败: ${errorMessage}`);
     }
+  }
+
+  /**
+   * 读取非 2xx 响应的错误详情
+   * 响应体不一定是 JSON（如路由不存在时是纯文本 404），解析失败时使用原文
+   */
+  private async readErrorDetail(response: Response): Promise<string> {
+    const body = (await response.text().catch(() => '')).trim();
+
+    try {
+      const error = JSON.parse(body)?.error;
+      if (typeof error === 'string' && error) {
+        return error;
+      }
+    } catch {
+      // 非 JSON 响应，使用原文
+    }
+
+    return body.slice(0, 500) || response.statusText;
   }
 
   /**
