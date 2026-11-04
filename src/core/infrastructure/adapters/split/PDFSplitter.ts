@@ -12,6 +12,16 @@ import { WORKER_CONFIG } from '../../config/worker.config.js';
 /** A rendered page, held in memory until it is written to the split directory. */
 type RenderedPage = Omit<PageInfo, 'imagePath'> & { content: Buffer };
 
+/** PDF errors that a retry cannot fix: the document itself is protected or invalid. */
+function isRetryablePdfError(error: Error): boolean {
+  const message = error.message.toLowerCase();
+  return !(
+    message.includes('password') ||
+    message.includes('encrypted') ||
+    message.includes('invalid pdf')
+  );
+}
+
 /**
  * PDF splitter implementation using pdf-to-png-converter.
  *
@@ -161,6 +171,7 @@ export class PDFSplitter implements ISplitter {
     const taskDir = ImagePathUtil.getTaskDir(taskId);
 
     try {
+      // Retry whatever the error says: its message embeds the output path, which can hold any word.
       return await this.withRetry(async () => {
         await fs.mkdir(taskDir, { recursive: true });
 
@@ -171,7 +182,7 @@ export class PDFSplitter implements ISplitter {
           pages.push({ page, pageSource, imagePath });
         }
         return pages;
-      }, 'write page images');
+      }, 'write page images', () => true);
     } catch (error) {
       throw new Error(`Failed to write split images to ${taskDir}: ${(error as Error).message}`);
     }
@@ -182,11 +193,13 @@ export class PDFSplitter implements ISplitter {
    *
    * @param operation - Async operation to retry
    * @param operationName - Name for logging
+   * @param isRetryable - Whether a failure is worth another attempt (default: PDF errors)
    * @returns Operation result
    */
   private async withRetry<T>(
     operation: () => Promise<T>,
-    operationName: string
+    operationName: string,
+    isRetryable: (error: Error) => boolean = isRetryablePdfError
   ): Promise<T> {
     const maxRetries = WORKER_CONFIG.splitter.maxRetries;
     const baseDelay = WORKER_CONFIG.splitter.retryDelayBase;
@@ -199,14 +212,7 @@ export class PDFSplitter implements ISplitter {
       } catch (error) {
         lastError = error as Error;
 
-        // Check for non-retryable errors
-        const errorMessage = lastError.message.toLowerCase();
-        if (
-          errorMessage.includes('password') ||
-          errorMessage.includes('encrypted') ||
-          errorMessage.includes('invalid pdf')
-        ) {
-          // Don't retry for these errors
+        if (!isRetryable(lastError)) {
           throw lastError;
         }
 
