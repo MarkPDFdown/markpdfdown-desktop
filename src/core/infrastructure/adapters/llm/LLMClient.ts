@@ -97,8 +97,15 @@ export class LLMClientFactory {
    * @param type LLM client type
    * @param apiKey API key
    * @param baseUrl Base URL (some services need custom URL)
+   * @param options.exactEndpoint baseUrl is the complete endpoint, the client must not extend it.
+   *   Only Gemini extends its URL (with the model path); the other clients always post to baseUrl.
    */
-  static async createClient(type: string, apiKey: string, baseUrl?: string): Promise<LLMClient> {
+  static async createClient(
+    type: string,
+    apiKey: string,
+    baseUrl?: string,
+    options: { exactEndpoint?: boolean } = {}
+  ): Promise<LLMClient> {
     switch (type) {
       case 'openai': {
         const OpenAIModule = await import('./OpenAIClient.js');
@@ -110,7 +117,7 @@ export class LLMClientFactory {
       }
       case 'gemini': {
         const GeminiModule = await import('./GeminiClient.js');
-        return new GeminiModule.GeminiClient(apiKey, baseUrl || '');
+        return new GeminiModule.GeminiClient(apiKey, baseUrl || '', options.exactEndpoint);
       }
       case 'anthropic': {
         const AnthropicModule = await import('./AnthropicClient.js');
