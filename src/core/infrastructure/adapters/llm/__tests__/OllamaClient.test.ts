@@ -201,6 +201,79 @@ describe('OllamaClient', () => {
 
       expect(result.content).toBe('Streaming response')
     })
+
+    describe('responses that are not a chat stream', () => {
+      const stubStream = (...lines: unknown[]) => {
+        const ndjson = lines.map((line) => JSON.stringify(line)).join('\n')
+        global.fetch = vi.fn().mockResolvedValue(new Response(ndjson))
+      }
+
+      const completeStream = (onUpdate: (content: string) => void = vi.fn()) => client.completion({
+        messages: [
+          { role: 'user', content: { type: 'text', text: 'Test' } }
+        ],
+        model: 'llama2',
+        stream: true,
+        onUpdate
+      })
+
+      it('should report an error sent as the first line', async () => {
+        stubStream({ error: "model 'x' not found" })
+
+        await expect(completeStream()).rejects.toThrow("Ollama补全请求失败: Ollama 返回错误: model 'x' not found")
+      })
+
+      it('should report an error sent after partial content instead of returning it', async () => {
+        const onUpdate = vi.fn()
+        stubStream(
+          { model: 'llama2', message: { content: 'Partial' }, done: false },
+          { error: 'llama runner process has terminated' }
+        )
+
+        await expect(completeStream(onUpdate)).rejects.toThrow('llama runner process has terminated')
+        expect(onUpdate).toHaveBeenCalledWith('Partial')
+      })
+
+      it('should report a /api/generate stream instead of returning empty content', async () => {
+        stubStream(
+          { model: 'llama2', response: 'Hello', done: false },
+          { model: 'llama2', response: '', done: true }
+        )
+
+        await expect(completeStream()).rejects.toThrow(/Ollama补全请求失败.*缺少 message.*\/api\/chat/)
+      })
+
+      it('should report a stream that ends without any message', async () => {
+        stubStream({ model: 'llama2', done: false })
+
+        await expect(completeStream()).rejects.toThrow(/缺少 message/)
+      })
+
+      it('should report an empty stream', async () => {
+        stubStream()
+
+        await expect(completeStream()).rejects.toThrow(/缺少 message/)
+      })
+
+      it('should accept a chat stream whose message is empty, like the non-streaming branch', async () => {
+        stubStream({ model: 'llama2', message: { role: 'assistant', content: '' }, done: true })
+
+        const result = await completeStream()
+
+        expect(result.content).toBe('')
+        expect(result.finishReason).toBe('stop')
+      })
+
+      it('should still skip lines that are not JSON', async () => {
+        global.fetch = vi.fn().mockResolvedValue(new Response(
+          'not json\n{"model":"llama2","message":{"content":"Hello"},"done":false}\n{"model":"llama2","done":true}\n'
+        ))
+
+        const result = await completeStream()
+
+        expect(result.content).toBe('Hello')
+      })
+    })
   })
 
   describe('Tool Support', () => {
@@ -333,6 +406,12 @@ describe('OllamaClient', () => {
       mockFetchSuccess({ model: 'llama2', response: '', done: true, done_reason: 'load' })
 
       await expect(completeText()).rejects.toThrow(/\/api\/chat/)
+    })
+
+    it('should report an error in a successful response instead of blaming the endpoint', async () => {
+      mockFetchSuccess({ error: 'llama runner process has terminated' })
+
+      await expect(completeText()).rejects.toThrow('Ollama 返回错误: llama runner process has terminated')
     })
 
     it('should handle network errors', async () => {

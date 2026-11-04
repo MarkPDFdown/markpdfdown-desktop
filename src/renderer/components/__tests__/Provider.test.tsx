@@ -564,7 +564,7 @@ describe('Provider', () => {
         })
       })
 
-      it('should only offer suffixes that reach the chat endpoint', async () => {
+      it('should only offer the suffix that reaches the chat endpoint from the default base', async () => {
         mockOllama('/chat')
 
         render(
@@ -585,7 +585,7 @@ describe('Provider', () => {
 
         const options = Array.from(document.querySelectorAll('.ant-select-item-option-content'))
           .map(el => el.textContent)
-        expect(options).toEqual(['/chat', '/api/chat'])
+        expect(options).toEqual(['/chat'])
       })
     })
   })
