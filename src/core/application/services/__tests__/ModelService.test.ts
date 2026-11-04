@@ -100,7 +100,7 @@ describe('Model Logic', () => {
       expect(mockLLMClientFactory.createClient).toHaveBeenCalledWith(
         'ollama',
         '',
-        'http://localhost:11434/api/generate'
+        'http://localhost:11434/api/chat'
       )
     })
 
@@ -110,7 +110,7 @@ describe('Model Logic', () => {
         { type: 'openai-responses', expectedSuffix: '/responses' },
         { type: 'gemini', expectedSuffix: '/models' },
         { type: 'anthropic', expectedSuffix: '/messages' },
-        { type: 'ollama', expectedSuffix: '/generate' }
+        { type: 'ollama', expectedSuffix: '/chat' }
       ]
 
       for (const testCase of testCases) {

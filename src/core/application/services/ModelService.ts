@@ -39,7 +39,7 @@ const getLLMClient = async (providerId: number) => {
                 suffix = '/messages';
                 break;
             case 'ollama':
-                suffix = '/generate';
+                suffix = '/chat';
                 break;
         }
     }
