@@ -13,6 +13,15 @@ const path = require('node:path');
 const appModules = path.join(process.argv[2], 'app.asar', 'node_modules');
 const loadFromApp = (name) => require(path.join(appModules, name));
 
+/** Cleanup is not what's being checked: a failure here must neither fail the check nor mask its error. */
+async function cleanUp(description, action) {
+  try {
+    await action();
+  } catch (error) {
+    console.warn(`  warning: could not ${description}: ${error.message}`);
+  }
+}
+
 async function checkSharp() {
   const sharp = loadFromApp('sharp');
   await sharp({ create: { width: 1, height: 1, channels: 3, background: '#000' } }).png().toBuffer();
@@ -35,8 +44,11 @@ async function checkPrisma() {
   try {
     await client.$queryRaw`SELECT 1`;
   } finally {
-    await client.$disconnect();
-    fs.rmSync(tempDir, { recursive: true, force: true });
+    await cleanUp('disconnect Prisma', () => client.$disconnect());
+    // Windows can hold the db file for a moment after the engine disconnects.
+    await cleanUp(`remove ${tempDir}`, () =>
+      fs.rmSync(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }),
+    );
   }
 }
 

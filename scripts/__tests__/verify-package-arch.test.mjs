@@ -1,8 +1,12 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { parseBinaryHeader, resolvePackageLayout, verifyBinaries } from '../verify-package-arch.mjs';
+import { loadCheckProblems, parseBinaryHeader, resolvePackageLayout, verifyBinaries } from '../verify-package-arch.mjs';
+
+const SCRIPT = fileURLToPath(new URL('../verify-package-arch.mjs', import.meta.url));
 
 const CPU_TYPE = { x64: 0x01000007, arm64: 0x0100000c };
 
@@ -80,6 +84,56 @@ describe('resolvePackageLayout', () => {
     const layout = resolvePackageLayout({ ...names, platform, arch });
     expect(layout.resourcesDir.split(path.sep).join('/')).toBe(resourcesDir);
     expect(layout.executable.split(path.sep).join('/')).toBe(executable);
+  });
+});
+
+describe('loadCheckProblems', () => {
+  it('accepts a clean exit', () => {
+    expect(loadCheckProblems({ status: 0, signal: null })).toEqual([]);
+  });
+
+  it('reports the exit code of a failed check', () => {
+    expect(loadCheckProblems({ status: 1, signal: null })).toEqual(['Load check failed with exit code 1']);
+  });
+
+  it('names the signal when the check was killed, as there is no exit code then', () => {
+    expect(loadCheckProblems({ status: null, signal: 'SIGSEGV' })).toEqual(['Load check was killed by signal SIGSEGV']);
+  });
+
+  it('prefers the spawn error, which explains a timeout better than the signal it sends', () => {
+    const error = new Error('spawnSync ETIMEDOUT');
+
+    expect(loadCheckProblems({ error, status: null, signal: 'SIGTERM' })).toEqual([
+      'Load check could not run: spawnSync ETIMEDOUT',
+    ]);
+  });
+});
+
+describe('command line entry', () => {
+  // An unknown platform makes main() fail right away, so a non-zero exit proves that it ran.
+  const run = (script) => spawnSync(process.execPath, [script, '--platform', 'nope'], { encoding: 'utf8' });
+
+  it('runs when started directly', () => {
+    const result = run(SCRIPT);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('Unknown --platform "nope"');
+  });
+
+  // Creating a symlink needs extra privileges on Windows.
+  it.skipIf(process.platform === 'win32')('runs when started through a symlink, rather than passing silently', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'verify-package-arch-link-'));
+    try {
+      const link = path.join(dir, 'verify.mjs');
+      symlinkSync(SCRIPT, link);
+
+      const result = run(link);
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('Unknown --platform "nope"');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

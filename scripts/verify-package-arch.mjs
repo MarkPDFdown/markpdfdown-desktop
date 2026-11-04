@@ -18,7 +18,7 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { closeSync, existsSync, openSync, readFileSync, readSync, readdirSync } from 'node:fs';
+import { closeSync, existsSync, openSync, readFileSync, readSync, readdirSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
@@ -185,6 +185,14 @@ export function verifyBinaries({ resourcesDir, executable, platform, arch }) {
   return { binaries, problems };
 }
 
+/** @returns {string[]} problems found in the spawnSync result of the load check */
+export function loadCheckProblems({ error, status, signal }) {
+  if (error) return [`Load check could not run: ${error.message}`];
+  if (signal) return [`Load check was killed by signal ${signal}`];
+  if (status !== 0) return [`Load check failed with exit code ${status}`];
+  return [];
+}
+
 /** Loads the native modules in the packaged Electron. @returns {string[]} problems */
 function runLoadCheck({ resourcesDir, executable }) {
   const result = spawnSync(executable, [LOAD_CHECK_SCRIPT, resourcesDir], {
@@ -195,9 +203,7 @@ function runLoadCheck({ resourcesDir, executable }) {
   if (result.stdout) process.stdout.write(result.stdout);
   if (result.stderr) process.stderr.write(result.stderr);
 
-  if (result.error) return [`Load check could not run: ${result.error.message}`];
-  if (result.status !== 0) return [`Load check failed with exit code ${result.status}`];
-  return [];
+  return loadCheckProblems(result);
 }
 
 function main() {
@@ -249,7 +255,16 @@ function main() {
   console.log(`\nPackage ${platform}-${arch} is OK.`);
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+/**
+ * Node resolves symlinks in this module's URL but not in argv[1], so comparing them directly would
+ * skip main() when started through a symlink, and the gate would pass with exit code 0.
+ */
+function isEntryPoint() {
+  const entry = process.argv[1];
+  return Boolean(entry) && existsSync(entry) && realpathSync(entry) === realpathSync(fileURLToPath(import.meta.url));
+}
+
+if (isEntryPoint()) {
   try {
     main();
   } catch (error) {
