@@ -40,6 +40,22 @@ vi.mock('fs', () => ({
 import { pdfToPng } from 'pdf-to-png-converter';
 import { PDFDocument } from 'pdf-lib';
 import { FileWaitUtil } from '../FileWaitUtil.js';
+import { WORKER_CONFIG } from '../../../config/worker.config.js';
+
+/** Renders the requested pages the way pdf-to-png-converter does, stopping at the document's end. */
+function fakePdfToPng(pagesInDocument: number) {
+  return async (_pdf: unknown, options?: { pagesToProcess?: number[] }) =>
+    (options?.pagesToProcess ?? Array.from({ length: pagesInDocument }, (_, i) => i + 1))
+      .filter((page) => page <= pagesInDocument)
+      .map((page) => ({
+        path: '',
+        name: `doc_page_${page}.png`,
+        pageNumber: page,
+        content: Buffer.from(`source-${page}`),
+        width: 100,
+        height: 100,
+      }));
+}
 
 describe('PDFSplitter', () => {
   const uploadsDir = '/mock/uploads';
@@ -466,21 +482,238 @@ describe('PDFSplitter', () => {
         getPageCount: () => 200,
       } as any);
 
-      // Mock 100 pages
-      const pages = Array.from({ length: 100 }, (_, i) => ({
-        path: `/tmp/page-${i + 1}.png`,
-        name: `page-${i + 1}.png`,
-        page: i + 1,
-        content: Buffer.from(''),
-      }));
-
-      vi.mocked(pdfToPng).mockResolvedValueOnce(pages);
+      vi.mocked(pdfToPng).mockImplementation(fakePdfToPng(200) as any);
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
       expect(result.totalPages).toBe(100);
       expect(result.pages).toHaveLength(100);
+      vi.mocked(pdfToPng).mockReset();
+    });
+  });
+
+  describe('batched rendering', () => {
+    const BATCH_SIZE = WORKER_CONFIG.splitter.renderBatchSize;
+    const taskId = 'task-batch';
+    const task = { id: taskId, filename: 'document.pdf', page_range: '' };
+    const pagePath = (page: number) => path.join(uploadsDir, taskId, 'split', `page-${page}.png`);
+    const range = (from: number, to: number) =>
+      Array.from({ length: to - from + 1 }, (_, i) => from + i);
+    const renderedBatches = () =>
+      vi.mocked(pdfToPng).mock.calls.map(([, options]) => options?.pagesToProcess);
+
+    function givenDocument(pagesByPdfLib: number, pagesByPdfJs: number = pagesByPdfLib) {
+      vi.mocked(PDFDocument.load).mockResolvedValue({ getPageCount: () => pagesByPdfLib } as any);
+      vi.mocked(pdfToPng).mockImplementation(fakePdfToPng(pagesByPdfJs) as any);
+    }
+
+    beforeEach(() => {
+      vi.spyOn(splitter as any, 'sleep').mockResolvedValue(undefined);
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      vi.mocked(pdfToPng).mockReset();
+      vi.mocked(fs.writeFile).mockReset();
+      vi.restoreAllMocks();
+    });
+
+    it('should render all pages in batches of the configured size', async () => {
+      const pageCount = BATCH_SIZE * 2 + 3;
+      givenDocument(pageCount);
+
+      const result = await splitter.split(task);
+
+      expect(renderedBatches()).toEqual([
+        range(1, BATCH_SIZE),
+        range(BATCH_SIZE + 1, BATCH_SIZE * 2),
+        range(BATCH_SIZE * 2 + 1, BATCH_SIZE * 3),
+      ]);
+      expect(result.totalPages).toBe(pageCount);
+      expect(result.pages).toEqual(
+        range(1, pageCount).map((page) => ({ page, pageSource: page, imagePath: pagePath(page) }))
+      );
+    });
+
+    it('should find the end of the document with an empty batch when the pages fit exactly', async () => {
+      givenDocument(BATCH_SIZE * 2);
+
+      const result = await splitter.split(task);
+
+      expect(pdfToPng).toHaveBeenCalledTimes(3);
+      expect(result.totalPages).toBe(BATCH_SIZE * 2);
+    });
+
+    it('should not render a further batch when a range is used up exactly', async () => {
+      givenDocument(BATCH_SIZE * 3);
+
+      const result = await splitter.split({ ...task, page_range: `1-${BATCH_SIZE * 2}` });
+
+      expect(pdfToPng).toHaveBeenCalledTimes(2);
+      expect(result.totalPages).toBe(BATCH_SIZE * 2);
+    });
+
+    it('should render the pages pdf.js finds when pdf-lib counts fewer', async () => {
+      const pagesByPdfJs = BATCH_SIZE + 3;
+      givenDocument(2, pagesByPdfJs);
+
+      const result = await splitter.split(task);
+
+      expect(result.pages.map((page) => page.pageSource)).toEqual(range(1, pagesByPdfJs));
+    });
+
+    it('should stop a range at the end of the document as pdf.js counts it', async () => {
+      const pagesByPdfJs = BATCH_SIZE + 2;
+      givenDocument(BATCH_SIZE * 5, pagesByPdfJs);
+
+      const result = await splitter.split({ ...task, page_range: `1-${BATCH_SIZE * 4}` });
+
+      expect(pdfToPng).toHaveBeenCalledTimes(2);
+      expect(result.pages.map((page) => page.pageSource)).toEqual(range(1, pagesByPdfJs));
+    });
+
+    it('should write each page image with the content of its source page', async () => {
+      const pageCount = BATCH_SIZE + 2;
+      givenDocument(pageCount);
+
+      await splitter.split(task);
+
+      expect(vi.mocked(fs.writeFile).mock.calls).toEqual(
+        range(1, pageCount).map((page) => [pagePath(page), Buffer.from(`source-${page}`)])
+      );
+    });
+
+    it('should number pages sequentially and keep source pages for a range across batches', async () => {
+      givenDocument(100);
+      const sourcePages = [2, 3, ...range(10, 10 + BATCH_SIZE), 50, 99];
+
+      const result = await splitter.split({ ...task, page_range: `2-3,10-${10 + BATCH_SIZE},50,99` });
+
+      expect(renderedBatches().flat()).toEqual(sourcePages);
+      expect(result.pages).toEqual(
+        sourcePages.map((pageSource, i) => ({
+          page: i + 1,
+          pageSource,
+          imagePath: pagePath(i + 1),
+        }))
+      );
+      expect(fs.writeFile).toHaveBeenCalledWith(pagePath(3), Buffer.from(`source-${sourcePages[2]}`));
+    });
+
+    it('should never hold more than one batch of rendered pages', async () => {
+      const pageCount = BATCH_SIZE * 5 + 1;
+      givenDocument(pageCount);
+      const render = fakePdfToPng(pageCount);
+      let unwritten = 0;
+      let mostUnwritten = 0;
+      vi.mocked(pdfToPng).mockImplementation((async (pdf: unknown, options: any) => {
+        const pages = await render(pdf, options);
+        unwritten += pages.length;
+        mostUnwritten = Math.max(mostUnwritten, unwritten);
+        return pages;
+      }) as any);
+      vi.mocked(fs.writeFile).mockImplementation((async () => {
+        unwritten--;
+      }) as any);
+
+      await splitter.split(task);
+
+      expect(unwritten).toBe(0);
+      expect(mostUnwritten).toBe(BATCH_SIZE);
+    });
+
+    it('should not keep page images in the result', async () => {
+      givenDocument(BATCH_SIZE + 1);
+
+      const result = await splitter.split(task);
+
+      result.pages.forEach((page) => expect(page).not.toHaveProperty('content'));
+    });
+
+    it('should retry only the batch whose rendering failed', async () => {
+      const pageCount = BATCH_SIZE * 2 - 1;
+      givenDocument(pageCount);
+      const render = fakePdfToPng(pageCount);
+      vi.mocked(pdfToPng)
+        .mockImplementationOnce(render as any)
+        .mockRejectedValueOnce(new Error('Transient render error'));
+
+      const result = await splitter.split(task);
+
+      expect(result.totalPages).toBe(pageCount);
+      expect(renderedBatches()).toEqual([
+        range(1, BATCH_SIZE),
+        range(BATCH_SIZE + 1, BATCH_SIZE * 2),
+        range(BATCH_SIZE + 1, BATCH_SIZE * 2),
+      ]);
+      expect(fs.writeFile).toHaveBeenCalledTimes(pageCount);
+    });
+
+    it('should retry a failed write of a later batch without rendering again', async () => {
+      givenDocument(BATCH_SIZE + 1);
+      vi.mocked(fs.writeFile).mockImplementation((async (target: string) => {
+        if (target === pagePath(BATCH_SIZE + 1) && vi.mocked(fs.writeFile).mock.calls.length === BATCH_SIZE + 1) {
+          throw new Error('EBUSY: resource busy');
+        }
+      }) as any);
+
+      const result = await splitter.split(task);
+
+      expect(result.totalPages).toBe(BATCH_SIZE + 1);
+      expect(pdfToPng).toHaveBeenCalledTimes(2);
+      expect(fs.writeFile).toHaveBeenCalledTimes(BATCH_SIZE + 2);
+    });
+
+    it('should report a failure in a later batch as a source problem and stop', async () => {
+      givenDocument(BATCH_SIZE * 3);
+      const render = fakePdfToPng(BATCH_SIZE * 3);
+      vi.mocked(pdfToPng).mockImplementation((async (pdf: unknown, options: any) => {
+        if (options.pagesToProcess[0] > BATCH_SIZE) {
+          throw new Error('Render exploded');
+        }
+        return render(pdf, options);
+      }) as any);
+
+      const failure = splitter.split(task);
+
+      await expect(failure).rejects.toThrow('Failed to split PDF document.pdf');
+      await expect(failure).rejects.toThrow('Render exploded');
+      // The third batch is never attempted, and only the first one reached the disk.
+      expect(renderedBatches().every((batch) => batch![0] <= BATCH_SIZE + 1)).toBe(true);
+      expect(fs.writeFile).toHaveBeenCalledTimes(BATCH_SIZE);
+    });
+
+    it('should not retry a later batch for a non-retryable error', async () => {
+      givenDocument(BATCH_SIZE + 1);
+      const render = fakePdfToPng(BATCH_SIZE + 1);
+      vi.mocked(pdfToPng)
+        .mockImplementationOnce(render as any)
+        .mockRejectedValueOnce(new Error('PDF is encrypted'));
+
+      await expect(splitter.split(task)).rejects.toThrow(/Cannot process password-protected PDF/);
+
+      expect(pdfToPng).toHaveBeenCalledTimes(2);
+    });
+
+    it.each([
+      { scenario: 'partway through a batch', pagesByPdfJs: BATCH_SIZE + 1 },
+      { scenario: 'exactly at a batch boundary', pagesByPdfJs: BATCH_SIZE },
+    ])('should keep the rendered pages when pdf.js ends the document $scenario', async ({ pagesByPdfJs }) => {
+      givenDocument(BATCH_SIZE + 5, pagesByPdfJs);
+
+      const result = await splitter.split(task);
+
+      expect(result.totalPages).toBe(pagesByPdfJs);
+      expect(result.pages.map((page) => page.pageSource)).toEqual(range(1, pagesByPdfJs));
+    });
+
+    it('should fail when the document renders nothing at all', async () => {
+      givenDocument(BATCH_SIZE + 1, 0);
+
+      await expect(splitter.split(task)).rejects.toThrow('PDF conversion produced no output');
+
+      expect(fs.writeFile).not.toHaveBeenCalled();
     });
   });
 });

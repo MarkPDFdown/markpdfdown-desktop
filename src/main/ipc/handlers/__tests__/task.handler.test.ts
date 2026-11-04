@@ -349,6 +349,39 @@ describe('Task Handler', () => {
       )
     })
 
+    it('should give a retried task a fresh count of interrupted splits', async () => {
+      const taskUpdate = vi.fn().mockResolvedValue({ id: 'task-1', status: 1 })
+
+      mockPrisma.$transaction.mockImplementation(async (callback: any) =>
+        callback({
+          task: {
+            findUnique: vi.fn().mockResolvedValue({
+              id: 'task-1',
+              status: 0,
+              provider: 1,
+              model: 'gpt-4o',
+              model_name: 'GPT-4o | OpenAI',
+              split_interrupt_count: 3,
+            }),
+            update: taskUpdate,
+          },
+          taskDetail: {
+            count: vi.fn().mockResolvedValue(0),
+            updateMany: vi.fn(),
+          },
+        })
+      )
+
+      const handler = handlers.get('task:retry')
+      const result = await handler!({}, 'task-1')
+
+      expect(result.success).toBe(true)
+      expect(taskUpdate).toHaveBeenCalledWith({
+        where: { id: 'task-1' },
+        data: expect.objectContaining({ status: 1, split_interrupt_count: 0 }),
+      })
+    })
+
     it('should retry task with model override', async () => {
       const taskDetailUpdateMany = vi.fn().mockResolvedValue({ count: 3 })
       const taskUpdate = vi.fn().mockResolvedValue({

@@ -5,6 +5,7 @@ import path from 'path';
 import { PDFDocument } from 'pdf-lib';
 import { PDFSplitter } from '../PDFSplitter.js';
 import { ImagePathUtil } from '../ImagePathUtil.js';
+import { WORKER_CONFIG } from '../../../config/worker.config.js';
 
 /**
  * Runs against the real pdf-to-png-converter, pdf-lib and file system, because
@@ -68,6 +69,80 @@ describe('PDFSplitter with the real converter', () => {
       { page: 1, pageSource: 2, imagePath: path.join(splitDir, 'page-1.png') },
     ]);
     expect(await fs.readdir(splitDir)).toEqual(['page-1.png']);
+  });
+
+  describe('across render batches', () => {
+    const BATCH_SIZE = WORKER_CONFIG.splitter.renderBatchSize;
+    const PAGE_COUNT = BATCH_SIZE * 2 + 3;
+
+    /** Every page gets its own width, which identifies it in the rendered PNG. */
+    const widthOf = (sourcePage: number) => PAGE_SIZE_PT + sourcePage;
+
+    beforeEach(async () => {
+      const pdf = await PDFDocument.create();
+      for (let page = 1; page <= PAGE_COUNT; page++) {
+        pdf.addPage([widthOf(page), PAGE_SIZE_PT]);
+      }
+      await fs.writeFile(path.join(uploadsDir, TASK_ID, 'doc.pdf'), await pdf.save());
+    });
+
+    async function expectPages(pageRange: string, sourcePages: number[]) {
+      const result = await splitter.split({ id: TASK_ID, filename: 'doc.pdf', page_range: pageRange });
+
+      expect(result.totalPages).toBe(sourcePages.length);
+      expect(result.pages).toEqual(
+        sourcePages.map((pageSource, i) => ({
+          page: i + 1,
+          pageSource,
+          imagePath: path.join(splitDir, `page-${i + 1}.png`),
+        }))
+      );
+      expect((await fs.readdir(splitDir)).sort()).toEqual(
+        sourcePages.map((_, i) => `page-${i + 1}.png`).sort()
+      );
+      for (const [i, sourcePage] of sourcePages.entries()) {
+        const png = await fs.readFile(path.join(splitDir, `page-${i + 1}.png`));
+        expect(png.readUInt32BE(16)).toBe(widthOf(sourcePage) * 2);
+      }
+    }
+
+    it('should render every page in order', async () => {
+      await expectPages('', Array.from({ length: PAGE_COUNT }, (_, i) => i + 1));
+    });
+
+    it('should render a page range in order', async () => {
+      const lastPages = [PAGE_COUNT - 1, PAGE_COUNT];
+      await expectPages(
+        `1,3-${BATCH_SIZE + 4},${lastPages.join(',')}`,
+        [1, ...Array.from({ length: BATCH_SIZE + 2 }, (_, i) => i + 3), ...lastPages]
+      );
+    });
+  });
+
+  it('should keep a page that pdf-lib does not count because its node has no /Type', async () => {
+    const objects = [
+      '<< /Type /Catalog /Pages 2 0 R >>',
+      '<< /Type /Pages /Count 3 /Kids [3 0 R 4 0 R 5 0 R] >>',
+      '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] >>',
+      '<< /Parent 2 0 R /MediaBox [0 0 100 100] >>',
+      '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] >>',
+    ];
+    let pdf = '%PDF-1.4\n';
+    const offsets = objects.map((object, i) => {
+      const offset = pdf.length;
+      pdf += `${i + 1} 0 obj\n${object}\nendobj\n`;
+      return offset;
+    });
+    const xref = pdf.length;
+    pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+    pdf += offsets.map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`).join('');
+    pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+    await fs.writeFile(path.join(uploadsDir, TASK_ID, 'doc.pdf'), pdf, 'latin1');
+
+    const result = await splitter.split({ id: TASK_ID, filename: 'doc.pdf', page_range: '' });
+
+    expect(result.pages.map((page) => page.pageSource)).toEqual([1, 2, 3]);
+    expect((await fs.readdir(splitDir)).sort()).toEqual(['page-1.png', 'page-2.png', 'page-3.png']);
   });
 
   it('should not blame the source PDF when the split dir cannot be created', async () => {

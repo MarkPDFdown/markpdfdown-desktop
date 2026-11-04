@@ -16,6 +16,10 @@ export const WORKER_CONFIG = {
     viewportScale: 2.0,
     /** Output image format */
     imageFormat: 'png' as const,
+    /** Pages rendered per batch. PNGs of a batch stay in memory until it is written to disk */
+    renderBatchSize: 10,
+    /** Interrupted splits (crash, forced quit) of a task before it fails instead of being re-queued */
+    maxInterruptedSplits: 3,
     /** Maximum retry attempts for transient errors */
     maxRetries: 3,
     /** Base retry delay in milliseconds (exponential backoff) */
