@@ -10,10 +10,11 @@ npm run dev                    # Run full dev environment (generates Prisma, sta
 npm run build                  # Full production build (generates Prisma + builds Electron app)
 npm run start                  # Preview production build (generates Prisma + previews Electron)
 
-# Platform-specific builds (must run npm run build first)
-npm run build:win              # Build Windows NSIS installer (x64 + arm64)
-npm run build:mac              # Build macOS DMG (x64 + arm64)
-npm run build:linux            # Build Linux AppImage (x64 + arm64)
+# Platform-specific builds, for the host architecture only (see "Native Modules and Packaging")
+npm run build:win              # Build Windows NSIS installer
+npm run build:mac              # Build macOS DMG
+npm run build:linux            # Build Linux AppImage
+npm run verify:package         # Check the packaged native modules (arch, presence, load test)
 
 # Database
 npm run generate               # Generate Prisma client (required after schema changes)
@@ -277,7 +278,7 @@ The domain layer contains **only interfaces and pure business logic** with no ex
   - `ci.yml` - Runs on push/PR to master: commit validation, typecheck, lint, test, build
   - `changelog.yml` - Auto-updates CHANGELOG.md on release
   - `draft-release.yml` - Creates draft release on tag push
-  - `release.yml` - Builds and uploads assets on release, publishes to npm
+  - `release.yml` - Builds each arch on a native runner, verifies and uploads assets on release, publishes to npm
 
 ### Adding New Features
 
@@ -296,6 +297,13 @@ For detailed instructions on adding new features, including step-by-step develop
   - macOS: DMG with `.icns` icon
   - Linux: AppImage with PNG icons
 - **Artifact Naming**: `${productName}-${version}-${arch}.${ext}` (e.g., `MarkPDFdown-1.0.0-x64.exe`)
+
+### Native Modules and Packaging
+- **Build on the target architecture**: sharp, `@napi-rs/canvas` and the Prisma engine ship as prebuilt binaries that `npm ci` and `prisma generate` install for the host only, and electron-builder does not fetch those of another arch. Packaging `--x64` on an arm64 machine produces an app that crashes at startup, so `release.yml` runs one job per arch on a native runner.
+- **`npm run verify:package`** (`scripts/verify-package-arch.mjs`) checks an unpacked package: binary architectures, required modules, and, when the host can run the package, a real load test in the packaged Electron. Pass `-- --platform <mac|win|linux> --arch <x64|arm64>` for another target. CI fails on any problem.
+- **New native dependency**: add it to `requiredModules` in the verify script and to `scripts/package-load-check.cjs`.
+- **Windows is x64 only**: Prisma has no Windows arm64 engine, and an arm64 process can't load the x64 one. Windows on Arm runs the x64 build under emulation.
+- **`latest-mac.yml`**: each mac job writes its own, and the `upload-manifests` job in `release.yml` merges them, x64 first.
 
 ### IPC API Reference
 

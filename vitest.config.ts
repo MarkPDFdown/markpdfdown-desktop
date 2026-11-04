@@ -9,6 +9,7 @@ export default defineConfig({
       "src/main/**/*.test.ts",
       "src/core/**/*.test.ts",
       "src/preload/**/*.test.ts",
+      "scripts/**/*.test.mjs",
     ],
     exclude: ["**/node_modules/**", "**/dist/**", "**/*.d.ts"],
     globals: true,

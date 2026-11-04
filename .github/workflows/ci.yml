@@ -87,3 +87,12 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Package for Linux x64 (unpacked)
+        run: npx electron-builder --linux --x64 --dir --publish never
+
+      - name: Install Electron runtime libraries
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-0t64 libnss3 libgbm1 libasound2t64
+
+      - name: Verify packaged native modules
+        run: npm run verify:package -- --platform linux --arch x64
