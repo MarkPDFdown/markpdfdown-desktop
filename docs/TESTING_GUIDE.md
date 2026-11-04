@@ -75,14 +75,17 @@ npm run test:coverage
 | `src/core/infrastructure/adapters/llm/__tests__/LLMClient.test.ts` | 15 | Base class backward compatibility |
 | `src/core/infrastructure/adapters/llm/__tests__/LLMClientFactory.test.ts` | 8 | Client factory creation |
 
-#### Splitter Adapters (4 files)
+#### Splitter Adapters (7 files)
 
 | File | Description |
 |------|-------------|
 | `src/core/infrastructure/adapters/split/__tests__/PDFSplitter.test.ts` | PDF splitting functionality |
+| `src/core/infrastructure/adapters/split/__tests__/PDFSplitter.win32.test.ts` | PDF output location with Windows path semantics (cross-drive, UNC, same drive) on any host OS |
+| `src/core/infrastructure/adapters/split/__tests__/PDFSplitter.integration.test.ts` | PDF splitting with the real converter and file system |
 | `src/core/infrastructure/adapters/split/__tests__/ImageSplitter.test.ts` | Image splitting functionality |
 | `src/core/infrastructure/adapters/split/__tests__/SplitterFactory.test.ts` | Splitter factory creation |
 | `src/core/infrastructure/adapters/split/__tests__/ImagePathUtil.test.ts` | Image path utilities |
+| `src/core/infrastructure/adapters/split/__tests__/FileWaitUtil.test.ts` | Waiting for uploaded source files to become available |
 
 #### Infrastructure Services (2 files)
 
