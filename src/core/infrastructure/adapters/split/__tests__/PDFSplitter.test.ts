@@ -272,6 +272,32 @@ describe('PDFSplitter', () => {
       expect(pdfToPng).toHaveBeenCalledTimes(1);
     });
 
+    it.each(['password', 'encrypted', 'invalid pdf'])(
+      'should retry a failed write when the output path contains "%s"',
+      async (word) => {
+        const target = path.join('/data', word, 'page-1.png');
+        vi.mocked(fs.writeFile).mockRejectedValueOnce(systemError('EBUSY', 'open', target));
+
+        const result = await splitter.split(task);
+
+        expect(result.totalPages).toBe(1);
+        expect(fs.writeFile).toHaveBeenCalledTimes(2);
+      }
+    );
+
+    it('should fail without writing any page when one has no image', async () => {
+      vi.mocked(pdfToPng).mockResolvedValue([
+        { path: '', name: 'temp-1.png', pageNumber: 1, content: Buffer.from('png-1') },
+        { path: '', name: 'temp-2.png', pageNumber: 2 },
+      ] as any);
+
+      const failure = splitter.split(task);
+
+      await expect(failure).rejects.toThrow('Failed to split PDF document.pdf');
+      await expect(failure).rejects.toThrow('PDF conversion produced no image for page 2');
+      expect(fs.writeFile).not.toHaveBeenCalled();
+    });
+
     it('should not blame the source when writing a page keeps failing, even if it is ENOENT', async () => {
       const target = path.join(splitDir, 'page-1.png');
       vi.mocked(fs.writeFile).mockRejectedValue(systemError('ENOENT', 'open', target));
