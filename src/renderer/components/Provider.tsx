@@ -469,9 +469,9 @@ const Provider: React.FC<ProviderProps> = ({
                       ];
                     case "ollama":
                       // 空后缀运行时会回退到 /chat，所以不提供“无后缀”
+                      // base 约定以 /api 结尾（模型列表依赖 base + /tags），所以不提供 /api/chat
                       return [
                         { label: "/chat", value: "/chat" },
-                        { label: "/api/chat", value: "/api/chat" },
                       ];
                     default:
                       return [noSuffix];
