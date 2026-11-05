@@ -78,6 +78,7 @@ export class OpenAIClient extends LLMClient {
         const reader = response.body.getReader();
         const decoder = new TextDecoder('utf-8');
         let content = '';
+        let finishReason: string | undefined;
         const toolCalls: ToolCall[] = [];
 
         const processStream = async (): Promise<CompletionResponse> => {
@@ -87,7 +88,7 @@ export class OpenAIClient extends LLMClient {
             return {
               content,
               model: normalizedOptions.model || 'gpt-3.5-turbo',
-              finishReason: 'stop',
+              finishReason: this.normalizeFinishReason(finishReason) ?? 'stop',
               toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
               responseFormat: normalizedOptions.response_format?.type
             };
@@ -103,6 +104,8 @@ export class OpenAIClient extends LLMClient {
             if (line.startsWith('data: ')) {
               try {
                 const data = JSON.parse(line.slice(6));
+
+                finishReason = data.choices?.[0]?.finish_reason || finishReason;
 
                 // 处理常规文本内容
                 if (data.choices && data.choices[0]?.delta?.content) {
@@ -193,7 +196,7 @@ export class OpenAIClient extends LLMClient {
         return {
           content: responseContent,
           model: data.model,
-          finishReason: data.choices[0]?.finish_reason,
+          finishReason: this.normalizeFinishReason(data.choices[0]?.finish_reason),
           toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
           responseFormat: normalizedOptions.response_format?.type,
           rawResponse: data // 保留原始响应以便调试

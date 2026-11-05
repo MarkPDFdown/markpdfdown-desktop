@@ -106,12 +106,18 @@ export interface ToolCall {
 }
 
 /**
+ * Finish reason every client reports when the output was cut off by the token limit.
+ * Other finish reasons are passed through as the provider returned them.
+ */
+export const FINISH_REASON_TRUNCATED = 'length';
+
+/**
  * Completion response
  */
 export interface CompletionResponse {
   content: string;
   model: string;
-  finishReason?: string;
+  finishReason?: string; // FINISH_REASON_TRUNCATED when the output hit the token limit
   toolCalls?: ToolCall[];
   responseFormat?: 'text' | 'json_object';
   rawResponse?: any; // Raw response for debugging
