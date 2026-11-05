@@ -237,6 +237,7 @@ export function registerTaskHandlers() {
               error: null,
               merged_path: null,
               worker_id: null,
+              split_interrupt_count: 0,
             },
           });
         }, {

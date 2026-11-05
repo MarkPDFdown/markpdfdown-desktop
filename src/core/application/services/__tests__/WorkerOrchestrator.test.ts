@@ -48,12 +48,22 @@ vi.mock('../../../infrastructure/adapters/split/index.js', () => ({
 
 vi.mock('../../../infrastructure/services/FileService.js', () => ({
   default: {
-    getUploadDir: vi.fn().mockReturnValue('/mock/uploads')
+    getUploadDir: vi.fn().mockReturnValue('/mock/uploads'),
+    getSplitDir: vi.fn((taskId: string) => `/mock/uploads/${taskId}/split`)
+  }
+}))
+
+vi.mock('fs', () => ({
+  promises: {
+    rm: vi.fn().mockResolvedValue(undefined)
   }
 }))
 
 vi.mock('../../../infrastructure/config/worker.config.js', () => ({
   WORKER_CONFIG: {
+    splitter: {
+      maxInterruptedSplits: 3
+    },
     converter: {
       count: 3
     }
@@ -64,6 +74,7 @@ import { WorkerOrchestrator } from '../WorkerOrchestrator.js'
 import { SplitterWorker, ConverterWorker, MergerWorker } from '../../workers/index.js'
 import { ImagePathUtil } from '../../../infrastructure/adapters/split/index.js'
 import { prisma } from '../../../infrastructure/db/index.js'
+import { promises as fs } from 'fs'
 
 // Cast to mock type for type safety
 const prismaMock = prisma as unknown as DeepMockProxy<PrismaClient>
@@ -293,10 +304,148 @@ describe('WorkerOrchestrator', () => {
         },
         data: {
           status: TaskStatus.PENDING,
-          worker_id: null
+          worker_id: null,
+          split_interrupt_count: { increment: 1 }
         }
       })
       expect(result.orphanedSplittingTasks).toBe(2)
+      expect(result.failedSplittingTasks).toBe(0)
+    })
+
+    it('should fail SPLITTING tasks on their last allowed interruption', async () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => {})
+      prismaMock.task.findMany.mockResolvedValueOnce([{ id: 'crashing-task' }] as any)
+      prismaMock.task.updateMany.mockResolvedValue({ count: 0 } as any)
+
+      const result = await orchestrator.cleanupOrphanedWork()
+
+      expect(prismaMock.task.findMany).toHaveBeenCalledWith({
+        where: {
+          status: TaskStatus.SPLITTING,
+          worker_id: { not: null },
+          split_interrupt_count: { gte: 2 }
+        },
+        select: { id: true }
+      })
+      expect(prismaMock.task.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: ['crashing-task'] } },
+        data: {
+          status: TaskStatus.FAILED,
+          worker_id: null,
+          split_interrupt_count: { increment: 1 },
+          error: expect.stringContaining('interrupted 3 times')
+        }
+      })
+      expect(result.failedSplittingTasks).toBe(1)
+      expect(result.total).toBe(1)
+    })
+
+    it('should remove the pages left behind by a task it fails', async () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => {})
+      prismaMock.task.findMany.mockResolvedValueOnce([{ id: 'crashing-task' }] as any)
+
+      await orchestrator.cleanupOrphanedWork()
+
+      expect(fs.rm).toHaveBeenCalledTimes(1)
+      expect(fs.rm).toHaveBeenCalledWith('/mock/uploads/crashing-task/split', {
+        recursive: true,
+        force: true
+      })
+    })
+
+    it('should not remove any pages of tasks that are re-queued', async () => {
+      prismaMock.task.updateMany.mockResolvedValueOnce({ count: 2 } as any)
+
+      await orchestrator.cleanupOrphanedWork()
+
+      expect(fs.rm).not.toHaveBeenCalled()
+    })
+
+    it('should still recover other work when removing leftover pages fails', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      vi.mocked(fs.rm).mockRejectedValueOnce(new Error('EBUSY'))
+      prismaMock.task.findMany.mockResolvedValueOnce([{ id: 'crashing-task' }] as any)
+      prismaMock.task.updateMany
+        .mockResolvedValueOnce({ count: 1 } as any) // fail the exhausted task
+        .mockResolvedValueOnce({ count: 0 } as any) // SPLITTING -> PENDING
+        .mockResolvedValueOnce({ count: 2 } as any) // MERGING -> READY_TO_MERGE
+
+      const result = await orchestrator.cleanupOrphanedWork()
+
+      expect(result.failedSplittingTasks).toBe(1)
+      expect(result.orphanedMergingTasks).toBe(2)
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('crashing-task'),
+        expect.any(Error)
+      )
+    })
+
+    describe('across restarts', () => {
+      type StoredTask = { id: string; status: number; worker_id: string | null; split_interrupt_count: number }
+
+      /** Applies the task queries of the recovery to a task, as the database would. */
+      function backTasksWith(task: StoredTask) {
+        const isInterrupted = () => task.status === TaskStatus.SPLITTING && task.worker_id !== null
+        const applyUpdate = (data: any) => {
+          task.status = data.status
+          task.worker_id = data.worker_id
+          task.split_interrupt_count += data.split_interrupt_count.increment
+        }
+
+        prismaMock.task.findMany.mockImplementation((async ({ where }: any) =>
+          where.split_interrupt_count &&
+          isInterrupted() &&
+          task.split_interrupt_count >= where.split_interrupt_count.gte
+            ? [{ id: task.id }]
+            : []) as any)
+
+        prismaMock.task.updateMany.mockImplementation((async ({ where, data }: any) => {
+          const matches = where.id
+            ? where.id.in.includes(task.id)
+            : where.status === TaskStatus.SPLITTING && isInterrupted()
+          if (!matches) {
+            return { count: 0 }
+          }
+          applyUpdate(data)
+          return { count: 1 }
+        }) as any)
+      }
+
+      /** The next start claims the task if it is queued, and it brings the app down again. */
+      function crashWhileSplitting(task: StoredTask) {
+        if (task.status === TaskStatus.PENDING) {
+          task.status = TaskStatus.SPLITTING
+          task.worker_id = 'worker-of-a-dead-process'
+        }
+      }
+
+      it('should stop re-queuing a task that crashes the app on every start', async () => {
+        vi.spyOn(console, 'warn').mockImplementation(() => {})
+        const task: StoredTask = {
+          id: 'crashing-task',
+          status: TaskStatus.PENDING,
+          worker_id: null,
+          split_interrupt_count: 0
+        }
+        backTasksWith(task)
+
+        const statusAfterRestart: number[] = []
+        for (let restart = 0; restart < 5; restart++) {
+          crashWhileSplitting(task)
+          await orchestrator.cleanupOrphanedWork()
+          statusAfterRestart.push(task.status)
+        }
+
+        expect(statusAfterRestart).toEqual([
+          TaskStatus.PENDING,
+          TaskStatus.PENDING,
+          TaskStatus.FAILED,
+          TaskStatus.FAILED,
+          TaskStatus.FAILED
+        ])
+        expect(task.split_interrupt_count).toBe(3)
+        expect(task.worker_id).toBeNull()
+      })
     })
 
     it('should reset MERGING tasks to READY_TO_MERGE', async () => {
@@ -326,10 +475,12 @@ describe('WorkerOrchestrator', () => {
         .mockResolvedValueOnce({ count: 0 } as any)  // PROCESSING -> PENDING (first call)
         .mockResolvedValueOnce({ count: 4 } as any)  // orphaned PENDING -> FAILED (second call)
       prismaMock.task.updateMany.mockResolvedValue({ count: 0 } as any)
-      prismaMock.task.findMany.mockResolvedValue([
-        { id: 'failed-task-1' },
-        { id: 'cancelled-task-2' },
-      ] as any)
+      prismaMock.task.findMany
+        .mockResolvedValueOnce([] as any) // no SPLITTING task out of attempts
+        .mockResolvedValueOnce([
+          { id: 'failed-task-1' },
+          { id: 'cancelled-task-2' },
+        ] as any)
 
       const result = await orchestrator.cleanupOrphanedWork()
 
@@ -380,6 +531,7 @@ describe('WorkerOrchestrator', () => {
       expect(result).toEqual({
         orphanedPages: 0,
         orphanedSplittingTasks: 0,
+        failedSplittingTasks: 0,
         orphanedMergingTasks: 0,
         orphanedPendingPages: 0,
         total: 0

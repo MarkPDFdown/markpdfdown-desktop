@@ -23,7 +23,7 @@ function isRetryablePdfError(error: Error): boolean {
 }
 
 /**
- * PDF splitter implementation using pdf-to-png-converter.
+ * PDF splitter implementation, rendering through renderPdfPages.
  *
  * Features:
  * - High quality conversion (viewport scale 2.0 ~144 DPI)
@@ -32,6 +32,8 @@ function isRetryablePdfError(error: Error): boolean {
  * - Sequential page numbering (page-1.png, page-2.png, ...)
  * - Output location independent of process.cwd() (pages are written by this class,
  *   see renderPagesWithRetry)
+ * - Memory bounded by the batch size, not the page count: pages are rendered and
+ *   written in batches, because renderPdfPages holds every page it renders until it returns
  */
 export class PDFSplitter implements ISplitter {
   private readonly uploadsDir: string;
@@ -63,29 +65,60 @@ export class PDFSplitter implements ISplitter {
     // Retry with short delays to handle antivirus scanning or filesystem sync delays
     await FileWaitUtil.waitForFile(sourcePath, this.uploadsDir, taskId, filename, 'PDFSplitter');
 
-    let renderedPages: RenderedPage[];
-    try {
-      // Step 1: Get total page count with retry
+    // Step 1: Resolve the pages to render (defaults to all pages if no range is specified)
+    const pageNumbers = await this.withSourceErrors(sourcePath, filename, async () => {
       const totalPages = await this.getPDFPageCountWithRetry(sourcePath);
+      return PageRangeParser.parse(task.page_range, totalPages);
+    });
 
-      // Step 2: Parse page range (defaults to all pages if not specified)
-      const pageNumbers = PageRangeParser.parse(task.page_range, totalPages);
+    // Step 2: Render and write batch by batch. Only `pages` (metadata) outlives an iteration,
+    // so the PNG buffers of a batch can be collected before the next one is rendered.
+    const hasPageRange = Boolean(task.page_range && task.page_range.trim() !== '');
+    const batchSize = WORKER_CONFIG.splitter.renderBatchSize;
+    const pages: PageInfo[] = [];
+    for (let start = 0; ; start += batchSize) {
+      // Without a range, pdf.js decides where the document ends, not the pdf-lib count: pdf-lib
+      // misses pages whose tree nodes lack a /Type, and those pages must not be dropped.
+      const batch = hasPageRange
+        ? pageNumbers.slice(start, start + batchSize)
+        : Array.from({ length: batchSize }, (_, i) => start + i + 1);
+      if (batch.length === 0) {
+        break;
+      }
 
-      // Step 3: Render specified pages with retry
-      // Pass the page_range string to determine if user explicitly specified pages
-      renderedPages = await this.renderPagesWithRetry(sourcePath, pageNumbers, task.page_range);
-    } catch (error) {
-      throw await this.wrapError(error, sourcePath, filename);
+      const renderedPages = await this.withSourceErrors(sourcePath, filename, () =>
+        this.renderPagesWithRetry(sourcePath, batch, pages.length)
+      );
+
+      // Not covered by withSourceErrors, so that an output failure is never reported
+      // as a problem with the source PDF.
+      pages.push(...(await this.writePagesWithRetry(taskId, renderedPages)));
+
+      // Pages are ascending, so a short batch means the document has ended.
+      if (renderedPages.length < batch.length) {
+        break;
+      }
     }
-
-    // Step 4: Write the images. Kept apart from the steps above so that an output
-    // failure is never reported as a problem with the source PDF.
-    const pages = await this.writePagesWithRetry(taskId, renderedPages);
 
     return {
       pages,
       totalPages: pages.length,
     };
+  }
+
+  /**
+   * Run a step that reads the source PDF, reporting its failure with a friendly message.
+   */
+  private async withSourceErrors<T>(
+    sourcePath: string,
+    filename: string,
+    step: () => Promise<T>
+  ): Promise<T> {
+    try {
+      return await step();
+    } catch (error) {
+      throw await this.wrapError(error, sourcePath, filename);
+    }
   }
 
   /**
@@ -114,46 +147,42 @@ export class PDFSplitter implements ISplitter {
   }
 
   /**
-   * Render specified pages to in-memory PNGs with retry logic.
+   * Render one batch of pages to in-memory PNGs with retry logic.
+   *
+   * @param pdfPath - Source PDF
+   * @param sourcePages - Source page numbers of this batch, ascending
+   * @param pagesBefore - Pages produced by the previous batches, which the numbering continues from
    */
   private async renderPagesWithRetry(
     pdfPath: string,
-    pageNumbers: number[],
-    pageRange?: string | null
+    sourcePages: number[],
+    pagesBefore: number
   ): Promise<RenderedPage[]> {
     return this.withRetry(async () => {
-      // IMPORTANT: do not pass outputFolder to pdf-to-png-converter. It resolves it with
+      // IMPORTANT: do not pass outputFolder to the renderer. pdf-to-png-converter resolves it with
       // path.join(process.cwd(), outputFolder), which cannot address a directory on another
       // Windows drive or UNC share (#75). We take the PNG buffers and write them ourselves.
-      const options: any = {
+      const result = await renderPdfPages(pdfPath, {
         returnPageContent: true,
         viewportScale: WORKER_CONFIG.splitter.viewportScale,
-        strictPagesToProcess: false,
-      };
+        pagesToProcess: sourcePages,
+      });
 
-      // Only add pagesToProcess if user explicitly specified a page range
-      // If pageRange is empty/null, let pdf-to-png-converter process all pages
-      const hasPageRange = Boolean(pageRange && pageRange.trim() !== '');
-      if (hasPageRange) {
-        options.pagesToProcess = pageNumbers; // Array of page numbers
-      }
-      // Otherwise, don't specify pagesToProcess to convert all pages
-
-      const result = await renderPdfPages(pdfPath, options);
-
-      if (!result || result.length === 0) {
+      // The renderer skips pages beyond the end of the document, so a later batch may come back
+      // short or empty, but the document as a whole must produce something.
+      if (!result || (result.length === 0 && pagesBefore === 0)) {
         throw new Error('PDF conversion produced no output');
       }
 
       return result.map((output, i) => {
-        const page = i + 1; // Sequential numbering
+        const page = pagesBefore + i + 1; // Sequential numbering
         if (!output.content) {
           throw new Error(`PDF conversion produced no image for page ${page}`);
         }
         return {
           page,
-          // If page range was specified, use the mapped page numbers; otherwise use sequential numbering
-          pageSource: hasPageRange ? pageNumbers[i] : page,
+          // Only trailing pages can be skipped, so the indexes of `sourcePages` still line up.
+          pageSource: sourcePages[i],
           content: output.content,
         };
       });
