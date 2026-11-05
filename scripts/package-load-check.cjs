@@ -17,6 +17,15 @@ const appDir = path.join(path.resolve(process.argv[2]), 'app.asar');
 const appModules = path.join(appDir, 'node_modules');
 const loadFromApp = (name) => require(path.join(appModules, name));
 
+/** Cleanup is not what's being checked: a failure here must neither fail the check nor mask its error. */
+async function cleanUp(description, action) {
+  try {
+    await action();
+  } catch (error) {
+    console.warn(`  warning: could not ${description}: ${error.message}`);
+  }
+}
+
 async function checkCanvas() {
   const canvasModule = loadFromApp('@napi-rs/canvas');
   const canvas = canvasModule.createCanvas(20, 10);
@@ -77,8 +86,11 @@ async function checkPrisma() {
     await client.$queryRaw`SELECT 1`;
     return loadedPrismaEngine();
   } finally {
-    await client.$disconnect();
-    fs.rmSync(tempDir, { recursive: true, force: true });
+    await cleanUp('disconnect Prisma', () => client.$disconnect());
+    // Windows can hold the db file for a moment after the engine disconnects.
+    await cleanUp(`remove ${tempDir}`, () =>
+      fs.rmSync(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }),
+    );
   }
 }
 
@@ -107,7 +119,9 @@ async function main() {
   }
 
   process.chdir(os.tmpdir());
-  fs.rmSync(emptyCwd, { recursive: true, force: true });
+  await cleanUp(`remove ${emptyCwd}`, () =>
+    fs.rmSync(emptyCwd, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }),
+  );
   process.exit(failed ? 1 : 0);
 }
 

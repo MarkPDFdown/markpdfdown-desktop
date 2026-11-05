@@ -12,6 +12,9 @@ jobs:
     # Only build assets on prereleased to avoid duplicate builds
     if: github.event.action == 'prereleased'
     strategy:
+      # Let the other arches finish, so one run shows every failure. The run still concludes as
+      # failed, and upload-manifests only promotes from a successful one.
+      fail-fast: false
       matrix:
         # Each arch builds on its own native runner: npm and Prisma only install the prebuilt
         # binaries of the host arch, and electron-builder doesn't fetch those of another arch.
@@ -20,18 +23,23 @@ jobs:
           - os: macos-15-intel
             platform: mac
             arch: x64
+            manifest: latest-mac.yml
           - os: macos-latest
             platform: mac
             arch: arm64
+            manifest: latest-mac.yml
           - os: windows-latest
             platform: win
             arch: x64
+            manifest: latest.yml
           - os: ubuntu-latest
             platform: linux
             arch: x64
+            manifest: latest-linux.yml
           - os: ubuntu-24.04-arm
             platform: linux
             arch: arm64
+            manifest: latest-linux-arm64.yml
 
     runs-on: ${{ matrix.os }}
 
@@ -93,6 +101,18 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
+      # The exact file rather than a glob, which other yml files in release/ would satisfy. A missing
+      # manifest fails the run here, before this job publishes its assets, not at promotion to stable.
+      # A re-run rebuilds the installers, so its manifest has to replace the one describing the old ones.
+      - name: Save update manifest as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: update-manifests-${{ matrix.platform }}-${{ matrix.arch }}
+          path: release/${{ matrix.manifest }}
+          if-no-files-found: error
+          retention-days: 30
+          overwrite: true
+
       - name: Upload release assets (installers only)
         uses: softprops/action-gh-release@v2
         with:
@@ -106,13 +126,6 @@ jobs:
             release/*.blockmap
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Save update manifests as artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: update-manifests-${{ matrix.platform }}-${{ matrix.arch }}
-          path: release/*.yml
-          retention-days: 30
 
   # Upload auto-update manifests only when release is promoted to stable
   upload-manifests:
@@ -148,14 +161,6 @@ jobs:
             --dir manifests
 
           echo "Downloaded manifests:"
-          find manifests -type f -name "*.yml" | sort
-
-      - name: Filter out builder-debug.yml
-        run: |
-          # Remove builder-debug.yml from manifests directory (exists in all platform artifacts)
-          find manifests -name "builder-debug.yml" -delete
-
-          echo "Remaining manifests:"
           find manifests -type f -name "*.yml" | sort
 
       # electron-updater reads one latest-mac.yml and picks the file for its arch from it.
