@@ -49,7 +49,7 @@ describe('PDF rendering from a cwd without pdfjs-dist', () => {
     await fs.rm(workDir, { recursive: true, force: true });
   });
 
-  it('should draw predefined CMap, Identity-H and standard font text', { timeout: 60_000 }, async () => {
+  it('should draw predefined CMap, Identity-H and standard font text, and JPEG2000 images', { timeout: 60_000 }, async () => {
     const warnings: string[] = [];
     vi.spyOn(console, 'warn').mockImplementation((...args) => {
       warnings.push(args.join(' '));

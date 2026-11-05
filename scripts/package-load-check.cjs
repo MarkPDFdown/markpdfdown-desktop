@@ -12,8 +12,10 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { countDarkPixels } = require('./fixtures/count-dark-pixels.cjs');
 const { SAMPLE_PDF, findRenderProblems } = require('./fixtures/pdf-render-check.cjs');
+const { findUnpackedAssetProblems } = require('./unpacked-assets.cjs');
 
-const appDir = path.join(path.resolve(process.argv[2]), 'app.asar');
+const resourcesDir = path.resolve(process.argv[2]);
+const appDir = path.join(resourcesDir, 'app.asar');
 const appModules = path.join(appDir, 'node_modules');
 const loadFromApp = (name) => require(path.join(appModules, name));
 
@@ -46,6 +48,11 @@ async function checkCanvas() {
 
   // The app reaches canvas through this module, which requires it at load time.
   loadFromApp('pdf-to-png-converter');
+}
+
+function checkUnpackedAssets() {
+  const problems = findUnpackedAssetProblems(resourcesDir);
+  if (problems.length > 0) throw new Error(problems.join('; '));
 }
 
 /** Runs the app's own renderer, so this fails when the renderer stops finding the pdf.js data. */
@@ -98,6 +105,7 @@ async function main() {
   const checks = {
     '@napi-rs/canvas': checkCanvas,
     'Prisma query engine': checkPrisma,
+    'Unpacked assets': checkUnpackedAssets,
     'PDF rendering': checkPdfRendering,
   };
 
