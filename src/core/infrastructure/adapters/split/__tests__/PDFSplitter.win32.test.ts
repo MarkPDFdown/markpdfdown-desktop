@@ -6,8 +6,8 @@ vi.mock('path', async (importOriginal) => {
   return { ...actual.win32, default: actual.win32 };
 });
 
-vi.mock('pdf-to-png-converter', () => ({
-  pdfToPng: vi.fn(),
+vi.mock('../PDFPageRenderer.js', () => ({
+  renderPdfPages: vi.fn(),
 }));
 
 vi.mock('pdf-lib', () => ({
@@ -33,7 +33,7 @@ vi.mock('fs', () => ({
 
 import { promises as fs } from 'fs';
 import path from 'path';
-import { pdfToPng } from 'pdf-to-png-converter';
+import { renderPdfPages } from '../PDFPageRenderer.js';
 import { PDFDocument } from 'pdf-lib';
 import { PDFSplitter } from '../PDFSplitter.js';
 import { ImagePathUtil } from '../ImagePathUtil.js';
@@ -89,7 +89,7 @@ class FakeWindowsFs {
 }
 
 /** Same output handling as pdf-to-png-converter 3.11.0 (out/pdfToPng.js). */
-function fakePdfToPng(pageCount: number): typeof pdfToPng {
+function fakePdfToPng(pageCount: number): typeof renderPdfPages {
   return (async (_pdf: unknown, props?: { outputFolder?: string }) => {
     const pages = Array.from({ length: pageCount }, (_, i) => ({
       pageNumber: i + 1,
@@ -110,7 +110,7 @@ function fakePdfToPng(pageCount: number): typeof pdfToPng {
     }
 
     return pages;
-  }) as unknown as typeof pdfToPng;
+  }) as unknown as typeof renderPdfPages;
 }
 
 describe('PDFSplitter output location on Windows', () => {
@@ -134,7 +134,7 @@ describe('PDFSplitter output location on Windows', () => {
     vi.mocked(fs.rename).mockImplementation(fakeFs.rename as any);
     vi.mocked(fs.readFile).mockResolvedValue(Buffer.from('pdf-bytes'));
     vi.mocked(PDFDocument.load).mockResolvedValue({ getPageCount: () => 2 } as any);
-    vi.mocked(pdfToPng).mockImplementation(fakePdfToPng(2));
+    vi.mocked(renderPdfPages).mockImplementation(fakePdfToPng(2));
     vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
 

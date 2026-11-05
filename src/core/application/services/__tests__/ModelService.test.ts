@@ -69,7 +69,8 @@ describe('Model Logic', () => {
       expect(mockLLMClientFactory.createClient).toHaveBeenCalledWith(
         'openai',
         'sk-test-key',
-        'https://api.openai.com/v1/chat/completions'
+        'https://api.openai.com/v1/chat/completions',
+        { exactEndpoint: false }
       )
     })
 
@@ -97,7 +98,8 @@ describe('Model Logic', () => {
       expect(mockLLMClientFactory.createClient).toHaveBeenCalledWith(
         'ollama',
         '',
-        'http://localhost:11434/api/chat'
+        'http://localhost:11434/api/chat',
+        { exactEndpoint: false }
       )
     })
 
@@ -134,7 +136,8 @@ describe('Model Logic', () => {
         expect(mockLLMClientFactory.createClient).toHaveBeenCalledWith(
           testCase.type,
           'test-key',
-          `https://api.test.com${testCase.expectedSuffix}`
+          `https://api.test.com${testCase.expectedSuffix}`,
+          { exactEndpoint: false }
         )
       }
     })
@@ -163,7 +166,30 @@ describe('Model Logic', () => {
       expect(mockLLMClientFactory.createClient).toHaveBeenCalledWith(
         'openai',
         'test-key',
-        'https://api.custom.com/custom/endpoint'
+        'https://api.custom.com/custom/endpoint',
+        { exactEndpoint: false }
+      )
+    })
+
+    it('should pass the base URL as the exact endpoint for the no-suffix marker', async () => {
+      mockProviderRepository.findById.mockResolvedValue({
+        id: 1,
+        type: 'gemini',
+        api_key: 'test-key',
+        base_url: 'https://gateway.test/full/endpoint',
+        suffix: 'none'
+      })
+      mockLLMClientFactory.createClient.mockResolvedValue({
+        completion: vi.fn().mockResolvedValue({ content: 'response' })
+      })
+
+      await modelLogic.completion(1, { messages: [], model: 'test' })
+
+      expect(mockLLMClientFactory.createClient).toHaveBeenCalledWith(
+        'gemini',
+        'test-key',
+        'https://gateway.test/full/endpoint',
+        { exactEndpoint: true }
       )
     })
   })

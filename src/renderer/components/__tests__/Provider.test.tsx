@@ -3,6 +3,7 @@ import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/re
 import { BrowserRouter } from 'react-router-dom'
 import { App } from 'antd'
 import Provider from '../Provider'
+import { NO_SUFFIX } from '../../../shared/providerSuffix'
 
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
@@ -529,6 +530,107 @@ describe('Provider', () => {
         el => el.textContent === '/chat/completions'
       )
       expect(suffixSelect).toBeInTheDocument()
+    })
+
+    describe('no suffix', () => {
+      const BASE = 'https://proxy.test/v1/my-endpoint'
+
+      const TYPES = [
+        { type: 'openai', defaultSuffix: '/chat/completions' },
+        { type: 'openai-responses', defaultSuffix: '/responses' },
+        { type: 'gemini', defaultSuffix: '/models' },
+        { type: 'anthropic', defaultSuffix: '/messages' }
+      ]
+
+      const renderProvider = async () => {
+        render(
+          <Wrapper>
+            <Provider providerId={1} />
+          </Wrapper>
+        )
+
+        await waitFor(() => {
+          expect(screen.getByDisplayValue(BASE)).toBeInTheDocument()
+        })
+      }
+
+      // Saved values come back from getById, as they do from the database
+      const renderStoredProvider = async (type: string, suffix: string | null) => {
+        let stored = { ...mockProvider, type, base_url: BASE, suffix }
+        vi.mocked(window.api.provider.getById).mockImplementation(async () => ({ success: true, data: stored }))
+        vi.mocked(window.api.provider.update).mockImplementation(async (_id, data) => {
+          stored = { ...stored, ...data }
+          return { success: true, data: stored }
+        })
+
+        await renderProvider()
+      }
+
+      const selectedSuffix = () =>
+        Array.from(document.querySelectorAll('.ant-select-selection-item')).map(el => el.textContent)
+
+      // The preview renders base URL and suffix as separate text nodes
+      const previewText = () => screen.getByText('API URL').nextElementSibling?.textContent
+
+      describe.each(TYPES)('$type', ({ type, defaultSuffix }) => {
+        it('should restore No Suffix on reopen and preview the exact base URL', async () => {
+          await renderStoredProvider(type, NO_SUFFIX)
+
+          await waitFor(() => {
+            expect(selectedSuffix()).toEqual(['No Suffix'])
+          })
+          expect(previewText()).toBe(BASE)
+        })
+
+        it.each([[''], [null]])('should show the default for an existing provider with suffix %j', async (suffix) => {
+          await renderStoredProvider(type, suffix)
+
+          await waitFor(() => {
+            expect(selectedSuffix()).toEqual([defaultSuffix])
+          })
+          expect(previewText()).toBe(`${BASE}${defaultSuffix}`)
+        })
+
+        it('should save No Suffix, update the preview and still show it after reopening', async () => {
+          await renderStoredProvider(type, '')
+
+          await waitFor(() => {
+            expect(selectedSuffix()).toEqual([defaultSuffix])
+          })
+          fireEvent.mouseDown(document.querySelector('.ant-select-selector')!)
+          fireEvent.click(await screen.findByText('No Suffix'))
+
+          await waitFor(() => {
+            expect(window.api.provider.update).toHaveBeenCalledWith(1, { suffix: NO_SUFFIX })
+          })
+          await waitFor(() => {
+            expect(previewText()).toBe(BASE)
+          })
+
+          cleanup()
+          await renderProvider()
+
+          await waitFor(() => {
+            expect(selectedSuffix()).toEqual(['No Suffix'])
+          })
+          expect(previewText()).toBe(BASE)
+        })
+      })
+
+      it('should keep No Suffix when the base URL is edited', async () => {
+        await renderStoredProvider('openai', NO_SUFFIX)
+
+        const input = screen.getByDisplayValue(BASE)
+        fireEvent.change(input, { target: { value: 'https://proxy.test/other' } })
+        fireEvent.blur(input)
+
+        await waitFor(() => {
+          expect(window.api.provider.update).toHaveBeenCalledWith(1, {
+            base_url: 'https://proxy.test/other',
+            suffix: NO_SUFFIX
+          })
+        })
+      })
     })
 
     describe('ollama', () => {

@@ -7,6 +7,16 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()],
     build: {
       outDir: "dist/main",
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, "src/main/index.ts"),
+          // Imported by scripts/package-load-check.cjs to render a sample in the packaged app.
+          "pdf-page-renderer": resolve(
+            __dirname,
+            "src/core/infrastructure/adapters/split/PDFPageRenderer.ts",
+          ),
+        },
+      },
     },
   },
   preload: {
