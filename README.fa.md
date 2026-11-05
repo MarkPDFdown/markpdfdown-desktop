@@ -119,7 +119,7 @@ src/
 - **ابزار ساخت**: Vite 6
 - **رابط کاربری**: Ant Design 5
 - **پایگاه داده**: Prisma ORM + SQLite
-- **پردازش PDF**: pdf-lib، pdf-to-png-converter، Sharp
+- **پردازش PDF**: pdf-lib، pdf-to-png-converter، @napi-rs/canvas
 - **Markdown**: react-markdown، remark-gfm، remark-math، rehype-katex، rehype-prism-plus
 - **تست**: Vitest + Testing Library
 

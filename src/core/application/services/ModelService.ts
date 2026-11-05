@@ -1,6 +1,8 @@
 import providerRepository from '../../domain/repositories/ProviderRepository.js';
 import { LLMClientFactory, CompletionOptions, Message } from '../../infrastructure/adapters/llm/LLMClient.js';
-import sharp from 'sharp';
+import { mayHoldMetadata, reencodeImage } from '../../infrastructure/adapters/split/ImageReencoder.js';
+import { NO_SUFFIX, resolveSuffix } from '../../../shared/providerSuffix.js';
+import { promises as fs } from 'fs';
 
 
 // 根据服务商ID获取LLM客户端
@@ -11,9 +13,8 @@ const getLLMClient = async (providerId: number) => {
         throw new Error('服务商不存在');
     }
 
-    // 获取 base_url 和 suffix
     let baseUrl = provider.base_url || '';
-    let suffix = provider.suffix || '';
+    const isExactEndpoint = provider.suffix === NO_SUFFIX;
 
     // 根据 provider 类型设置默认值
     if (!baseUrl) {
@@ -24,30 +25,16 @@ const getLLMClient = async (providerId: number) => {
         }
     }
 
-    if (!suffix) {
-        switch (provider.type) {
-            case 'openai':
-                suffix = '/chat/completions';
-                break;
-            case 'openai-responses':
-                suffix = '/responses';
-                break;
-            case 'gemini':
-                suffix = '/models';
-                break;
-            case 'anthropic':
-                suffix = '/messages';
-                break;
-            case 'ollama':
-                suffix = '/chat';
-                break;
-        }
+    // 客户端会把空地址回退到官方端点，不能把自定义网关的 Key 发过去
+    if (isExactEndpoint && !baseUrl) {
+        throw new Error('选择「无后缀」时必须填写 API 地址');
     }
 
     return LLMClientFactory.createClient(
         provider.type || '',
         provider.api_key || '',
-        `${baseUrl}${suffix}`
+        `${baseUrl}${resolveSuffix(provider.type, provider.suffix)}`,
+        { exactEndpoint: isExactEndpoint }
     );
 }
 
@@ -59,9 +46,11 @@ const completion = async (providerId: number, options: CompletionOptions) => {
 
 // 输入图片文件路径，返回图片的base64编码字符串
 const getImageBase64 = async (imagePath: string): Promise<string> => {
-    const image = sharp(imagePath);
-    const buffer = await image.toBuffer();
-    return buffer.toString('base64');
+    const buffer = await fs.readFile(imagePath);
+    // ImageSplitter already re-encodes uploads, but retrying a task reuses its page files, and those
+    // of a task split by an older version are plain copies of what the user uploaded.
+    const image = mayHoldMetadata(buffer) ? await reencodeImage(buffer) : buffer;
+    return image.toString('base64');
 }
 
 // 输入图片文件路径，构造Message

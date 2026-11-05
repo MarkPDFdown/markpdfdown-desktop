@@ -9,6 +9,35 @@ describe('OllamaClient', () => {
     client = new OllamaClient('', 'http://localhost:11434/api')
   })
 
+  describe('Authorization', () => {
+    const request = { messages: [{ role: 'user' as const, content: { type: 'text' as const, text: 'Hi' } }], model: 'llama2' }
+    const sentHeaders = () => (global.fetch as any).mock.calls[0][1].headers
+
+    it('should send a Bearer token when an API key is configured', async () => {
+      mockFetchSuccess(createMockOllamaResponse('ok'))
+
+      await new OllamaClient('proxy-key', 'http://proxy.test/api/chat').completion(request)
+
+      expect(sentHeaders().Authorization).toBe('Bearer proxy-key')
+    })
+
+    it('should prefer the API key of the request', async () => {
+      mockFetchSuccess(createMockOllamaResponse('ok'))
+
+      await new OllamaClient('proxy-key', 'http://proxy.test/api/chat').completion({ ...request, apiKey: 'request-key' })
+
+      expect(sentHeaders().Authorization).toBe('Bearer request-key')
+    })
+
+    it('should not send the header without an API key', async () => {
+      mockFetchSuccess(createMockOllamaResponse('ok'))
+
+      await client.completion(request)
+
+      expect(sentHeaders()).not.toHaveProperty('Authorization')
+    })
+  })
+
   describe('Constructor', () => {
     it('should initialize with API key and base URL', () => {
       expect(client).toBeDefined()

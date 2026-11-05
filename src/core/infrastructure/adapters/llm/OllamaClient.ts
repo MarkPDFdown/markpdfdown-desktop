@@ -60,10 +60,14 @@ export class OllamaClient extends LLMClient {
         requestBody.format = 'json';
       }
 
+      // 本地 Ollama 无需鉴权，只有配置了 Key（如带鉴权的反向代理）才发送
+      const apiKey = normalizedOptions.apiKey || this.apiKey;
+
       const response = await fetch(`${this.baseUrl}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {}),
           'X-Title': 'MarkPDFdown',
           'HTTP-Referer': 'https://github.com/MarkPDFdown'
         },
@@ -144,7 +148,7 @@ export class OllamaClient extends LLMClient {
               return {
                 content,
                 model: data.model || normalizedOptions.model || 'llama3',
-                finishReason: 'stop',
+                finishReason: this.normalizeFinishReason(data.done_reason) ?? 'stop',
                 responseFormat: normalizedOptions.response_format?.type,
                 rawResponse: data
               };
@@ -171,7 +175,7 @@ export class OllamaClient extends LLMClient {
         return {
           content: data.message.content || '',
           model: data.model,
-          finishReason: data.done ? 'stop' : undefined,
+          finishReason: data.done ? this.normalizeFinishReason(data.done_reason) ?? 'stop' : undefined,
           responseFormat: normalizedOptions.response_format?.type,
           rawResponse: data // 保留原始响应以便调试
         };

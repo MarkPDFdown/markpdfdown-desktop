@@ -149,6 +149,7 @@ Application information.
 | Method | Description |
 |--------|-------------|
 | `window.api.app.getVersion()` | Get app version from package.json |
+| `window.api.app.getDatabaseStatus()` | Wait for the startup database initialization; `success: false` with `error` when it failed, plus `databasePath` when rebuilding the database file can help |
 
 ---
 

@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
  * Protocol consistency between ModelService (endpoint), OllamaClient (request
  * body and response parsing) and the Ollama server.
  *
- * Only the database and sharp are mocked. Unit tests that mock either side of
+ * Only the database and reading the page image are mocked. Unit tests that mock either side of
  * the HTTP boundary could not catch issue #72: one side asserted /api/generate,
  * the other returned a /api/chat shaped response.
  */
@@ -15,10 +15,8 @@ vi.mock('../../../domain/repositories/ProviderRepository.js', () => ({
   default: mockProviderRepository
 }))
 
-vi.mock('sharp', () => ({
-  default: vi.fn(() => ({
-    toBuffer: vi.fn().mockResolvedValue(Buffer.from('page-image'))
-  }))
+vi.mock('fs', () => ({
+  promises: { readFile: vi.fn().mockResolvedValue(Buffer.from('page-image')) }
 }))
 
 const HOST = 'http://ollama.test:11434'
@@ -73,11 +71,11 @@ const fakeOllamaServer = vi.fn(async (input: string | URL, init?: RequestInit): 
 describe('Ollama protocol consistency', () => {
   let modelService: any
 
-  const useProvider = (base_url: string, suffix: string | null) => {
+  const useProvider = (base_url: string, suffix: string | null, api_key = '') => {
     mockProviderRepository.findById.mockResolvedValue({
       id: 1,
       type: 'ollama',
-      api_key: '',
+      api_key,
       base_url,
       suffix
     })
@@ -155,6 +153,51 @@ describe('Ollama protocol consistency', () => {
       })
 
       expect(result.content).toBe(MARKDOWN)
+    })
+  })
+
+  describe('reverse proxy with Bearer authentication (issue #89)', () => {
+    const API_KEY = 'proxy-key'
+
+    const testConnection = () =>
+      modelService.completion(1, {
+        model: 'llama3.2-vision',
+        maxTokens: 8,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image_url', image_url: { url: `data:image/png;base64,${PAGE_IMAGE_BASE64}` } },
+            { type: 'text', text: 'Identify the largest letter.' }
+          ]
+        }]
+      })
+
+    beforeEach(() => {
+      global.fetch = vi.fn(async (input: string | URL, init?: RequestInit) =>
+        new Headers(init?.headers).get('Authorization') === `Bearer ${API_KEY}`
+          ? fakeOllamaServer(input, init)
+          : new Response('unauthorized', { status: 401, statusText: 'Unauthorized' })
+      ) as unknown as typeof fetch
+    })
+
+    it.each([
+      ['page conversion', convertPage],
+      ['connection test', testConnection]
+    ])('authenticates the %s', async (_name, request) => {
+      useProvider(`${HOST}/api`, '', API_KEY)
+
+      const result = await request()
+
+      expect(result.content).toBe(MARKDOWN)
+    })
+
+    it('sends no Authorization header when no key is configured', async () => {
+      useProvider(`${HOST}/api`, '')
+
+      await expect(convertPage()).rejects.toThrow(/HTTP 401/)
+
+      const init = vi.mocked(global.fetch).mock.calls[0][1]
+      expect(new Headers(init?.headers).has('Authorization')).toBe(false)
     })
   })
 

@@ -1,6 +1,7 @@
 import { ipcMain, app } from "electron";
 import { createRequire } from "module";
 import path from "path";
+import { initDatabase } from "../../../core/infrastructure/db/index.js";
 
 // 使用 createRequire 来支持在 ESM 中导入 JSON
 const requireJson = createRequire(import.meta.url);
@@ -35,4 +36,7 @@ export function registerAppHandlers() {
   ipcMain.handle("app:getVersion", () => {
     return getAppVersion();
   });
+
+  // Resolves once startup's database initialization has finished, however early it's called.
+  ipcMain.handle("app:getDatabaseStatus", () => initDatabase());
 }

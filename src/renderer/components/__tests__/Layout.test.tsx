@@ -53,6 +53,9 @@ const mockApi = {
   },
   task: {
     hasRunningTasks: vi.fn()
+  },
+  app: {
+    getDatabaseStatus: vi.fn().mockResolvedValue({ success: true })
   }
 }
 

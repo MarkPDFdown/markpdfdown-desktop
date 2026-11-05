@@ -5,7 +5,10 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // Set by scripts/prisma-cli.mjs, so run Prisma through `npm run generate` / `npm run migrate:*`.
+  // It can't be a literal list: engines are per arch, and each package must only carry its own.
+  binaryTargets = env("PRISMA_BINARY_TARGETS")
 }
 
 datasource db {

@@ -36,7 +36,9 @@ async function ensurePrismaClient() {
         shell: true,
         env: {
           ...process.env,
-          DATABASE_URL: 'file:./placeholder.db'
+          DATABASE_URL: 'file:./placeholder.db',
+          // schema.prisma 通过该变量读取 binaryTargets；这里只在用户本机运行，生成 native 即可
+          PRISMA_BINARY_TARGETS: '["native"]'
         }
       });
       console.log('✅ Prisma client generated successfully.');

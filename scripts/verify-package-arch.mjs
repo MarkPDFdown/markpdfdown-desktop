@@ -4,7 +4,8 @@
  * Verifies an unpacked electron-builder package (release/mac, release/linux-unpacked, ...):
  *
  * 1. Every native binary in the third-party module trees matches the target platform and arch.
- * 2. The native modules the app needs at startup are present (sharp, libvips, canvas, Prisma).
+ * 2. The native modules the app needs at startup are present (canvas, and the Prisma engine, on
+ *    Linux that of every distro family and libssl version).
  * 3. When the host can execute the package, those modules really load inside the packaged Electron.
  *    This catches what headers cannot, such as a library left inside app.asar where dlopen can't see it.
  *
@@ -22,6 +23,7 @@ import { closeSync, existsSync, openSync, readFileSync, readSync, readdirSync } 
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
+import { linuxEngineTargets } from './prisma-engines.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const LOAD_CHECK_SCRIPT = path.join(SCRIPT_DIR, 'package-load-check.cjs');
@@ -127,6 +129,16 @@ export function resolvePackageLayout({ releaseDir, platform, arch, productName, 
   };
 }
 
+function prismaEngineModules(platform, arch) {
+  if (platform !== 'linux') {
+    return [{ label: 'Prisma query engine', pattern: /\/\.prisma\/client\/[^/]*query_engine[^/]*\.node$/ }];
+  }
+  return linuxEngineTargets(arch).map((target) => ({
+    label: `Prisma query engine (${target})`,
+    pattern: new RegExp(`/\\.prisma/client/libquery_engine-${target.replaceAll('.', '\\.')}\\.so\\.node$`),
+  }));
+}
+
 /**
  * Native modules without which the app can't work. `electron-builder` leaves them out silently,
  * e.g. when the matching optional dependency wasn't installed on the build machine.
@@ -134,11 +146,8 @@ export function resolvePackageLayout({ releaseDir, platform, arch, productName, 
 function requiredModules(platform, arch) {
   const target = `${PLATFORMS[platform].nodePlatform}-${arch}`;
   return [
-    { label: 'sharp', pattern: new RegExp(`/@img/sharp-${target}/lib/[^/]+\\.node$`) },
-    // On Windows libvips ships inside the sharp package rather than in its own package.
-    { label: 'libvips', pattern: new RegExp(`/@img/sharp-(libvips-)?${target}/lib/libvips[^/]*$`) },
     { label: '@napi-rs/canvas', pattern: new RegExp(`/@napi-rs/canvas-${target}[^/]*/[^/]+\\.node$`) },
-    { label: 'Prisma query engine', pattern: /\/\.prisma\/client\/[^/]*query_engine[^/]*\.node$/ },
+    ...prismaEngineModules(platform, arch),
   ];
 }
 

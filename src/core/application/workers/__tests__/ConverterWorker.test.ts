@@ -61,6 +61,8 @@ vi.mock('../../../infrastructure/config/worker.config.js', () => ({
 import { prisma } from '../../../infrastructure/db/index.js';
 import modelLogic from '../../services/ModelService.js';
 import { eventBus, TaskEventType } from '../../../shared/events/EventBus.js';
+import { OllamaClient } from '../../../infrastructure/adapters/llm/OllamaClient.js';
+import { FINISH_REASON_TRUNCATED } from '../../../domain/llm/ILLMClient.js';
 
 describe('ConverterWorker', () => {
   let worker: ConverterWorker;
@@ -293,6 +295,38 @@ describe('ConverterWorker', () => {
       } as any);
 
       await expect((worker as any).convertPage(mockPage)).rejects.toThrow('Content exceeds maximum length');
+    });
+
+    it('should throw error if the output was truncated', async () => {
+      vi.mocked(modelLogic.completion).mockResolvedValue({
+        content: '# Partial',
+        finishReason: FINISH_REASON_TRUNCATED,
+        rawResponse: {},
+      } as any);
+
+      await expect((worker as any).convertPage(mockPage)).rejects.toThrow('truncated');
+    });
+
+    it('should report truncation rather than empty content when the limit left nothing', async () => {
+      vi.mocked(modelLogic.completion).mockResolvedValue({
+        content: '',
+        finishReason: FINISH_REASON_TRUNCATED,
+        rawResponse: {},
+      } as any);
+
+      await expect((worker as any).convertPage(mockPage)).rejects.toThrow('truncated');
+    });
+
+    it.each(['stop', 'end_turn', 'STOP', undefined])('should accept finish reason %s', async (finishReason) => {
+      vi.mocked(modelLogic.completion).mockResolvedValue({
+        content: '# Complete',
+        finishReason,
+        rawResponse: {},
+      } as any);
+
+      const result = await (worker as any).convertPage(mockPage);
+
+      expect(result.markdown).toBe('# Complete');
     });
   });
 
@@ -1039,6 +1073,105 @@ describe('ConverterWorker', () => {
 
       // Should only call once (no retry for config error)
       expect(modelLogic.completion).toHaveBeenCalledTimes(1);
+    });
+
+    describe('when the output is truncated', () => {
+      const stubPageTransaction = (pages: number) => {
+        const tx = {
+          taskDetail: {
+            findUnique: vi.fn().mockResolvedValue({
+              worker_id: worker.getWorkerId(),
+              status: PageStatus.PROCESSING,
+            }),
+            update: vi.fn(),
+          },
+          task: {
+            findUnique: vi.fn().mockResolvedValue({
+              status: TaskStatus.PROCESSING,
+              pages,
+              completed_count: 0,
+              failed_count: 0,
+            }),
+            update: vi.fn().mockResolvedValue({ completed_count: 1, failed_count: 1 }),
+          },
+        };
+        vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => callback(tx));
+        vi.mocked(prisma.task.findUnique).mockResolvedValue({ id: 'task123', status: TaskStatus.PROCESSING } as any);
+        vi.mocked(prisma.taskDetail.update).mockResolvedValue({} as any);
+        return tx;
+      };
+
+      const truncated = { content: '# Partial', finishReason: FINISH_REASON_TRUNCATED, rawResponse: {} } as any;
+
+      it('should retry, then fail the page with a visible reason and without the partial content', async () => {
+        const tx = stubPageTransaction(10);
+        vi.mocked(modelLogic.completion).mockResolvedValue(truncated);
+
+        await (worker as any).processPageWithRetry(mockPage);
+
+        expect(modelLogic.completion).toHaveBeenCalledTimes(4); // first attempt + maxRetries
+        expect(tx.taskDetail.update).toHaveBeenCalledTimes(1);
+        const { data } = tx.taskDetail.update.mock.calls[0][0];
+        expect(data.status).toBe(PageStatus.FAILED);
+        expect(data.error).toContain('truncated');
+        expect(data.content).toBeUndefined();
+        expect(tx.task.update).toHaveBeenCalledWith(
+          expect.objectContaining({ data: { failed_count: { increment: 1 } } })
+        );
+        expect(eventBus.emitTaskDetailEvent).toHaveBeenCalledWith(
+          TaskEventType.TASK_DETAIL_UPDATED,
+          expect.objectContaining({ status: PageStatus.FAILED })
+        );
+      });
+
+      it('should show the reason on the task when it is the only page', async () => {
+        const tx = stubPageTransaction(1);
+        vi.mocked(modelLogic.completion).mockResolvedValue(truncated);
+
+        await (worker as any).processPageWithRetry(mockPage);
+
+        expect(tx.task.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              status: TaskStatus.FAILED,
+              error: expect.stringContaining('truncated'),
+            }),
+          })
+        );
+      });
+
+      it('should complete the page when a retry finishes normally', async () => {
+        const tx = stubPageTransaction(10);
+        vi.mocked(modelLogic.completion)
+          .mockResolvedValueOnce(truncated)
+          .mockResolvedValueOnce({ content: '# Complete', finishReason: 'stop', rawResponse: {} } as any);
+
+        await (worker as any).processPageWithRetry(mockPage);
+
+        expect(modelLogic.completion).toHaveBeenCalledTimes(2);
+        expect(tx.taskDetail.update).toHaveBeenCalledTimes(1);
+        expect(tx.taskDetail.update.mock.calls[0][0].data).toMatchObject({
+          status: PageStatus.COMPLETED,
+          content: '# Complete',
+        });
+      });
+
+      it('should fail the page for a truncated response from a real client', async () => {
+        const tx = stubPageTransaction(10);
+        vi.mocked(modelLogic.completion).mockImplementation(async (_provider, options) => {
+          global.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+            model: 'llama3',
+            message: { role: 'assistant', content: '# Partial' },
+            done: true,
+            done_reason: 'length',
+          })));
+          return new OllamaClient('', 'http://localhost:11434/api/chat').completion(options);
+        });
+
+        await (worker as any).processPageWithRetry(mockPage);
+
+        expect(tx.taskDetail.update.mock.calls[0][0].data.status).toBe(PageStatus.FAILED);
+      });
     });
 
     it('should stop retrying if task is cancelled', async () => {

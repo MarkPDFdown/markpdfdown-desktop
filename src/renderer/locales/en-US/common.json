@@ -32,5 +32,17 @@
   },
   "auth": {
     "not_signed_in": "Not Signed In"
+  },
+  "databaseError": {
+    "title": "The database failed to initialize",
+    "description": "Local features such as providers and tasks are unavailable. Restart the app. If this keeps happening, report it with the details below.",
+    "details": "Error details",
+    "rebuild": {
+      "description": "The local database can't be upgraded to this version, so local features such as providers and tasks are unavailable, and restarting won't fix it. You can back it up and rebuild it:",
+      "quit": "Quit the app completely.",
+      "moveFile": "Move the database file below somewhere else as a backup, along with any file next to it whose name starts the same way (such as -journal):",
+      "reopen": "Open the app again. It creates a new database. Providers and tasks have to be added again; the old data stays in your backup.",
+      "stillFailing": "If it still fails, move the backup back and report this with the details below."
+    }
   }
 }

@@ -29,9 +29,10 @@
     "build:win": "npm run build && electron-builder --win",
     "build:linux": "npm run build && electron-builder --linux",
     "verify:package": "node scripts/verify-package-arch.mjs",
-    "migrate:dev": "prisma migrate dev --schema=./src/core/infrastructure/db/schema.prisma",
-    "migrate:reset": "prisma migrate reset --schema=./src/core/infrastructure/db/schema.prisma",
-    "generate": "prisma generate --schema=./src/core/infrastructure/db/schema.prisma",
+    "verify:package:distros": "node scripts/verify-package-distros.mjs",
+    "migrate:dev": "node scripts/prisma-cli.mjs migrate dev --schema=./src/core/infrastructure/db/schema.prisma",
+    "migrate:reset": "node scripts/prisma-cli.mjs migrate reset --schema=./src/core/infrastructure/db/schema.prisma",
+    "generate": "node scripts/prisma-cli.mjs generate --schema=./src/core/infrastructure/db/schema.prisma",
     "logo": "electron-icon-builder --input=./src/renderer/assets/logo.png --output=./public",
     "test": "vitest run",
     "test:unit": "vitest run --config vitest.config.ts",
@@ -58,7 +59,8 @@
       "!**/node_modules/**/{CHANGELOG.md,README.md,readme.md,LICENSE,license,License}",
       "!**/node_modules/**/*.{ts,tsx,md,markdown}",
       "!**/node_modules/**/{test,tests,__tests__,__mocks__,docs,doc,example,examples}/**/*",
-      "!**/node_modules/.cache/**/*"
+      "!**/node_modules/.cache/**/*",
+      "!**/node_modules/prisma/libquery_engine-*"
     ],
     "extraResources": [
       "node_modules/.prisma/**/*",
@@ -76,8 +78,7 @@
       }
     ],
     "asarUnpack": [
-      "**/*.{node,dll,metal,exp,lib}",
-      "**/node_modules/@img/**/*"
+      "**/*.{node,dll,metal,exp,lib}"
     ],
     "directories": {
       "buildResources": "assets",
@@ -157,18 +158,19 @@
   },
   "overrides": {
     "@electron/get": "^4.0.2",
+    "@napi-rs/canvas": "$@napi-rs/canvas",
     "global-agent": "^3.0.1"
   },
   "dependencies": {
     "@ant-design/icons": "^5.6.1",
+    "@napi-rs/canvas": "1.0.11",
     "@prisma/client": "^6.5.0",
-    "@types/sharp": "^0.31.1",
     "antd": "^5.24.4",
     "electron-is-dev": "^3.0.1",
     "electron-updater": "^6.7.3",
     "katex": "^0.16.21",
     "pdf-lib": "^1.17.1",
-    "pdf-to-png-converter": "^3.11.0",
+    "pdf-to-png-converter": "3.11.0",
     "prisma": "^6.5.0",
     "prismjs": "^1.30.0",
     "react": "^18.2.0",
@@ -180,7 +182,6 @@
     "rehype-prism-plus": "^2.0.0",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
-    "sharp": "^0.34.1",
     "uuid": "^11.1.0"
   },
   "devDependencies": {

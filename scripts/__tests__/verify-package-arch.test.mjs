@@ -95,8 +95,6 @@ describe('verifyBinaries', () => {
 
   /** The native files of an app package, with one header per file. */
   const putModules = (target, header) => {
-    put(`app.asar.unpacked/node_modules/@img/sharp-${target}/lib/sharp-${target}.node`, header);
-    put(`app.asar.unpacked/node_modules/@img/sharp-libvips-${target}/lib/libvips-cpp.8.17.3.dylib`, header);
     put(`app.asar.unpacked/node_modules/@napi-rs/canvas/node_modules/@napi-rs/canvas-${target}/skia.${target}.node`, header);
     put('node_modules/.prisma/client/libquery_engine-darwin.dylib.node', header);
   };
@@ -115,12 +113,12 @@ describe('verifyBinaries', () => {
 
   it('accepts a package whose binaries all match', () => {
     putModules('darwin-x64', macho('x64'));
-    put('app.asar.unpacked/node_modules/@img/sharp-darwin-x64/package.json', '{}');
+    put('app.asar.unpacked/node_modules/@napi-rs/canvas/package.json', '{}');
 
     const { problems, binaries } = verifyMac('x64');
 
     expect(problems).toEqual([]);
-    expect(binaries).toHaveLength(5);
+    expect(binaries).toHaveLength(3);
   });
 
   it('rejects the package from issue #77: an x64 app holding only arm64 modules', () => {
@@ -128,14 +126,8 @@ describe('verifyBinaries', () => {
 
     const { problems } = verifyMac('x64');
 
-    expect(problems.filter((p) => p.startsWith('Wrong architecture'))).toHaveLength(4);
-    expect(problems).toEqual(
-      expect.arrayContaining([
-        'Missing native module for mac-x64: sharp',
-        'Missing native module for mac-x64: libvips',
-        'Missing native module for mac-x64: @napi-rs/canvas',
-      ]),
-    );
+    expect(problems.filter((p) => p.startsWith('Wrong architecture'))).toHaveLength(2);
+    expect(problems).toContain('Missing native module for mac-x64: @napi-rs/canvas');
   });
 
   it('rejects a stray binary of another arch, even when all required modules are fine', () => {
@@ -177,23 +169,68 @@ describe('verifyBinaries', () => {
     expect(verifyMac('x64').problems).toEqual([`Missing file: ${executable}`]);
   });
 
-  it('knows libvips lives in the sharp package on Windows', () => {
+  it('accepts a Windows package, whose engine has no lib prefix', () => {
     writeFileSync(executable, pe(0x8664));
-    put('app.asar.unpacked/node_modules/@img/sharp-win32-x64/lib/sharp-win32-x64.node', pe(0x8664));
-    put('app.asar.unpacked/node_modules/@img/sharp-win32-x64/lib/libvips-42.dll', pe(0x8664));
     put('app.asar.unpacked/node_modules/@napi-rs/canvas-win32-x64-msvc/skia.win32-x64-msvc.node', pe(0x8664));
     put('node_modules/.prisma/client/query_engine-windows.dll.node', pe(0x8664));
 
     expect(verifyBinaries({ resourcesDir, executable, platform: 'win', arch: 'x64' }).problems).toEqual([]);
   });
 
-  it('finds the versioned libvips on Linux', () => {
+  it('accepts a Linux arm64 package with both of its engines', () => {
     writeFileSync(executable, elf(183));
-    put('app.asar.unpacked/node_modules/@img/sharp-linux-arm64/lib/sharp-linux-arm64.node', elf(183));
-    put('app.asar.unpacked/node_modules/@img/sharp-libvips-linux-arm64/lib/libvips-cpp.so.8.17.3', elf(183));
     put('app.asar.unpacked/node_modules/@napi-rs/canvas-linux-arm64-gnu/skia.linux-arm64-gnu.node', elf(183));
+    put('node_modules/.prisma/client/libquery_engine-linux-arm64-openssl-1.1.x.so.node', elf(183));
     put('node_modules/.prisma/client/libquery_engine-linux-arm64-openssl-3.0.x.so.node', elf(183));
 
     expect(verifyBinaries({ resourcesDir, executable, platform: 'linux', arch: 'arm64' }).problems).toEqual([]);
+  });
+
+  describe('Linux Prisma engines', () => {
+    const X64_ENGINES = ['debian-openssl-1.1.x', 'debian-openssl-3.0.x', 'rhel-openssl-1.1.x', 'rhel-openssl-3.0.x'];
+
+    const putLinuxX64Modules = (engines) => {
+      writeFileSync(executable, elf(62));
+      put('app.asar.unpacked/node_modules/@napi-rs/canvas-linux-x64-gnu/skia.linux-x64-gnu.node', elf(62));
+      for (const engine of engines) {
+        put(`node_modules/.prisma/client/libquery_engine-${engine}.so.node`, elf(62));
+      }
+    };
+
+    const verifyLinuxX64 = () => verifyBinaries({ resourcesDir, executable, platform: 'linux', arch: 'x64' });
+
+    it('accepts a package with the engine of every distro family and libssl version', () => {
+      putLinuxX64Modules(X64_ENGINES);
+
+      expect(verifyLinuxX64().problems).toEqual([]);
+    });
+
+    it('rejects the package from issue #86: only the engine of the build machine', () => {
+      putLinuxX64Modules(['debian-openssl-3.0.x']);
+
+      expect(verifyLinuxX64().problems).toEqual([
+        'Missing native module for linux-x64: Prisma query engine (debian-openssl-1.1.x)',
+        'Missing native module for linux-x64: Prisma query engine (rhel-openssl-1.1.x)',
+        'Missing native module for linux-x64: Prisma query engine (rhel-openssl-3.0.x)',
+      ]);
+    });
+
+    it('does not count an engine outside the generated client', () => {
+      putLinuxX64Modules(X64_ENGINES.slice(1));
+      put('app.asar.unpacked/node_modules/prisma/libquery_engine-debian-openssl-1.1.x.so.node', elf(62));
+
+      expect(verifyLinuxX64().problems).toEqual([
+        'Missing native module for linux-x64: Prisma query engine (debian-openssl-1.1.x)',
+      ]);
+    });
+
+    it('rejects an engine of the other arch', () => {
+      putLinuxX64Modules(X64_ENGINES);
+      put('node_modules/.prisma/client/libquery_engine-linux-arm64-openssl-3.0.x.so.node', elf(183));
+
+      expect(verifyLinuxX64().problems).toEqual([
+        'Wrong architecture: node_modules/.prisma/client/libquery_engine-linux-arm64-openssl-3.0.x.so.node is elf/arm64, expected elf/x64',
+      ]);
+    });
   });
 });

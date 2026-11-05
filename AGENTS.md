@@ -15,6 +15,7 @@ npm run build:win              # Build Windows NSIS installer
 npm run build:mac              # Build macOS DMG
 npm run build:linux            # Build Linux AppImage
 npm run verify:package         # Check the packaged native modules (arch, presence, load test)
+npm run verify:package:distros # Load the Linux package on other distros (needs Docker)
 
 # Database
 npm run generate               # Generate Prisma client (required after schema changes)
@@ -299,9 +300,14 @@ For detailed instructions on adding new features, including step-by-step develop
 - **Artifact Naming**: `${productName}-${version}-${arch}.${ext}` (e.g., `MarkPDFdown-1.0.0-x64.exe`)
 
 ### Native Modules and Packaging
-- **Build on the target architecture**: sharp, `@napi-rs/canvas` and the Prisma engine ship as prebuilt binaries that `npm ci` and `prisma generate` install for the host only, and electron-builder does not fetch those of another arch. Packaging `--x64` on an arm64 machine produces an app that crashes at startup, so `release.yml` runs one job per arch on a native runner.
+- **Build on the target architecture**: `@napi-rs/canvas` and the Prisma engine ship as prebuilt binaries that `npm ci` and `prisma generate` install for the host only, and electron-builder does not fetch those of another arch. Packaging `--x64` on an arm64 machine produces an app that crashes at startup, so `release.yml` runs one job per arch on a native runner.
 - **`npm run verify:package`** (`scripts/verify-package-arch.mjs`) checks an unpacked package: binary architectures, required modules, and, when the host can run the package, a real load test in the packaged Electron. Pass `-- --platform <mac|win|linux> --arch <x64|arm64>` for another target. CI fails on any problem.
+- **Linux Prisma engines**: Prisma picks its engine at runtime from the user's distro family and libssl, so a Linux package carries one per combination (`scripts/prisma-engines.mjs`). `binaryTargets` comes from `PRISMA_BINARY_TARGETS`, so a list in the schema can't put the other arch's engines in a package: run Prisma through `npm run generate` / `npm run migrate:*` (`scripts/prisma-cli.mjs`). A bare `npx prisma generate` stops with an error about the missing variable. `npm run verify:package:distros` (`scripts/verify-package-distros.mjs`) checks in containers that each distro loads the engine meant for it.
+- **No sharp in Electron on Linux**: its libvips bundles and exports glib, while Electron links the system's, so the two mix and sharp segfaults inside `g_object_unref` (seen on Fedora 44, glib 2.88). `RTLD_DEEPBIND` doesn't help. `@napi-rs/canvas` has no such clash.
+- **`@napi-rs/canvas` is pinned to an exact version, 1.0.11**: 0.1.x up to 1.0.3 segfault when decoding a truncated image (0.1.88 on 41 of 225 damaged samples), which takes down the main process, and again on each start since the task is picked up again. 1.0.12 and 1.0.13 segfault in Electron 38 as soon as they load, while passing in plain Node. So bump it only with `npm run verify:package`, whose load check covers both. `pdf-to-png-converter` asks for 0.1.x, so the `overrides` entry in `package.json` keeps a single copy in the package.
+- **Images leaving the machine carry no metadata**: `ImageSplitter` re-encodes uploads through `ImageReencoder`, dropping Exif (GPS, device) and bringing photos to quality 80, and never falls back to the original. `ModelService` re-encodes any page file that still looks like it has metadata, such as those split by an older version.
 - **New native dependency**: add it to `requiredModules` in the verify script and to `scripts/package-load-check.cjs`.
+- **PDF rendering**: go through `renderPdfPages` (`src/core/infrastructure/adapters/split/PDFPageRenderer.ts`), never `pdf-to-png-converter` directly. The converter looks for the pdf.js CMaps and standard fonts under `process.cwd()`, which only works in `npm run dev`; without them CJK text silently disappears from the page images. The renderer overrides those paths through a non-public file of the converter, so the converter's version is pinned: when upgrading, run the integration test and `npm run verify:package`. Both render `scripts/fixtures/pdf-render-check.pdf` from a directory without `node_modules`.
 - **Windows is x64 only**: Prisma has no Windows arm64 engine, and an arm64 process can't load the x64 one. Windows on Arm runs the x64 build under emulation.
 - **`latest-mac.yml`**: each mac job writes its own, and the `upload-manifests` job in `release.yml` merges them, x64 first.
 

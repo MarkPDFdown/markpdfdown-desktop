@@ -119,7 +119,7 @@ src/
 - **أداة البناء**: Vite 6
 - **واجهة المستخدم**: Ant Design 5
 - **قاعدة البيانات**: Prisma ORM + SQLite
-- **معالجة PDF**: pdf-lib، pdf-to-png-converter، Sharp
+- **معالجة PDF**: pdf-lib، pdf-to-png-converter، @napi-rs/canvas
 - **Markdown**: react-markdown، remark-gfm، remark-math، rehype-katex، rehype-prism-plus
 - **الاختبار**: Vitest + Testing Library
 

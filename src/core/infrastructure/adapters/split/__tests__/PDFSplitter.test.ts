@@ -4,9 +4,9 @@ import { ImagePathUtil } from '../ImagePathUtil.js';
 import { promises as fs } from 'fs';
 import path from 'path';
 
-// Mock pdf-to-png-converter
-vi.mock('pdf-to-png-converter', () => ({
-  pdfToPng: vi.fn(),
+// Mock the renderer, the splitter's only way to pdf-to-png-converter
+vi.mock('../PDFPageRenderer.js', () => ({
+  renderPdfPages: vi.fn(),
 }));
 
 // Mock pdf-lib
@@ -37,13 +37,13 @@ vi.mock('fs', () => ({
   },
 }));
 
-import { pdfToPng } from 'pdf-to-png-converter';
+import { renderPdfPages } from '../PDFPageRenderer.js';
 import { PDFDocument } from 'pdf-lib';
 import { FileWaitUtil } from '../FileWaitUtil.js';
 import { WORKER_CONFIG } from '../../../config/worker.config.js';
 
 /** Renders the requested pages the way pdf-to-png-converter does, stopping at the document's end. */
-function fakePdfToPng(pagesInDocument: number) {
+function fakeRenderPdfPages(pagesInDocument: number) {
   return async (_pdf: unknown, options?: { pagesToProcess?: number[] }) =>
     (options?.pagesToProcess ?? Array.from({ length: pagesInDocument }, (_, i) => i + 1))
       .filter((page) => page <= pagesInDocument)
@@ -96,8 +96,8 @@ describe('PDFSplitter', () => {
         page_range: '',
       };
 
-      // Mock pdfToPng to return 3 pages (PDFDocument.load already mocked in beforeEach)
-      vi.mocked(pdfToPng).mockResolvedValueOnce([
+      // Mock the renderer to return 3 pages (PDFDocument.load already mocked in beforeEach)
+      vi.mocked(renderPdfPages).mockResolvedValueOnce([
         { path: '/tmp/page-1.png', name: 'page-1.png', page: 1, content: Buffer.from('') },
         { path: '/tmp/page-2.png', name: 'page-2.png', page: 2, content: Buffer.from('') },
         { path: '/tmp/page-3.png', name: 'page-3.png', page: 3, content: Buffer.from('') },
@@ -126,8 +126,8 @@ describe('PDFSplitter', () => {
         getPageCount: () => 5,
       } as any);
 
-      // Mock pdfToPng to return selected pages
-      vi.mocked(pdfToPng).mockResolvedValueOnce([
+      // Mock the renderer to return selected pages
+      vi.mocked(renderPdfPages).mockResolvedValueOnce([
         { path: '/tmp/page-1.png', name: 'page-1.png', page: 1, content: Buffer.from('') },
         { path: '/tmp/page-3.png', name: 'page-3.png', page: 3, content: Buffer.from('') },
       ]);
@@ -154,7 +154,7 @@ describe('PDFSplitter', () => {
         getPageCount: () => 2,
       } as any);
 
-      vi.mocked(pdfToPng).mockResolvedValueOnce([
+      vi.mocked(renderPdfPages).mockResolvedValueOnce([
         { path: '', name: 'temp-1.png', pageNumber: 1, content: Buffer.from('png-1') },
         { path: '', name: 'temp-2.png', pageNumber: 2, content: Buffer.from('png-2') },
       ]);
@@ -177,13 +177,23 @@ describe('PDFSplitter', () => {
     });
 
     it('should not hand an output folder to the converter', async () => {
-      vi.mocked(pdfToPng).mockResolvedValueOnce([
+      vi.mocked(renderPdfPages).mockResolvedValueOnce([
         { path: '', name: 'temp-1.png', pageNumber: 1, content: Buffer.from('png-1') },
       ] as any);
 
       await splitter.split({ id: 'task789', filename: 'document.pdf', page_range: '' });
 
-      expect(vi.mocked(pdfToPng).mock.calls[0][1]).not.toHaveProperty('outputFolder');
+      expect(vi.mocked(renderPdfPages).mock.calls[0][1]).not.toHaveProperty('outputFolder');
+    });
+
+    it('should leave the pdf.js log level to the renderer', async () => {
+      vi.mocked(renderPdfPages).mockResolvedValueOnce([
+        { path: '', name: 'temp-1.png', pageNumber: 1, content: Buffer.from('png-1') },
+      ] as any);
+
+      await splitter.split({ id: 'task789', filename: 'document.pdf', page_range: '' });
+
+      expect(vi.mocked(renderPdfPages).mock.calls[0][1]).not.toHaveProperty('verbosityLevel');
     });
 
     it('should throw error for missing task ID', async () => {
@@ -257,13 +267,13 @@ describe('PDFSplitter', () => {
     beforeEach(() => {
       vi.spyOn(splitter as any, 'sleep').mockResolvedValue(undefined);
       vi.spyOn(console, 'warn').mockImplementation(() => {});
-      vi.mocked(pdfToPng).mockResolvedValue([
+      vi.mocked(renderPdfPages).mockResolvedValue([
         { path: '', name: 'temp-1.png', pageNumber: 1, content: Buffer.from('png-1') },
       ] as any);
     });
 
     afterEach(() => {
-      vi.mocked(pdfToPng).mockReset();
+      vi.mocked(renderPdfPages).mockReset();
       vi.restoreAllMocks();
     });
 
@@ -285,7 +295,7 @@ describe('PDFSplitter', () => {
 
       expect(result.totalPages).toBe(1);
       expect(fs.writeFile).toHaveBeenCalledTimes(2);
-      expect(pdfToPng).toHaveBeenCalledTimes(1);
+      expect(renderPdfPages).toHaveBeenCalledTimes(1);
     });
 
     it.each(['password', 'encrypted', 'invalid pdf'])(
@@ -302,7 +312,7 @@ describe('PDFSplitter', () => {
     );
 
     it('should fail without writing any page when one has no image', async () => {
-      vi.mocked(pdfToPng).mockResolvedValue([
+      vi.mocked(renderPdfPages).mockResolvedValue([
         { path: '', name: 'temp-1.png', pageNumber: 1, content: Buffer.from('png-1') },
         { path: '', name: 'temp-2.png', pageNumber: 2 },
       ] as any);
@@ -328,7 +338,7 @@ describe('PDFSplitter', () => {
 
     it('should not blame the source for an ENOENT on another file while it still exists', async () => {
       const fontPath = '/resources/standard_fonts/missing.pfb';
-      vi.mocked(pdfToPng).mockRejectedValue(systemError('ENOENT', 'open', fontPath));
+      vi.mocked(renderPdfPages).mockRejectedValue(systemError('ENOENT', 'open', fontPath));
 
       const failure = splitter.split(task);
 
@@ -401,7 +411,7 @@ describe('PDFSplitter', () => {
           getPageCount: () => 1,
         } as any);
 
-      vi.mocked(pdfToPng).mockResolvedValueOnce([
+      vi.mocked(renderPdfPages).mockResolvedValueOnce([
         { path: '/tmp/page-1.png', name: 'page-1.png', page: 1, content: Buffer.from('') },
       ]);
 
@@ -458,7 +468,7 @@ describe('PDFSplitter', () => {
         getPageCount: () => 1,
       } as any);
 
-      vi.mocked(pdfToPng).mockResolvedValueOnce([
+      vi.mocked(renderPdfPages).mockResolvedValueOnce([
         { path: '/tmp/page-1.png', name: 'page-1.png', page: 1, content: Buffer.from('') },
       ]);
 
@@ -482,14 +492,14 @@ describe('PDFSplitter', () => {
         getPageCount: () => 200,
       } as any);
 
-      vi.mocked(pdfToPng).mockImplementation(fakePdfToPng(200) as any);
+      vi.mocked(renderPdfPages).mockImplementation(fakeRenderPdfPages(200) as any);
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
       expect(result.totalPages).toBe(100);
       expect(result.pages).toHaveLength(100);
-      vi.mocked(pdfToPng).mockReset();
+      vi.mocked(renderPdfPages).mockReset();
     });
   });
 
@@ -501,11 +511,11 @@ describe('PDFSplitter', () => {
     const range = (from: number, to: number) =>
       Array.from({ length: to - from + 1 }, (_, i) => from + i);
     const renderedBatches = () =>
-      vi.mocked(pdfToPng).mock.calls.map(([, options]) => options?.pagesToProcess);
+      vi.mocked(renderPdfPages).mock.calls.map(([, options]) => options?.pagesToProcess);
 
     function givenDocument(pagesByPdfLib: number, pagesByPdfJs: number = pagesByPdfLib) {
       vi.mocked(PDFDocument.load).mockResolvedValue({ getPageCount: () => pagesByPdfLib } as any);
-      vi.mocked(pdfToPng).mockImplementation(fakePdfToPng(pagesByPdfJs) as any);
+      vi.mocked(renderPdfPages).mockImplementation(fakeRenderPdfPages(pagesByPdfJs) as any);
     }
 
     beforeEach(() => {
@@ -514,7 +524,7 @@ describe('PDFSplitter', () => {
     });
 
     afterEach(() => {
-      vi.mocked(pdfToPng).mockReset();
+      vi.mocked(renderPdfPages).mockReset();
       vi.mocked(fs.writeFile).mockReset();
       vi.restoreAllMocks();
     });
@@ -541,7 +551,7 @@ describe('PDFSplitter', () => {
 
       const result = await splitter.split(task);
 
-      expect(pdfToPng).toHaveBeenCalledTimes(3);
+      expect(renderPdfPages).toHaveBeenCalledTimes(3);
       expect(result.totalPages).toBe(BATCH_SIZE * 2);
     });
 
@@ -550,7 +560,7 @@ describe('PDFSplitter', () => {
 
       const result = await splitter.split({ ...task, page_range: `1-${BATCH_SIZE * 2}` });
 
-      expect(pdfToPng).toHaveBeenCalledTimes(2);
+      expect(renderPdfPages).toHaveBeenCalledTimes(2);
       expect(result.totalPages).toBe(BATCH_SIZE * 2);
     });
 
@@ -569,7 +579,7 @@ describe('PDFSplitter', () => {
 
       const result = await splitter.split({ ...task, page_range: `1-${BATCH_SIZE * 4}` });
 
-      expect(pdfToPng).toHaveBeenCalledTimes(2);
+      expect(renderPdfPages).toHaveBeenCalledTimes(2);
       expect(result.pages.map((page) => page.pageSource)).toEqual(range(1, pagesByPdfJs));
     });
 
@@ -604,10 +614,10 @@ describe('PDFSplitter', () => {
     it('should never hold more than one batch of rendered pages', async () => {
       const pageCount = BATCH_SIZE * 5 + 1;
       givenDocument(pageCount);
-      const render = fakePdfToPng(pageCount);
+      const render = fakeRenderPdfPages(pageCount);
       let unwritten = 0;
       let mostUnwritten = 0;
-      vi.mocked(pdfToPng).mockImplementation((async (pdf: unknown, options: any) => {
+      vi.mocked(renderPdfPages).mockImplementation((async (pdf: unknown, options: any) => {
         const pages = await render(pdf, options);
         unwritten += pages.length;
         mostUnwritten = Math.max(mostUnwritten, unwritten);
@@ -634,8 +644,8 @@ describe('PDFSplitter', () => {
     it('should retry only the batch whose rendering failed', async () => {
       const pageCount = BATCH_SIZE * 2 - 1;
       givenDocument(pageCount);
-      const render = fakePdfToPng(pageCount);
-      vi.mocked(pdfToPng)
+      const render = fakeRenderPdfPages(pageCount);
+      vi.mocked(renderPdfPages)
         .mockImplementationOnce(render as any)
         .mockRejectedValueOnce(new Error('Transient render error'));
 
@@ -661,14 +671,14 @@ describe('PDFSplitter', () => {
       const result = await splitter.split(task);
 
       expect(result.totalPages).toBe(BATCH_SIZE + 1);
-      expect(pdfToPng).toHaveBeenCalledTimes(2);
+      expect(renderPdfPages).toHaveBeenCalledTimes(2);
       expect(fs.writeFile).toHaveBeenCalledTimes(BATCH_SIZE + 2);
     });
 
     it('should report a failure in a later batch as a source problem and stop', async () => {
       givenDocument(BATCH_SIZE * 3);
-      const render = fakePdfToPng(BATCH_SIZE * 3);
-      vi.mocked(pdfToPng).mockImplementation((async (pdf: unknown, options: any) => {
+      const render = fakeRenderPdfPages(BATCH_SIZE * 3);
+      vi.mocked(renderPdfPages).mockImplementation((async (pdf: unknown, options: any) => {
         if (options.pagesToProcess[0] > BATCH_SIZE) {
           throw new Error('Render exploded');
         }
@@ -686,14 +696,14 @@ describe('PDFSplitter', () => {
 
     it('should not retry a later batch for a non-retryable error', async () => {
       givenDocument(BATCH_SIZE + 1);
-      const render = fakePdfToPng(BATCH_SIZE + 1);
-      vi.mocked(pdfToPng)
+      const render = fakeRenderPdfPages(BATCH_SIZE + 1);
+      vi.mocked(renderPdfPages)
         .mockImplementationOnce(render as any)
         .mockRejectedValueOnce(new Error('PDF is encrypted'));
 
       await expect(splitter.split(task)).rejects.toThrow(/Cannot process password-protected PDF/);
 
-      expect(pdfToPng).toHaveBeenCalledTimes(2);
+      expect(renderPdfPages).toHaveBeenCalledTimes(2);
     });
 
     it.each([

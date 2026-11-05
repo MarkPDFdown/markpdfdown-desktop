@@ -12,7 +12,10 @@ import {
  * Google Gemini客户端实现
  */
 export class GeminiClient extends LLMClient {
-  constructor(apiKey: string, baseUrl?: string) {
+  /**
+   * @param exactEndpoint baseUrl 已是完整地址（如网关端点），不再追加模型路径
+   */
+  constructor(apiKey: string, baseUrl?: string, private readonly exactEndpoint: boolean = false) {
     super(apiKey, baseUrl || 'https://generativelanguage.googleapis.com/v1beta/models');
   }
 
@@ -26,7 +29,7 @@ export class GeminiClient extends LLMClient {
 
       const modelName = normalizedOptions.model || 'gemini-1.5-pro';
       // 使用 v1beta 端点，key 通过 header 传递
-      const endpoint = `${this.baseUrl}/${modelName}:generateContent`;
+      const endpoint = this.exactEndpoint ? this.baseUrl : `${this.baseUrl}/${modelName}:generateContent`;
 
       // 将消息转换为Gemini格式
       const geminiContents = this.convertMessagesToGeminiFormat(normalizedOptions.messages);
@@ -85,7 +88,7 @@ export class GeminiClient extends LLMClient {
         return {
           content,
           model: modelName,
-          finishReason: candidate.finishReason,
+          finishReason: this.normalizeFinishReason(candidate.finishReason),
           responseFormat: normalizedOptions.response_format?.type,
           rawResponse: data // 保留原始响应以便调试
         };

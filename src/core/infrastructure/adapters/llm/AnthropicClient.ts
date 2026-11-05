@@ -99,6 +99,7 @@ export class AnthropicClient extends LLMClient {
         const reader = response.body.getReader();
         const decoder = new TextDecoder('utf-8');
         let content = '';
+        let finishReason: string | undefined;
 
         const processStream = async (): Promise<CompletionResponse> => {
           const { done, value } = await reader.read();
@@ -107,7 +108,7 @@ export class AnthropicClient extends LLMClient {
             return {
               content,
               model: modelName,
-              finishReason: 'stop',
+              finishReason: this.normalizeFinishReason(finishReason) ?? 'stop',
               responseFormat: normalizedOptions.response_format?.type
             };
           }
@@ -122,6 +123,9 @@ export class AnthropicClient extends LLMClient {
             if (line.startsWith('data: ')) {
               try {
                 const data = JSON.parse(line.slice(6));
+
+                // Claude 3在message_delta事件的delta中返回，Claude 2在顶层返回
+                finishReason = data.delta?.stop_reason || data.stop_reason || finishReason;
 
                 // Claude 3使用content_block_delta类型流式传输内容
                 if (data.type === 'content_block_delta' && data.delta?.text) {
@@ -173,7 +177,7 @@ export class AnthropicClient extends LLMClient {
         return {
           content,
           model: data.model,
-          finishReason: data.stop_reason,
+          finishReason: this.normalizeFinishReason(data.stop_reason),
           responseFormat: normalizedOptions.response_format?.type,
           rawResponse: data // 保留原始响应以便调试
         };

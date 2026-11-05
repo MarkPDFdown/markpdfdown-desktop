@@ -1,4 +1,3 @@
-import { pdfToPng, type PdfToPngOptions } from 'pdf-to-png-converter';
 import { PDFDocument } from 'pdf-lib';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -7,6 +6,7 @@ import { Task } from '../../../../shared/types/index.js';
 import { PageRangeParser } from '../../../domain/split/PageRangeParser.js';
 import { ImagePathUtil } from './ImagePathUtil.js';
 import { FileWaitUtil } from './FileWaitUtil.js';
+import { renderPdfPages } from './PDFPageRenderer.js';
 import { WORKER_CONFIG } from '../../config/worker.config.js';
 
 /** A rendered page, held in memory until it is written to the split directory. */
@@ -23,7 +23,7 @@ function isRetryablePdfError(error: Error): boolean {
 }
 
 /**
- * PDF splitter implementation using pdf-to-png-converter.
+ * PDF splitter implementation, rendering through renderPdfPages.
  *
  * Features:
  * - High quality conversion (viewport scale 2.0 ~144 DPI)
@@ -33,7 +33,7 @@ function isRetryablePdfError(error: Error): boolean {
  * - Output location independent of process.cwd() (pages are written by this class,
  *   see renderPagesWithRetry)
  * - Memory bounded by the batch size, not the page count: pages are rendered and
- *   written in batches, because pdfToPng holds every page it renders until it returns
+ *   written in batches, because renderPdfPages holds every page it renders until it returns
  */
 export class PDFSplitter implements ISplitter {
   private readonly uploadsDir: string;
@@ -159,19 +159,16 @@ export class PDFSplitter implements ISplitter {
     pagesBefore: number
   ): Promise<RenderedPage[]> {
     return this.withRetry(async () => {
-      // IMPORTANT: do not pass outputFolder to pdf-to-png-converter. It resolves it with
+      // IMPORTANT: do not pass outputFolder to the renderer. pdf-to-png-converter resolves it with
       // path.join(process.cwd(), outputFolder), which cannot address a directory on another
       // Windows drive or UNC share (#75). We take the PNG buffers and write them ourselves.
-      const options: PdfToPngOptions = {
+      const result = await renderPdfPages(pdfPath, {
         returnPageContent: true,
         viewportScale: WORKER_CONFIG.splitter.viewportScale,
         pagesToProcess: sourcePages,
-        verbosityLevel: 0,
-      };
+      });
 
-      const result = await pdfToPng(pdfPath, options);
-
-      // pdfToPng skips pages beyond the end of the document, so a later batch may come back
+      // The renderer skips pages beyond the end of the document, so a later batch may come back
       // short or empty, but the document as a whole must produce something.
       if (!result || (result.length === 0 && pagesBefore === 0)) {
         throw new Error('PDF conversion produced no output');

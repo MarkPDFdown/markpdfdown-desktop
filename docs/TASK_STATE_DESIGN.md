@@ -294,10 +294,10 @@ model TaskDetail {
 
 ```bash
 # 添加新字段到 Task 表
-npx prisma migrate dev --name add_task_worker_fields
+npm run migrate:dev -- --name add_task_worker_fields
 
 # 添加新字段到 TaskDetail 表
-npx prisma migrate dev --name add_taskdetail_worker_fields
+npm run migrate:dev -- --name add_taskdetail_worker_fields
 ```
 
 ---
