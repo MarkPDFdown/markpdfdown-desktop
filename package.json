@@ -158,10 +158,12 @@
   },
   "overrides": {
     "@electron/get": "^4.0.2",
+    "@napi-rs/canvas": "$@napi-rs/canvas",
     "global-agent": "^3.0.1"
   },
   "dependencies": {
     "@ant-design/icons": "^5.6.1",
+    "@napi-rs/canvas": "1.0.11",
     "@prisma/client": "^6.5.0",
     "antd": "^5.24.4",
     "electron-is-dev": "^3.0.1",

@@ -40,16 +40,17 @@ export const DISTROS = [
   { image: 'ubuntu:20.04', install: APT, engine: { x64: 'debian-openssl-1.1.x', arm64: 'linux-arm64-openssl-1.1.x' } },
 ];
 
-export function dockerRunArgs({ image, install, appDir, executableName, loadCheckScript }) {
+/** Mounts all of scripts/, since the load check requires files next to it. */
+export function dockerRunArgs({ image, install, appDir, executableName, scriptsDir }) {
   return [
     'run',
     '--rm',
     '--volume', `${appDir}:/package:ro`,
-    '--volume', `${loadCheckScript}:/load-check.cjs:ro`,
+    '--volume', `${scriptsDir}:/scripts:ro`,
     image,
     'bash',
     '-c',
-    `${install} && ELECTRON_RUN_AS_NODE=1 /package/${executableName} /load-check.cjs /package/resources`,
+    `${install} && ELECTRON_RUN_AS_NODE=1 /package/${executableName} /scripts/package-load-check.cjs /package/resources`,
   ];
 }
 
@@ -94,7 +95,7 @@ function main() {
         install,
         appDir: path.dirname(resourcesDir),
         executableName,
-        loadCheckScript: path.join(SCRIPT_DIR, 'package-load-check.cjs'),
+        scriptsDir: SCRIPT_DIR,
       }),
       { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'], maxBuffer: OUTPUT_LIMIT_BYTES },
     );

@@ -27,15 +27,15 @@ describe('dockerRunArgs', () => {
       install: 'dnf install -y gtk3',
       appDir: '/repo/release/linux-unpacked',
       executableName: 'markpdfdown',
-      loadCheckScript: '/repo/scripts/package-load-check.cjs',
+      scriptsDir: '/repo/scripts',
     });
 
     expect(args.slice(0, 2)).toEqual(['run', '--rm']);
     expect(args).toContain('/repo/release/linux-unpacked:/package:ro');
-    expect(args).toContain('/repo/scripts/package-load-check.cjs:/load-check.cjs:ro');
+    expect(args).toContain('/repo/scripts:/scripts:ro');
     expect(args).toContain('fedora:44');
     expect(args.at(-1)).toBe(
-      'dnf install -y gtk3 && ELECTRON_RUN_AS_NODE=1 /package/markpdfdown /load-check.cjs /package/resources',
+      'dnf install -y gtk3 && ELECTRON_RUN_AS_NODE=1 /package/markpdfdown /scripts/package-load-check.cjs /package/resources',
     );
   });
 });

@@ -9,13 +9,29 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { countDarkPixels } = require('./fixtures/count-dark-pixels.cjs');
 
 const appModules = path.join(process.argv[2], 'app.asar', 'node_modules');
 const loadFromApp = (name) => require(path.join(appModules, name));
 
 async function checkCanvas() {
-  const { createCanvas } = loadFromApp('@napi-rs/canvas');
-  createCanvas(1, 1).getContext('2d');
+  const canvasModule = loadFromApp('@napi-rs/canvas');
+  const canvas = canvasModule.createCanvas(20, 10);
+  const context = canvas.getContext('2d');
+  context.fillStyle = '#fff';
+  context.fillRect(0, 0, 20, 10);
+  context.fillStyle = '#000';
+  context.fillRect(0, 0, 10, 10);
+
+  // ImageReencoder decodes and encodes every uploaded image this way.
+  const { width, dark } = await countDarkPixels(await canvas.encode('jpeg', 80), canvasModule);
+  if (width !== 20 || dark < 90) throw new Error(`A re-encoded image lost its pixels: ${dark} dark of ${width} wide`);
+
+  // Some canvas versions segfault on a damaged image, which in the app takes down the main process,
+  // again on each start once its task is picked up again. Getting past this line is the check.
+  const encoded = await canvas.encode('jpeg', 80);
+  await canvasModule.loadImage(encoded.subarray(0, encoded.length >> 1)).catch(() => {});
+
   // The app reaches canvas through this module, which requires it at load time.
   loadFromApp('pdf-to-png-converter');
 }
