@@ -259,11 +259,19 @@ export class OpenAIResponsesClient extends LLMClient {
     return {
       content: responseContent,
       model: data.model,
-      finishReason: data.output?.[0]?.finish_reason || 'stop',
+      finishReason: this.resolveFinishReason(data) ?? 'stop',
       toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
       responseFormat: options.response_format?.type,
       rawResponse: data // 保留原始响应以便调试
     };
+  }
+
+  /**
+   * Responses API 用 status: "incomplete" 和 incomplete_details.reason 表示输出未完成
+   * output 项上的 finish_reason 只有部分兼容网关返回
+   */
+  private resolveFinishReason(data: any): string | undefined {
+    return this.normalizeFinishReason(data.incomplete_details?.reason || data.output?.[0]?.finish_reason);
   }
 
   /**
@@ -354,11 +362,11 @@ export class OpenAIResponsesClient extends LLMClient {
                   }
                 }
               }
-            } else if (currentEvent === 'response.completed') {
-              // 响应完成
+            } else if (currentEvent === 'response.completed' || currentEvent === 'response.incomplete') {
+              // 响应结束（输出被截断时是 response.incomplete）
               if (data.response) {
                 model = data.response.model || model;
-                finishReason = data.response.output?.[0]?.finish_reason;
+                finishReason = this.resolveFinishReason(data.response);
               }
             } else if (currentEvent === 'response.tool_calls.delta') {
               // 工具调用增量（流式工具调用）

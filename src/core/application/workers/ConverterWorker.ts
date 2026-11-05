@@ -7,6 +7,7 @@ import { eventBus, TaskEventType } from '../../shared/events/EventBus.js';
 import { prisma } from '../../infrastructure/db/index.js';
 import { WORKER_CONFIG } from '../../infrastructure/config/worker.config.js';
 import type { CompletionResponse } from '../../infrastructure/adapters/llm/LLMClient.js';
+import { FINISH_REASON_TRUNCATED } from '../../domain/llm/ILLMClient.js';
 
 /**
  * Error types for classification and retry decisions.
@@ -320,6 +321,15 @@ export class ConverterWorker extends WorkerBase {
     const outputTokens = this.extractOutputTokens(response);
 
     // Step 5: Validate content
+    // Truncation comes first: the output limit can also leave the content empty.
+    // Retryable: a model stuck repeating itself can finish normally on another attempt.
+    if (response.finishReason === FINISH_REASON_TRUNCATED) {
+      throw new Error(
+        'LLM output was truncated at the output token limit, so the page content would be incomplete. ' +
+        'Try again with a model or provider setting that allows longer output.'
+      );
+    }
+
     if (!response.content || response.content.trim().length === 0) {
       throw new Error('LLM returned empty content');
     }

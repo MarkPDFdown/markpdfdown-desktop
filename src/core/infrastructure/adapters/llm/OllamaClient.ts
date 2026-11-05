@@ -144,7 +144,7 @@ export class OllamaClient extends LLMClient {
               return {
                 content,
                 model: data.model || normalizedOptions.model || 'llama3',
-                finishReason: 'stop',
+                finishReason: this.normalizeFinishReason(data.done_reason) ?? 'stop',
                 responseFormat: normalizedOptions.response_format?.type,
                 rawResponse: data
               };
@@ -171,7 +171,7 @@ export class OllamaClient extends LLMClient {
         return {
           content: data.message.content || '',
           model: data.model,
-          finishReason: data.done ? 'stop' : undefined,
+          finishReason: data.done ? this.normalizeFinishReason(data.done_reason) ?? 'stop' : undefined,
           responseFormat: normalizedOptions.response_format?.type,
           rawResponse: data // 保留原始响应以便调试
         };
