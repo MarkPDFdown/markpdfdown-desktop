@@ -175,7 +175,10 @@ export function registerProviderHandlers() {
         }
 
         // Find preset configuration for this provider (may be null for custom providers)
-        const preset = findProviderPreset(provider.type, provider.name);
+        // Every Ollama server has the same API, so a custom-named one still lists models via /tags
+        const preset =
+          findProviderPreset(provider.type, provider.name) ??
+          (provider.type === "ollama" ? findProviderPreset("ollama", "Ollama") : undefined);
 
         // Construct the full URL for fetching models
         const baseUrl = provider.base_url || preset?.apiBase;

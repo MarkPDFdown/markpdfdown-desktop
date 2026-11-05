@@ -1,5 +1,6 @@
 import providerRepository from '../../domain/repositories/ProviderRepository.js';
 import { LLMClientFactory, CompletionOptions, Message } from '../../infrastructure/adapters/llm/LLMClient.js';
+import { NO_SUFFIX, resolveSuffix } from '../../../shared/providerSuffix.js';
 import sharp from 'sharp';
 
 
@@ -11,9 +12,8 @@ const getLLMClient = async (providerId: number) => {
         throw new Error('服务商不存在');
     }
 
-    // 获取 base_url 和 suffix
     let baseUrl = provider.base_url || '';
-    let suffix = provider.suffix || '';
+    const isExactEndpoint = provider.suffix === NO_SUFFIX;
 
     // 根据 provider 类型设置默认值
     if (!baseUrl) {
@@ -24,30 +24,16 @@ const getLLMClient = async (providerId: number) => {
         }
     }
 
-    if (!suffix) {
-        switch (provider.type) {
-            case 'openai':
-                suffix = '/chat/completions';
-                break;
-            case 'openai-responses':
-                suffix = '/responses';
-                break;
-            case 'gemini':
-                suffix = '/models';
-                break;
-            case 'anthropic':
-                suffix = '/messages';
-                break;
-            case 'ollama':
-                suffix = '/chat';
-                break;
-        }
+    // 客户端会把空地址回退到官方端点，不能把自定义网关的 Key 发过去
+    if (isExactEndpoint && !baseUrl) {
+        throw new Error('选择「无后缀」时必须填写 API 地址');
     }
 
     return LLMClientFactory.createClient(
         provider.type || '',
         provider.api_key || '',
-        `${baseUrl}${suffix}`
+        `${baseUrl}${resolveSuffix(provider.type, provider.suffix)}`,
+        { exactEndpoint: isExactEndpoint }
     );
 }
 
