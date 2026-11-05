@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ImageSplitter } from '../ImageSplitter.js';
 import { ImagePathUtil } from '../ImagePathUtil.js';
 import { FileWaitUtil } from '../FileWaitUtil.js';
+import { reencodeImage } from '../ImageReencoder.js';
 import { promises as fs } from 'fs';
 import path from 'path';
 
@@ -19,10 +20,19 @@ vi.mock('fs', () => ({
     stat: vi.fn(),
     readdir: vi.fn(),
     mkdir: vi.fn(),
-    copyFile: vi.fn(),
+    readFile: vi.fn(),
+    writeFile: vi.fn(),
     rm: vi.fn(),
   },
 }));
+
+// The real thing is covered by ImageSplitter.integration.test.ts
+vi.mock('../ImageReencoder.js', () => ({
+  reencodeImage: vi.fn(),
+}));
+
+const ORIGINAL = Buffer.from('original image');
+const REENCODED = Buffer.from('re-encoded image');
 
 describe('ImageSplitter', () => {
   const uploadsDir = '/mock/uploads';
@@ -40,6 +50,8 @@ describe('ImageSplitter', () => {
 
     // Setup default mock for FileWaitUtil (file available immediately)
     vi.mocked(FileWaitUtil.waitForFile).mockResolvedValue(undefined);
+    vi.mocked(fs.readFile).mockResolvedValue(ORIGINAL);
+    vi.mocked(reencodeImage).mockResolvedValue(REENCODED);
   });
 
   afterEach(() => {
@@ -47,7 +59,7 @@ describe('ImageSplitter', () => {
   });
 
   describe('split()', () => {
-    it('should copy JPG image to split directory', async () => {
+    it('should re-encode JPG image into split directory', async () => {
       const task = {
         id: 'task123',
         filename: 'photo.jpg',
@@ -55,7 +67,7 @@ describe('ImageSplitter', () => {
 
       vi.mocked(fs.access).mockResolvedValue(undefined);
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-      vi.mocked(fs.copyFile).mockResolvedValue(undefined);
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
@@ -65,13 +77,15 @@ describe('ImageSplitter', () => {
       expect(result.pages[0].pageSource).toBe(1);
       expect(result.pages[0].imagePath).toBe(path.join(uploadsDir, 'task123', 'split', 'page-1.png'));
 
-      expect(fs.copyFile).toHaveBeenCalledWith(
-        path.join(uploadsDir, 'task123', 'photo.jpg'),
-        path.join(uploadsDir, 'task123', 'split', 'page-1.png')
+      expect(fs.readFile).toHaveBeenCalledWith(path.join(uploadsDir, 'task123', 'photo.jpg'));
+      expect(reencodeImage).toHaveBeenCalledWith(ORIGINAL);
+      expect(fs.writeFile).toHaveBeenCalledWith(
+        path.join(uploadsDir, 'task123', 'split', 'page-1.png'),
+        REENCODED
       );
     });
 
-    it('should copy PNG image to split directory', async () => {
+    it('should re-encode PNG image into split directory', async () => {
       const task = {
         id: 'task456',
         filename: 'screenshot.png',
@@ -79,14 +93,15 @@ describe('ImageSplitter', () => {
 
       vi.mocked(fs.access).mockResolvedValue(undefined);
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-      vi.mocked(fs.copyFile).mockResolvedValue(undefined);
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
       expect(result.totalPages).toBe(1);
-      expect(fs.copyFile).toHaveBeenCalledWith(
-        path.join(uploadsDir, 'task456', 'screenshot.png'),
-        path.join(uploadsDir, 'task456', 'split', 'page-1.png')
+      expect(fs.readFile).toHaveBeenCalledWith(path.join(uploadsDir, 'task456', 'screenshot.png'));
+      expect(fs.writeFile).toHaveBeenCalledWith(
+        path.join(uploadsDir, 'task456', 'split', 'page-1.png'),
+        REENCODED
       );
     });
 
@@ -98,7 +113,7 @@ describe('ImageSplitter', () => {
 
       vi.mocked(fs.access).mockResolvedValue(undefined);
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-      vi.mocked(fs.copyFile).mockResolvedValue(undefined);
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
@@ -113,7 +128,7 @@ describe('ImageSplitter', () => {
 
       vi.mocked(fs.access).mockResolvedValue(undefined);
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-      vi.mocked(fs.copyFile).mockResolvedValue(undefined);
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
@@ -128,7 +143,7 @@ describe('ImageSplitter', () => {
 
       vi.mocked(fs.access).mockResolvedValue(undefined);
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-      vi.mocked(fs.copyFile).mockResolvedValue(undefined);
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
@@ -143,7 +158,7 @@ describe('ImageSplitter', () => {
 
       vi.mocked(fs.access).mockResolvedValue(undefined);
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-      vi.mocked(fs.copyFile).mockResolvedValue(undefined);
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
 
       await splitter.split(task);
 
@@ -162,7 +177,7 @@ describe('ImageSplitter', () => {
 
       vi.mocked(fs.access).mockResolvedValue(undefined);
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-      vi.mocked(fs.copyFile).mockResolvedValue(undefined);
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
@@ -210,15 +225,25 @@ describe('ImageSplitter', () => {
       await expect(splitter.split(task)).rejects.toThrow(/Image file not found/);
     });
 
+    it('should not write the original when it cannot be re-encoded', async () => {
+      vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+      vi.mocked(reencodeImage).mockRejectedValue(new Error('Unsupported image type'));
+
+      await expect(splitter.split({ id: 'task', filename: 'broken.jpg' })).rejects.toThrow(
+        /Failed to process image broken\.jpg: Unsupported image type/
+      );
+      expect(fs.writeFile).not.toHaveBeenCalled();
+    });
+
     it('should throw error for permission denied', async () => {
       const task = {
         id: 'task123',
         filename: 'photo.jpg',
       };
 
-      // FileWaitUtil passes, but file copy fails with permission denied
+      // FileWaitUtil passes, but writing the page fails with permission denied
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-      vi.mocked(fs.copyFile).mockRejectedValue(new Error('EACCES: permission denied'));
+      vi.mocked(fs.writeFile).mockRejectedValue(new Error('EACCES: permission denied'));
 
       await expect(splitter.split(task)).rejects.toThrow(/Permission denied/);
     });
@@ -231,7 +256,7 @@ describe('ImageSplitter', () => {
 
       vi.mocked(fs.access).mockResolvedValue(undefined);
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-      vi.mocked(fs.copyFile).mockRejectedValue(new Error('ENOSPC: no space left on device'));
+      vi.mocked(fs.writeFile).mockRejectedValue(new Error('ENOSPC: no space left on device'));
 
       await expect(splitter.split(task)).rejects.toThrow(/Not enough disk space/);
     });
@@ -272,7 +297,7 @@ describe('ImageSplitter', () => {
 
       vi.mocked(fs.access).mockResolvedValue(undefined);
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-      vi.mocked(fs.copyFile).mockResolvedValue(undefined);
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
@@ -292,7 +317,7 @@ describe('ImageSplitter', () => {
 
       vi.mocked(fs.access).mockResolvedValue(undefined);
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-      vi.mocked(fs.copyFile).mockResolvedValue(undefined);
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
@@ -308,7 +333,7 @@ describe('ImageSplitter', () => {
 
       vi.mocked(fs.access).mockResolvedValue(undefined);
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-      vi.mocked(fs.copyFile).mockResolvedValue(undefined);
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
@@ -326,7 +351,7 @@ describe('ImageSplitter', () => {
 
       vi.mocked(fs.access).mockResolvedValue(undefined);
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-      vi.mocked(fs.copyFile).mockResolvedValue(undefined);
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
@@ -341,7 +366,7 @@ describe('ImageSplitter', () => {
 
       vi.mocked(fs.access).mockResolvedValue(undefined);
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-      vi.mocked(fs.copyFile).mockResolvedValue(undefined);
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 
@@ -356,7 +381,7 @@ describe('ImageSplitter', () => {
 
       vi.mocked(fs.access).mockResolvedValue(undefined);
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-      vi.mocked(fs.copyFile).mockResolvedValue(undefined);
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
 
       const result = await splitter.split(task);
 

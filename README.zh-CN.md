@@ -117,7 +117,7 @@ src/
 - **构建工具**：Vite 6
 - **UI**：Ant Design 5
 - **数据库**：Prisma ORM + SQLite
-- **PDF 处理**：pdf-lib、pdf-to-png-converter、Sharp
+- **PDF 处理**：pdf-lib、pdf-to-png-converter、@napi-rs/canvas
 - **Markdown**：react-markdown、remark-gfm、remark-math、rehype-katex、rehype-prism-plus
 - **测试**：Vitest + Testing Library
 

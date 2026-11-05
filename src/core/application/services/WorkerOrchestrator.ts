@@ -1,3 +1,4 @@
+import { promises as fs } from 'fs';
 import { SplitterWorker, ConverterWorker, MergerWorker } from '../workers/index.js';
 import { ImagePathUtil } from '../../infrastructure/adapters/split/index.js';
 import fileLogic from '../../infrastructure/services/FileService.js';
@@ -183,7 +184,8 @@ export class WorkerOrchestrator implements IWorkerOrchestrator {
    * - Pages with status=PROCESSING and worker_id set (orphaned by crashed workers)
    * - Tasks with status=SPLITTING (orphaned splitter work)
    *
-   * These are reset to their previous state so new workers can pick them up.
+   * These are reset to their previous state so new workers can pick them up,
+   * except for splits interrupted too many times (see recoverInterruptedSplits).
    */
   async cleanupOrphanedWork(): Promise<CleanupResult> {
     try {
@@ -207,22 +209,9 @@ export class WorkerOrchestrator implements IWorkerOrchestrator {
         console.log(`[WorkerOrchestrator] Reset ${orphanedPages.count} orphaned pages to PENDING`);
       }
 
-      // Reset orphaned splitting tasks (SPLITTING -> PENDING)
-      // These are tasks that were being split when the app was closed
-      const orphanedSplittingTasks = await prisma.task.updateMany({
-        where: {
-          status: TaskStatus.SPLITTING,
-          worker_id: { not: null },
-        },
-        data: {
-          status: TaskStatus.PENDING,
-          worker_id: null,
-        },
-      });
-
-      if (orphanedSplittingTasks.count > 0) {
-        console.log(`[WorkerOrchestrator] Reset ${orphanedSplittingTasks.count} orphaned SPLITTING tasks to PENDING`);
-      }
+      // Recover tasks that were being split when the app was closed
+      const { requeued: orphanedSplittingTasks, failed: failedSplittingTasks } =
+        await this.recoverInterruptedSplits();
 
       // Reset orphaned merging tasks (MERGING -> READY_TO_MERGE)
       // These are tasks that were being merged when the app was closed
@@ -284,10 +273,11 @@ export class WorkerOrchestrator implements IWorkerOrchestrator {
 
       const result: CleanupResult = {
         orphanedPages: orphanedPages.count,
-        orphanedSplittingTasks: orphanedSplittingTasks.count,
+        orphanedSplittingTasks,
+        failedSplittingTasks,
         orphanedMergingTasks: orphanedMergingTasks.count,
         orphanedPendingPages,
-        total: orphanedPages.count + orphanedSplittingTasks.count + orphanedMergingTasks.count + orphanedPendingPages,
+        total: orphanedPages.count + orphanedSplittingTasks + failedSplittingTasks + orphanedMergingTasks.count + orphanedPendingPages,
       };
 
       if (result.total === 0) {
@@ -303,10 +293,77 @@ export class WorkerOrchestrator implements IWorkerOrchestrator {
       return {
         orphanedPages: 0,
         orphanedSplittingTasks: 0,
+        failedSplittingTasks: 0,
         orphanedMergingTasks: 0,
         orphanedPendingPages: 0,
         total: 0,
       };
+    }
+  }
+
+  /**
+   * Recover tasks left in SPLITTING by an abnormal shutdown.
+   *
+   * A split that brought the app down (e.g. out of memory) would do so again on every
+   * restart, so each interruption is counted and the task fails once the limit is reached.
+   * The database can't tell a crash from quitting mid-split, so both count. A false
+   * positive costs the user one click on retry, which starts the count over.
+   */
+  private async recoverInterruptedSplits(): Promise<{ requeued: number; failed: number }> {
+    const interrupted = {
+      status: TaskStatus.SPLITTING,
+      worker_id: { not: null },
+    };
+    const maxInterruptedSplits = WORKER_CONFIG.splitter.maxInterruptedSplits;
+
+    const exhaustedTasks = await prisma.task.findMany({
+      where: {
+        ...interrupted,
+        split_interrupt_count: { gte: maxInterruptedSplits - 1 },
+      },
+      select: { id: true },
+    });
+
+    if (exhaustedTasks.length > 0) {
+      const exhaustedIds = exhaustedTasks.map((t) => t.id);
+      await prisma.task.updateMany({
+        where: { id: { in: exhaustedIds } },
+        data: {
+          status: TaskStatus.FAILED,
+          worker_id: null,
+          split_interrupt_count: { increment: 1 },
+          error: `Splitting was interrupted ${maxInterruptedSplits} times, possibly because the app crashed or ran out of memory. Retry the task, or split the PDF into smaller files.`,
+        },
+      });
+      await Promise.all(exhaustedIds.map((id) => this.removeSplitImages(id)));
+      console.warn(`[WorkerOrchestrator] Failed ${exhaustedIds.length} tasks interrupted ${maxInterruptedSplits} times while splitting`);
+    }
+
+    const requeued = await prisma.task.updateMany({
+      where: interrupted,
+      data: {
+        status: TaskStatus.PENDING,
+        worker_id: null,
+        split_interrupt_count: { increment: 1 },
+      },
+    });
+
+    if (requeued.count > 0) {
+      console.log(`[WorkerOrchestrator] Reset ${requeued.count} orphaned SPLITTING tasks to PENDING`);
+    }
+
+    return { requeued: requeued.count, failed: exhaustedTasks.length };
+  }
+
+  /**
+   * Remove the pages a failed split left behind. Best effort: a leftover only takes
+   * disk space until the task is deleted, and must not stop the workers from starting.
+   */
+  private async removeSplitImages(taskId: string): Promise<void> {
+    try {
+      await fs.rm(fileLogic.getSplitDir(taskId), { recursive: true, force: true });
+    } catch (error) {
+      console.warn(`[WorkerOrchestrator] Failed to remove split images of task ${taskId}:`, error);
     }
   }
 }

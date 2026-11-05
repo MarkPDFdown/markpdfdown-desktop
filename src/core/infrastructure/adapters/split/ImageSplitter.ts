@@ -4,6 +4,7 @@ import { ISplitter, SplitResult, PageInfo } from '../../../domain/split/ISplitte
 import { Task } from '../../../../shared/types/index.js';
 import { ImagePathUtil } from './ImagePathUtil.js';
 import { FileWaitUtil } from './FileWaitUtil.js';
+import { reencodeImage } from './ImageReencoder.js';
 
 /**
  * Image splitter implementation for single-page image files.
@@ -11,10 +12,11 @@ import { FileWaitUtil } from './FileWaitUtil.js';
  * Supports: JPG, JPEG, PNG, WebP
  *
  * Behavior:
- * - Copies image from uploads/{taskId}/{filename} to uploads/{taskId}/split/page-1.png
+ * - Re-encodes uploads/{taskId}/{filename} into uploads/{taskId}/split/page-1.png
  * - Always returns single page (images are not split)
  * - Ignores page_range parameter
- * - Preserves image quality (direct file copy, no conversion)
+ * - The page keeps the image's format despite its name, but none of its metadata: this file is
+ *   what the model provider receives, and uploads may carry a GPS position or device details
  */
 export class ImageSplitter implements ISplitter {
   private readonly uploadsDir: string;
@@ -24,11 +26,11 @@ export class ImageSplitter implements ISplitter {
   }
 
   /**
-   * "Split" an image file (actually just copy to temp directory as page-1.png).
+   * "Split" an image file (actually just re-encode it to the temp directory as page-1.png).
    *
    * @param task - Task containing image file information
    * @returns Split result with single page
-   * @throws Error if file not found or copy fails
+   * @throws Error if file not found or can't be re-encoded. The original is never used instead.
    */
   async split(task: Task): Promise<SplitResult> {
     if (!task.id) {
@@ -46,7 +48,6 @@ export class ImageSplitter implements ISplitter {
     await FileWaitUtil.waitForFile(sourcePath, this.uploadsDir, taskId, filename, 'ImageSplitter');
 
     try {
-      // Get file extension (preserve original format)
       const ext = path.extname(filename).toLowerCase();
       if (!ext) {
         throw new Error(`Image file has no extension: ${filename}`);
@@ -56,9 +57,9 @@ export class ImageSplitter implements ISplitter {
       const taskDir = ImagePathUtil.getTaskDir(taskId);
       await fs.mkdir(taskDir, { recursive: true });
 
-      // Copy to standard location (page-1.png)
+      // Write to standard location (page-1.png)
       const targetPath = ImagePathUtil.getPath(taskId, 1);
-      await fs.copyFile(sourcePath, targetPath);
+      await fs.writeFile(targetPath, await reencodeImage(await fs.readFile(sourcePath)));
 
       const pageInfo: PageInfo = {
         page: 1,

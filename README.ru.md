@@ -117,7 +117,7 @@ src/
 - **Инструмент сборки**: Vite 6
 - **UI**: Ant Design 5
 - **База данных**: Prisma ORM + SQLite
-- **Обработка PDF**: pdf-lib, pdf-to-png-converter, Sharp
+- **Обработка PDF**: pdf-lib, pdf-to-png-converter, @napi-rs/canvas
 - **Markdown**: react-markdown, remark-gfm, remark-math, rehype-katex, rehype-prism-plus
 - **Тестирование**: Vitest + Testing Library
 

@@ -24,7 +24,10 @@ export interface WorkerStatus {
  */
 export interface CleanupResult {
   orphanedPages: number;
+  /** Interrupted splits put back in the queue */
   orphanedSplittingTasks: number;
+  /** Interrupted splits failed instead, having been interrupted too many times */
+  failedSplittingTasks: number;
   orphanedMergingTasks: number;
   orphanedPendingPages: number;
   total: number;

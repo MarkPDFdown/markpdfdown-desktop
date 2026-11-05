@@ -5,7 +5,10 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // Set by scripts/prisma-cli.mjs, so run Prisma through `npm run generate` / `npm run migrate:*`.
+  // It can't be a literal list: engines are per arch, and each package must only carry its own.
+  binaryTargets = env("PRISMA_BINARY_TARGETS")
 }
 
 datasource db {
@@ -53,6 +56,7 @@ model Task {
 
   // Worker 追踪
   worker_id String? // 当前处理的 worker ID
+  split_interrupt_count Int @default(0) // 拆页被异常退出中断的次数，用于终止循环崩溃
 
   // 结果和错误
   merged_path String? // 合并后的文件路径

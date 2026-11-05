@@ -81,6 +81,10 @@ jobs:
       - name: Verify packaged native modules
         run: npm run verify:package -- --platform ${{ matrix.platform }} --arch ${{ matrix.arch }}
 
+      - name: Verify the package loads on other distros
+        if: runner.os == 'Linux'
+        run: npm run verify:package:distros -- --arch ${{ matrix.arch }}
+
       - name: Submit notarization (async)
         if: matrix.platform == 'mac'
         continue-on-error: true
