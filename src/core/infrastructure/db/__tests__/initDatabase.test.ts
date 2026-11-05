@@ -41,6 +41,7 @@ describe('initDatabase', () => {
   it('reports why the engine could not be loaded', async () => {
     queryRaw.mockRejectedValue(new Error('\nPrisma Client could not locate the Query Engine\n'))
 
+    // No database path: a new database file couldn't fix this, so nobody should be told to make one.
     await expect(initDatabase()).resolves.toEqual({
       success: false,
       error: 'Prisma Client could not locate the Query Engine'
@@ -51,7 +52,11 @@ describe('initDatabase', () => {
   it('reports a failed migration', async () => {
     runMigrations.mockRejectedValue(new Error('no such table'))
 
-    await expect(initDatabase()).resolves.toEqual({ success: false, error: 'no such table' })
+    await expect(initDatabase()).resolves.toEqual({
+      success: false,
+      error: 'no such table',
+      databasePath: expect.stringMatching(/dev\.db$/)
+    })
   })
 
   it('initializes once however many callers ask, so a late caller gets the same outcome', async () => {
@@ -61,7 +66,7 @@ describe('initDatabase', () => {
     const late = await initDatabase()
 
     expect(queryRaw).toHaveBeenCalledTimes(1)
-    expect(first).toEqual({ success: false, error: 'boom' })
+    expect(first).toMatchObject({ success: false, error: 'boom' })
     expect(second).toEqual(first)
     expect(late).toEqual(first)
   })

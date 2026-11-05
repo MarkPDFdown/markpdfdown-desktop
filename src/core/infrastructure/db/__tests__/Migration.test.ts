@@ -1,9 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { mkdtempSync, rmSync } from 'fs'
+import { mkdtempSync, readFileSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import path from 'path'
 import { PrismaClient } from '@prisma/client'
 import { runMigrations } from '../Migration.js'
+
+const MIGRATIONS_DIR = path.join(process.cwd(), 'src', 'core', 'infrastructure', 'db', 'migrations')
 
 /** Runs against a real SQLite file: what matters is how the runner reacts to real SQL errors. */
 describe('runMigrations', () => {
@@ -47,5 +49,31 @@ describe('runMigrations', () => {
     const provider = await prisma.$queryRaw<unknown[]>`
       SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'Provider'`
     expect(provider).toEqual([])
+  })
+
+  describe('databases that fail every time, so that restarting does not help', () => {
+    it('fails on a database left half migrated by an older version, again on a retry', async () => {
+      await runMigrations(prisma)
+      const applied = await appliedMigrations()
+      const rebuildsTask = applied.findLast((name) =>
+        readFileSync(path.join(MIGRATIONS_DIR, name, 'migration.sql'), 'utf8').includes('"new_Task"')
+      )
+      // What rebuilding the table left behind when it stopped between its DROP and its RENAME.
+      await prisma.$executeRawUnsafe('ALTER TABLE "Task" RENAME TO "new_Task"')
+      await prisma.$executeRawUnsafe(
+        `DELETE FROM _prisma_migrations WHERE migration_name >= '${rebuildsTask}'`
+      )
+
+      await expect(runMigrations(prisma)).rejects.toThrow(`Failed to apply migration ${rebuildsTask}`)
+      await expect(runMigrations(prisma)).rejects.toThrow(`Failed to apply migration ${rebuildsTask}`)
+    })
+
+    it('fails on an intact database that lost the record of a migration', async () => {
+      await runMigrations(prisma)
+      const [first] = await appliedMigrations()
+      await prisma.$executeRawUnsafe(`DELETE FROM _prisma_migrations WHERE migration_name = '${first}'`)
+
+      await expect(runMigrations(prisma)).rejects.toThrow(`Failed to apply migration ${first}`)
+    })
   })
 })

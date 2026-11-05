@@ -158,7 +158,7 @@ interface WindowAPI {
   platform: NodeJS.Platform;
   app: {
     getVersion: () => Promise<string>;
-    getDatabaseStatus: () => Promise<{ success: boolean; error?: string }>;
+    getDatabaseStatus: () => Promise<{ success: boolean; error?: string; databasePath?: string }>;
   };
 }
 
