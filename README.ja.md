@@ -117,7 +117,7 @@ src/
 - **ビルドツール**：Vite 6
 - **UI**：Ant Design 5
 - **データベース**：Prisma ORM + SQLite
-- **PDF処理**：pdf-lib、pdf-to-png-converter、Sharp
+- **PDF処理**：pdf-lib、pdf-to-png-converter、@napi-rs/canvas
 - **Markdown**：react-markdown、remark-gfm、remark-math、rehype-katex、rehype-prism-plus
 - **テスト**：Vitest + Testing Library
 
