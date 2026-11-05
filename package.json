@@ -78,7 +78,8 @@
       }
     ],
     "asarUnpack": [
-      "**/*.{node,dll,metal,exp,lib}"
+      "**/*.{node,dll,metal,exp,lib}",
+      "**/pdfjs-dist/wasm/openjpeg.wasm"
     ],
     "directories": {
       "buildResources": "assets",

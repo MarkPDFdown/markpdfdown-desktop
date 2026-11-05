@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,6 +7,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { loadCheckProblems, parseBinaryHeader, resolvePackageLayout, verifyBinaries } from '../verify-package-arch.mjs';
 
 const SCRIPT = fileURLToPath(new URL('../verify-package-arch.mjs', import.meta.url));
+
+const UNPACKED_WASM = 'app.asar.unpacked/node_modules/pdfjs-dist/wasm/openjpeg.wasm';
 
 const CPU_TYPE = { x64: 0x01000007, arm64: 0x0100000c };
 
@@ -159,10 +161,37 @@ describe('verifyBinaries', () => {
     resourcesDir = mkdtempSync(path.join(tmpdir(), 'verify-package-arch-'));
     executable = path.join(resourcesDir, 'MarkPDFdown');
     writeFileSync(executable, macho('x64'));
+    put(UNPACKED_WASM, '\0asm');
   });
 
   afterEach(() => {
     rmSync(resourcesDir, { recursive: true, force: true });
+  });
+
+  describe('openjpeg.wasm', () => {
+    beforeEach(() => putModules('darwin-x64', macho('x64')));
+
+    it('reports it missing from outside the asar, which is where pdf.js reads it', () => {
+      rmSync(path.join(resourcesDir, UNPACKED_WASM));
+
+      expect(verifyMac('x64').problems).toEqual([
+        'Missing from app.asar.unpacked: node_modules/pdfjs-dist/wasm/openjpeg.wasm',
+      ]);
+    });
+
+    it('rejects a file that is not WebAssembly', () => {
+      put(UNPACKED_WASM, 'git-lfs pointer');
+
+      expect(verifyMac('x64').problems).toEqual([
+        'Not a WebAssembly file: app.asar.unpacked/node_modules/pdfjs-dist/wasm/openjpeg.wasm',
+      ]);
+    });
+
+    it('is kept out of the asar by the electron-builder config', () => {
+      const packageJson = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
+
+      expect(packageJson.build.asarUnpack).toContain('**/pdfjs-dist/wasm/openjpeg.wasm');
+    });
   });
 
   it('accepts a package whose binaries all match', () => {
