@@ -85,7 +85,7 @@ export class GeminiClient extends LLMClient {
         return {
           content,
           model: modelName,
-          finishReason: candidate.finishReason,
+          finishReason: this.normalizeFinishReason(candidate.finishReason),
           responseFormat: normalizedOptions.response_format?.type,
           rawResponse: data // 保留原始响应以便调试
         };

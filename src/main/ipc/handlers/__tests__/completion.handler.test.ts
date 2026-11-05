@@ -186,6 +186,17 @@ describe('Completion Handler', () => {
       )
     })
 
+    it('should succeed when the tiny maxTokens truncates the reply', async () => {
+      const truncated = { content: 'The', finishReason: 'length' }
+      mockModelLogic.completion.mockResolvedValue(truncated)
+
+      const handler = handlers.get('completion:testConnection')
+      const result = await handler!({}, 1, 'gpt-4o')
+
+      expect(mockModelLogic.completion).toHaveBeenCalledWith(1, expect.objectContaining({ maxTokens: 8 }))
+      expect(result).toEqual({ success: true, data: truncated })
+    })
+
     it('should return error when providerId is missing', async () => {
       const handler = handlers.get('completion:testConnection')
       const result = await handler!({}, null, 'gpt-4o')
