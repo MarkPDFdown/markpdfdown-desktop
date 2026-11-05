@@ -51,6 +51,7 @@ vi.mock('../../../infrastructure/config/worker.config.js', () => ({
   WORKER_CONFIG: {
     converter: {
       maxRetries: 3,
+      maxTruncationRetries: 1,
       maxContentLength: 500000,
       pollInterval: 100, // Short for tests
       retryDelayBase: 10, // Short for tests
@@ -522,6 +523,20 @@ describe('ConverterWorker', () => {
       });
     });
 
+    it('should identify truncation by the error type, not by the word in a message', async () => {
+      vi.mocked(modelLogic.transformImageMessage).mockResolvedValue([] as any);
+      vi.mocked(modelLogic.completion).mockResolvedValue({
+        content: '# Partial',
+        finishReason: FINISH_REASON_TRUNCATED,
+      } as any);
+      const page = { task: 'task123', page: 1, provider: 1, model: 'test-model' };
+      const truncated = await (worker as any).convertPage(page).catch((error: Error) => error);
+
+      expect((worker as any).analyzeError(truncated)).toBe('truncation_error');
+      // What ImageReencoder throws for a damaged page image: no output was billed
+      expect((worker as any).analyzeError(new Error('The image file is truncated'))).toBe('unknown_error');
+    });
+
     it('should return unknown_error for unrecognized errors', () => {
       const error = new Error('Something unexpected happened');
       const result = (worker as any).analyzeError(error);
@@ -534,6 +549,7 @@ describe('ConverterWorker', () => {
       const retryableTypes = [
         'network_error',
         'llm_error',
+        'truncation_error',
         'rate_limit_error',
         'timeout_error',
         'unknown_error',
@@ -1076,6 +1092,11 @@ describe('ConverterWorker', () => {
     });
 
     describe('when the output is truncated', () => {
+      // clearAllMocks keeps queued once-values, which a failing test would pass on to the next
+      beforeEach(() => {
+        vi.mocked(modelLogic.completion).mockReset();
+      });
+
       const stubPageTransaction = (pages: number) => {
         const tx = {
           taskDetail: {
@@ -1103,17 +1124,19 @@ describe('ConverterWorker', () => {
 
       const truncated = { content: '# Partial', finishReason: FINISH_REASON_TRUNCATED, rawResponse: {} } as any;
 
-      it('should retry, then fail the page with a visible reason and without the partial content', async () => {
+      it('should retry once, then fail the page with a visible reason and without the partial content', async () => {
         const tx = stubPageTransaction(10);
         vi.mocked(modelLogic.completion).mockResolvedValue(truncated);
 
         await (worker as any).processPageWithRetry(mockPage);
 
-        expect(modelLogic.completion).toHaveBeenCalledTimes(4); // first attempt + maxRetries
+        expect(modelLogic.completion).toHaveBeenCalledTimes(2); // first attempt + maxTruncationRetries
+        expect(prisma.taskDetail.update).toHaveBeenCalledTimes(1); // the retry count, for that one retry
         expect(tx.taskDetail.update).toHaveBeenCalledTimes(1);
         const { data } = tx.taskDetail.update.mock.calls[0][0];
         expect(data.status).toBe(PageStatus.FAILED);
         expect(data.error).toContain('truncated');
+        expect(data.error).toContain('Switch to a model with a higher output token limit');
         expect(data.content).toBeUndefined();
         expect(tx.task.update).toHaveBeenCalledWith(
           expect.objectContaining({ data: { failed_count: { increment: 1 } } })
@@ -1142,18 +1165,86 @@ describe('ConverterWorker', () => {
 
       it('should complete the page when a retry finishes normally', async () => {
         const tx = stubPageTransaction(10);
+        const analyzeError = vi.spyOn(worker as any, 'analyzeError');
         vi.mocked(modelLogic.completion)
           .mockResolvedValueOnce(truncated)
           .mockResolvedValueOnce({ content: '# Complete', finishReason: 'stop', rawResponse: {} } as any);
 
         await (worker as any).processPageWithRetry(mockPage);
 
+        expect(analyzeError).toHaveReturnedWith('truncation_error');
         expect(modelLogic.completion).toHaveBeenCalledTimes(2);
         expect(tx.taskDetail.update).toHaveBeenCalledTimes(1);
         expect(tx.taskDetail.update.mock.calls[0][0].data).toMatchObject({
           status: PageStatus.COMPLETED,
           content: '# Complete',
         });
+      });
+
+      // Each case runs a truncated page first: on the same worker, one kind of failure gets the
+      // short budget and the other still gets what it always had.
+      it.each([
+        ['a network error', 4, () => Promise.reject(new Error('Network error'))],
+        ['a rate limit', 4, () => Promise.reject(new Error('429 Too Many Requests'))],
+        ['a timeout', 4, () => Promise.reject(new Error('Request timed out'))],
+        ['an LLM error', 4, () => Promise.reject(new Error('OpenAI API returned 500'))],
+        ['an unknown error', 4, () => Promise.reject(new Error('Something unexpected happened'))],
+        ['an empty response', 4, () => Promise.resolve({ content: ' ', finishReason: 'stop', rawResponse: {} })],
+        ['a config error', 1, () => Promise.reject(new Error('Invalid API key'))],
+        ['a quota error', 1, () => Promise.reject(new Error('insufficient_quota'))],
+      ] as const)('should leave the requests made for %s at %i', async (_name, requests, respond) => {
+        stubPageTransaction(10);
+        vi.mocked(modelLogic.completion).mockResolvedValue(truncated);
+        await (worker as any).processPageWithRetry(mockPage);
+        expect(modelLogic.completion).toHaveBeenCalledTimes(2);
+
+        vi.mocked(modelLogic.completion).mockReset();
+        vi.mocked(modelLogic.completion).mockImplementation(respond as any);
+        await (worker as any).processPageWithRetry(mockPage);
+
+        expect(modelLogic.completion).toHaveBeenCalledTimes(requests);
+      });
+
+      it('should give each page its own budget', async () => {
+        stubPageTransaction(10);
+        vi.mocked(modelLogic.completion)
+          .mockResolvedValueOnce(truncated)
+          .mockResolvedValueOnce({ content: '# Complete', finishReason: 'stop', rawResponse: {} } as any)
+          .mockResolvedValue(truncated);
+
+        await (worker as any).processPageWithRetry(mockPage);
+        await (worker as any).processPageWithRetry(mockPage);
+
+        expect(modelLogic.completion).toHaveBeenCalledTimes(4); // 2 for each page
+      });
+
+      it('should stop at the second truncation even with another error in between', async () => {
+        const tx = stubPageTransaction(10);
+        vi.mocked(modelLogic.completion)
+          .mockResolvedValueOnce(truncated)
+          .mockRejectedValueOnce(new Error('Network error'))
+          .mockResolvedValue(truncated);
+
+        await (worker as any).processPageWithRetry(mockPage);
+
+        expect(modelLogic.completion).toHaveBeenCalledTimes(3);
+        expect(tx.taskDetail.update.mock.calls[0][0].data.error).toContain('truncated');
+      });
+
+      it('should still retry a first truncation after other errors used up most attempts', async () => {
+        const tx = stubPageTransaction(10);
+        const analyzeError = vi.spyOn(worker as any, 'analyzeError');
+        vi.mocked(modelLogic.completion)
+          .mockRejectedValueOnce(new Error('Network error'))
+          .mockRejectedValueOnce(new Error('Network error'))
+          .mockResolvedValueOnce(truncated)
+          .mockResolvedValueOnce({ content: '# Complete', finishReason: 'stop', rawResponse: {} } as any);
+
+        await (worker as any).processPageWithRetry(mockPage);
+
+        expect(analyzeError).toHaveReturnedWith('truncation_error');
+        expect(modelLogic.completion).toHaveBeenCalledTimes(4);
+        expect(tx.taskDetail.update.mock.calls[0][0].data.status).toBe(PageStatus.COMPLETED);
       });
 
       it('should fail the page for a truncated response from a real client', async () => {
@@ -1170,6 +1261,7 @@ describe('ConverterWorker', () => {
 
         await (worker as any).processPageWithRetry(mockPage);
 
+        expect(modelLogic.completion).toHaveBeenCalledTimes(2);
         expect(tx.taskDetail.update.mock.calls[0][0].data.status).toBe(PageStatus.FAILED);
       });
     });

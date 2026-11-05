@@ -921,6 +921,7 @@ eventBus.onTaskEvent('task:*', (data) => {
 enum ErrorType {
   NETWORK_ERROR = 'network_error',      // 网络错误（可重试）
   LLM_ERROR = 'llm_error',              // LLM API 错误（可重试）
+  TRUNCATION_ERROR = 'truncation_error', // 输出被截断（只重试 1 次：每次都按全价计费）
   RATE_LIMIT_ERROR = 'rate_limit_error', // 速率限制（可重试，延迟更长）
   QUOTA_EXCEEDED_ERROR = 'quota_exceeded_error', // 配额超限（不可重试）
   CONFIG_ERROR = 'config_error',        // 配置错误（不可重试）

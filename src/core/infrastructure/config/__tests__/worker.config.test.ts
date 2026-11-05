@@ -49,6 +49,10 @@ describe('WORKER_CONFIG', () => {
       expect(WORKER_CONFIG.converter.maxRetries).toBeGreaterThanOrEqual(1)
     })
 
+    it('should allow one retry after a truncated response', () => {
+      expect(WORKER_CONFIG.converter.maxTruncationRetries).toBe(1)
+    })
+
     it('should have valid retryDelayBase', () => {
       expect(WORKER_CONFIG.converter.retryDelayBase).toBe(1000)
       expect(WORKER_CONFIG.converter.retryDelayBase).toBeGreaterThan(0)
