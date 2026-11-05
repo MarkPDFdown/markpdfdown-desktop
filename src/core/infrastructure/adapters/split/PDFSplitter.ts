@@ -1,4 +1,3 @@
-import { pdfToPng } from 'pdf-to-png-converter';
 import { PDFDocument } from 'pdf-lib';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -7,6 +6,7 @@ import { Task } from '../../../../shared/types/index.js';
 import { PageRangeParser } from '../../../domain/split/PageRangeParser.js';
 import { ImagePathUtil } from './ImagePathUtil.js';
 import { FileWaitUtil } from './FileWaitUtil.js';
+import { renderPdfPages } from './PDFPageRenderer.js';
 import { WORKER_CONFIG } from '../../config/worker.config.js';
 
 /** A rendered page, held in memory until it is written to the split directory. */
@@ -129,7 +129,6 @@ export class PDFSplitter implements ISplitter {
         returnPageContent: true,
         viewportScale: WORKER_CONFIG.splitter.viewportScale,
         strictPagesToProcess: false,
-        verbosityLevel: 0,
       };
 
       // Only add pagesToProcess if user explicitly specified a page range
@@ -140,7 +139,7 @@ export class PDFSplitter implements ISplitter {
       }
       // Otherwise, don't specify pagesToProcess to convert all pages
 
-      const result = await pdfToPng(pdfPath, options);
+      const result = await renderPdfPages(pdfPath, options);
 
       if (!result || result.length === 0) {
         throw new Error('PDF conversion produced no output');
