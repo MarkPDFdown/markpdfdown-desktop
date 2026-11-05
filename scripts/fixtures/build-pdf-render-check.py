@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Builds pdf-render-check.pdf, the sample behind the PDF rendering checks (needs fonttools).
+Builds pdf-render-check.pdf, the sample behind the PDF rendering checks (needs fonttools and Pillow).
 
 The embedded font's only glyph is a solid box and every CID maps to it, so whether text was drawn
 is a pixel count that depends on neither the system's fonts nor the characters used.
@@ -10,6 +10,7 @@ is a pixel count that depends on neither the system's fonts nor the characters u
   Page 3  embedded font, Identity-H, Identity ordering  needs no CMap file
   Page 4  embedded font, Identity-H, Adobe-GB1 ordering  needs pdfjs-dist/cmaps (Adobe-GB1-UCS2)
   Page 5  Helvetica, not embedded                        needs pdfjs-dist/standard_fonts
+  Page 6  full-page JPXDecode image                      needs pdfjs-dist/wasm/openjpeg.wasm
 
 Usage: python3 scripts/fixtures/build-pdf-render-check.py
 """
@@ -20,12 +21,15 @@ from pathlib import Path
 
 from fontTools.fontBuilder import FontBuilder
 from fontTools.pens.ttGlyphPen import TTGlyphPen
+from PIL import Image, ImageDraw
 
 UNITS_PER_EM = 1000
 # Larger than any CID in the Adobe-GB1 character collection.
 CID_COUNT = 32768
 BOX_GID = 1
 TEXT = "中文"
+PAGE_WIDTH_PT = 200
+PAGE_HEIGHT_PT = 100
 
 
 def build_box_font():
@@ -52,6 +56,17 @@ def build_box_font():
     builder.font.recalcTimestamp = False
     builder.save(output)
     return output.getvalue()
+
+
+def build_jpx_image():
+    """A JP2 file holding a black rectangle on white, at 2 pixels per point of the page."""
+    size = (PAGE_WIDTH_PT * 2, PAGE_HEIGHT_PT * 2)
+    image = Image.new("L", size, "white")
+    # 320x120 pixels, or 160x60 points: the end coordinates are inclusive.
+    ImageDraw.Draw(image).rectangle((40, 40, 359, 159), fill="black")
+    output = io.BytesIO()
+    image.save(output, "JPEG2000")
+    return size, output.getvalue()
 
 
 class Pdf:
@@ -104,26 +119,38 @@ def main():
         )
 
     helvetica = pdf.add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
+
+    def text_page(font, text, size=40):
+        return f"/Font << /F1 {font} 0 R >>", f"BT /F1 {size} Tf 20 30 Td <{text}> Tj ET"
+
+    (jpx_width, jpx_height), jpx_data = build_jpx_image()
+    jpx_image = pdf.add(
+        f"<< /Type /XObject /Subtype /Image /Width {jpx_width} /Height {jpx_height} /ColorSpace /DeviceGray "
+        f"/BitsPerComponent 8 /Filter /JPXDecode /Length {len(jpx_data)} >>\nstream\n".encode()
+        + jpx_data
+        + b"\nendstream"
+    )
+
     pages = [
-        (composite_font("UniGB-UCS2-H"), TEXT.encode("utf-16-be").hex()),
-        (composite_font("GBK-EUC-H"), TEXT.encode("gbk").hex()),
+        text_page(composite_font("UniGB-UCS2-H"), TEXT.encode("utf-16-be").hex()),
+        text_page(composite_font("GBK-EUC-H"), TEXT.encode("gbk").hex()),
         # Identity-H codes are CIDs. 0001 is not .notdef, and maps to the box like the rest.
-        (composite_font("Identity-H", ordering="Identity"), "00010002"),
+        text_page(composite_font("Identity-H", ordering="Identity"), "00010002"),
         # pdf.js caches fonts by a hash that ignores the ordering. Without its own /W this page
         # would reuse the font of the previous one and never load Adobe-GB1-UCS2.
-        (composite_font("Identity-H", widths=f"/W [1 [{UNITS_PER_EM}]] "), "00010002"),
-        (helvetica, "Standard font".encode("ascii").hex()),
+        text_page(composite_font("Identity-H", widths=f"/W [1 [{UNITS_PER_EM}]] "), "00010002"),
+        text_page(helvetica, "Standard font".encode("ascii").hex(), size=20),
+        (f"/XObject << /Im0 {jpx_image} 0 R >>", f"q {PAGE_WIDTH_PT} 0 0 {PAGE_HEIGHT_PT} 0 0 cm /Im0 Do Q"),
     ]
 
     pages_number = len(pdf.objects) + 2 * len(pages) + 1
     kids = []
-    for font, text in pages:
-        size = 20 if font == helvetica else 40
-        content = pdf.add_stream(f"BT /F1 {size} Tf 20 30 Td <{text}> Tj ET".encode())
+    for resources, operators in pages:
+        content = pdf.add_stream(operators.encode())
         kids.append(
             pdf.add(
-                f"<< /Type /Page /Parent {pages_number} 0 R /MediaBox [0 0 200 100] /Contents {content} 0 R "
-                f"/Resources << /Font << /F1 {font} 0 R >> >> >>"
+                f"<< /Type /Page /Parent {pages_number} 0 R /MediaBox [0 0 {PAGE_WIDTH_PT} {PAGE_HEIGHT_PT}] "
+                f"/Contents {content} 0 R /Resources << {resources} >> >>"
             )
         )
     pages_object = pdf.add(

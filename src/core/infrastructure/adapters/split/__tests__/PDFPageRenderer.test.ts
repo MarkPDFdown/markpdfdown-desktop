@@ -14,7 +14,7 @@ vi.mock('fs', async (importOriginal) => {
 
 import { pdfToPng } from 'pdf-to-png-converter';
 import { DOCUMENT_INIT_PARAMS_DEFAULTS } from 'pdf-to-png-converter/out/const.js';
-import { renderPdfPages } from '../PDFPageRenderer.js';
+import { outsideAsar, renderPdfPages } from '../PDFPageRenderer.js';
 
 describe('renderPdfPages', () => {
   beforeEach(() => {
@@ -28,7 +28,7 @@ describe('renderPdfPages', () => {
   });
 
   it('should have the pdf.js data of the installed package in place before it converts', async () => {
-    let urlsSeenByConverter: { cMapUrl?: string; standardFontDataUrl?: string } = {};
+    let urlsSeenByConverter: { cMapUrl?: string; standardFontDataUrl?: string; wasmUrl?: string } = {};
     vi.mocked(pdfToPng).mockImplementation(async () => {
       urlsSeenByConverter = { ...DOCUMENT_INIT_PARAMS_DEFAULTS };
       return [];
@@ -37,15 +37,18 @@ describe('renderPdfPages', () => {
 
     await renderPdfPages('/doc.pdf', {});
 
-    const { cMapUrl, standardFontDataUrl } = urlsSeenByConverter;
+    const { cMapUrl, standardFontDataUrl, wasmUrl } = urlsSeenByConverter;
     // The trailing slash is mandatory for pdf.js, which throws without it.
     expect(cMapUrl).toMatch(/pdfjs-dist[\\/]cmaps\/$/);
     expect(standardFontDataUrl).toMatch(/pdfjs-dist[\\/]standard_fonts\/$/);
+    expect(wasmUrl).toMatch(/pdfjs-dist[\\/]wasm\/$/);
     expect(path.isAbsolute(cMapUrl!)).toBe(true);
     expect(path.isAbsolute(standardFontDataUrl!)).toBe(true);
+    expect(path.isAbsolute(wasmUrl!)).toBe(true);
     // pdf.js builds file paths by appending the name, so that is how they must work.
     expect(readFileSync(`${cMapUrl}UniGB-UCS2-H.bcmap`).length).toBeGreaterThan(0);
     expect(readFileSync(`${standardFontDataUrl}LiberationSans-Regular.ttf`).length).toBeGreaterThan(0);
+    expect(readFileSync(`${wasmUrl}openjpeg.wasm`).length).toBeGreaterThan(0);
   });
 
   it('should pass the options on and turn pdf.js warnings on', async () => {
@@ -68,11 +71,12 @@ describe('renderPdfPages', () => {
   it.each([
     ['CMaps', 'UniGB-UCS2-H.bcmap'],
     ['standard fonts', 'LiberationSans-Regular.ttf'],
-  ])('should refuse to render without the %s rather than lose text', async (_label, fileName) => {
+    ['JPEG2000 decoder', 'openjpeg.wasm'],
+  ])('should refuse to render without the %s rather than lose content', async (_label, fileName) => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.mocked(existsSync).mockImplementation((file) => !String(file).endsWith(fileName));
 
-    await expect(renderPdfPages('/doc.pdf', {})).rejects.toThrow('PDF.js font data is missing');
+    await expect(renderPdfPages('/doc.pdf', {})).rejects.toThrow('PDF.js data files are missing');
 
     expect(pdfToPng).not.toHaveBeenCalled();
     expect(consoleError.mock.calls[0][0]).toContain(fileName);
@@ -86,5 +90,22 @@ describe('renderPdfPages', () => {
 
     expect(error.message).not.toContain('pdfjs-dist');
     expect(error.message).not.toContain(path.sep);
+  });
+});
+
+describe('outsideAsar', () => {
+  it.each([
+    ['/opt/MarkPDFdown/resources/app.asar/node_modules/x', '/opt/MarkPDFdown/resources/app.asar.unpacked/node_modules/x'],
+    ['C:\\MarkPDFdown\\resources\\app.asar\\node_modules\\x', 'C:\\MarkPDFdown\\resources\\app.asar.unpacked\\node_modules\\x'],
+  ])('should turn the path inside the archive into the real one: %s', (inside, outside) => {
+    expect(outsideAsar(inside)).toBe(outside);
+  });
+
+  it.each([
+    ['a development checkout', '/home/me/repo/node_modules/x'],
+    ['a path that is already outside', '/res/app.asar.unpacked/node_modules/x'],
+    ['a directory that merely ends the same way', '/home/me/myapp.asar/node_modules/x'],
+  ])('should leave %s alone', (_label, dir) => {
+    expect(outsideAsar(dir)).toBe(dir);
   });
 });

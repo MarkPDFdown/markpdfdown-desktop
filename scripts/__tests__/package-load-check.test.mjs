@@ -24,7 +24,7 @@ module.exports = {
 
 /** As many pages as the sample PDF has; the fake canvas decides what they look like. */
 const FAKE_PDF_RENDERER = `
-exports.renderPdfPages = async () => Array.from({ length: 5 }, () => ({ content: Buffer.alloc(0) }));
+exports.renderPdfPages = async () => Array.from({ length: 6 }, () => ({ content: Buffer.alloc(0) }));
 `;
 
 /** A Prisma client that fails where the test's environment tells it to, as a packaged one might. */
@@ -51,6 +51,7 @@ module.exports.PrismaClient = class {
 describe('package-load-check', () => {
   let root;
   let tempDir;
+  let unpackedWasm;
 
   /** Runs the script against a fake package, keeping its temp files in a directory of their own. */
   const runCheck = (failures = {}) =>
@@ -75,6 +76,9 @@ describe('package-load-check', () => {
     const rendererDir = path.join(root, 'resources', 'app.asar', 'dist', 'main');
     mkdirSync(rendererDir, { recursive: true });
     writeFileSync(path.join(rendererDir, 'pdf-page-renderer.js'), FAKE_PDF_RENDERER);
+    unpackedWasm = path.join(root, 'resources', 'app.asar.unpacked', 'node_modules', 'pdfjs-dist', 'wasm', 'openjpeg.wasm');
+    mkdirSync(path.dirname(unpackedWasm), { recursive: true });
+    writeFileSync(unpackedWasm, '\0asm');
   });
 
   afterEach(() => {
@@ -93,6 +97,25 @@ describe('package-load-check', () => {
     const result = runCheck({ FAIL_QUERY: '1' });
 
     expect(result.stderr).toContain('load FAIL  Prisma query engine: engine not found');
+    expect(result.status).toBe(1);
+  });
+
+  it('fails when openjpeg.wasm is missing from outside the asar', () => {
+    rmSync(unpackedWasm);
+
+    const result = runCheck();
+
+    expect(result.stderr).toContain('load FAIL  Unpacked assets: Missing from app.asar.unpacked');
+    expect(result.stderr).toContain('openjpeg.wasm');
+    expect(result.status).toBe(1);
+  });
+
+  it('fails when openjpeg.wasm is not a wasm file', () => {
+    writeFileSync(unpackedWasm, 'git-lfs pointer');
+
+    const result = runCheck();
+
+    expect(result.stderr).toContain('load FAIL  Unpacked assets: Not a WebAssembly file');
     expect(result.status).toBe(1);
   });
 

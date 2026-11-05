@@ -5,7 +5,7 @@
  *
  * 1. Every native binary in the third-party module trees matches the target platform and arch.
  * 2. The native modules the app needs at startup are present (canvas, and the Prisma engine, on
- *    Linux that of every distro family and libssl version).
+ *    Linux that of every distro family and libssl version), and so are the unpacked wasm files.
  * 3. When the host can execute the package, those modules really load inside the packaged Electron.
  *    This catches what headers cannot, such as a library left inside app.asar where dlopen can't see it.
  *
@@ -24,6 +24,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { linuxEngineTargets } from './prisma-engines.mjs';
+import unpackedAssets from './unpacked-assets.cjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const LOAD_CHECK_SCRIPT = path.join(SCRIPT_DIR, 'package-load-check.cjs');
@@ -190,6 +191,7 @@ export function verifyBinaries({ resourcesDir, executable, platform, arch }) {
       problems.push(`Missing native module for ${platform}-${arch}: ${label}`);
     }
   }
+  problems.push(...unpackedAssets.findUnpackedAssetProblems(resourcesDir));
 
   return { binaries, problems };
 }
