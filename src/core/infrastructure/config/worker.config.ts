@@ -39,6 +39,11 @@ export const WORKER_CONFIG = {
     timeout: 120000, // 2 minutes
     /** Maximum retry attempts for transient errors */
     maxRetries: 3,
+    /**
+     * Maximum retries after a truncated response. It costs as much as a full one and is likely to
+     * repeat, but a model stuck repeating itself can recover, hence not 0.
+     */
+    maxTruncationRetries: 1,
     /** Base retry delay in milliseconds (exponential backoff) */
     retryDelayBase: 1000,
     /** Maximum content length in characters */

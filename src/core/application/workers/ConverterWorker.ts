@@ -15,12 +15,27 @@ import { FINISH_REASON_TRUNCATED } from '../../domain/llm/ILLMClient.js';
 enum ErrorType {
   NETWORK_ERROR = 'network_error',
   LLM_ERROR = 'llm_error',
+  TRUNCATION_ERROR = 'truncation_error',
   RATE_LIMIT_ERROR = 'rate_limit_error',
   QUOTA_EXCEEDED_ERROR = 'quota_exceeded_error',
   CONFIG_ERROR = 'config_error',
   FILE_ERROR = 'file_error',
   TIMEOUT_ERROR = 'timeout_error',
   UNKNOWN_ERROR = 'unknown_error',
+}
+
+/**
+ * The model hit its output token limit. Identified by type rather than by message, as other
+ * errors mention truncation too (a truncated image file, for one).
+ */
+class OutputTruncatedError extends Error {
+  constructor() {
+    super(
+      'LLM output was truncated at the output token limit, so the page content would be incomplete. ' +
+      'Switch to a model with a higher output token limit.'
+    );
+    this.name = 'OutputTruncatedError';
+  }
 }
 
 /**
@@ -70,6 +85,7 @@ interface PageWithTask {
  */
 export class ConverterWorker extends WorkerBase {
   private readonly maxRetries: number;
+  private readonly maxTruncationRetries: number;
   private readonly maxContentLength: number;
   private readonly pollInterval: number;
   private readonly retryDelayBase: number;
@@ -78,6 +94,7 @@ export class ConverterWorker extends WorkerBase {
   constructor() {
     super();
     this.maxRetries = WORKER_CONFIG.converter.maxRetries;
+    this.maxTruncationRetries = WORKER_CONFIG.converter.maxTruncationRetries;
     this.maxContentLength = WORKER_CONFIG.converter.maxContentLength;
     this.pollInterval = WORKER_CONFIG.converter.pollInterval;
     this.retryDelayBase = WORKER_CONFIG.converter.retryDelayBase;
@@ -247,6 +264,7 @@ export class ConverterWorker extends WorkerBase {
    */
   private async processPageWithRetry(page: PageWithTask): Promise<void> {
     let lastError: Error | null = null;
+    let truncations = 0;
 
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
       try {
@@ -269,6 +287,14 @@ export class ConverterWorker extends WorkerBase {
         // Check if error is retryable
         if (!this.isRetryableError(errorType)) {
           console.log(`[Converter-${this.workerId.slice(0, 8)}] Non-retryable error, marking as failed`);
+          break;
+        }
+
+        // Truncated responses are billed in full, so they get a budget of their own.
+        // Counted apart from attempt so that other errors neither use it up nor gain from it.
+        if (errorType === ErrorType.TRUNCATION_ERROR) truncations++;
+        if (truncations > this.maxTruncationRetries) {
+          console.log(`[Converter-${this.workerId.slice(0, 8)}] Output still truncated, marking as failed`);
           break;
         }
 
@@ -322,12 +348,8 @@ export class ConverterWorker extends WorkerBase {
 
     // Step 5: Validate content
     // Truncation comes first: the output limit can also leave the content empty.
-    // Retryable: a model stuck repeating itself can finish normally on another attempt.
     if (response.finishReason === FINISH_REASON_TRUNCATED) {
-      throw new Error(
-        'LLM output was truncated at the output token limit, so the page content would be incomplete. ' +
-        'Try again with a model or provider setting that allows longer output.'
-      );
+      throw new OutputTruncatedError();
     }
 
     if (!response.content || response.content.trim().length === 0) {
@@ -744,6 +766,10 @@ export class ConverterWorker extends WorkerBase {
    * Analyze error to determine type.
    */
   private analyzeError(error: Error): ErrorType {
+    if (error instanceof OutputTruncatedError) {
+      return ErrorType.TRUNCATION_ERROR;
+    }
+
     const message = error.message.toLowerCase();
 
     // Network errors
@@ -825,6 +851,7 @@ export class ConverterWorker extends WorkerBase {
     switch (errorType) {
       case ErrorType.NETWORK_ERROR:
       case ErrorType.LLM_ERROR:
+      case ErrorType.TRUNCATION_ERROR:
       case ErrorType.RATE_LIMIT_ERROR:
       case ErrorType.TIMEOUT_ERROR:
       case ErrorType.UNKNOWN_ERROR:
