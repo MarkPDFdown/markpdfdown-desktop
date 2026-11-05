@@ -102,7 +102,8 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       # The exact file rather than a glob, which other yml files in release/ would satisfy. A missing
-      # manifest fails the run here, before any asset is published, not at promotion to stable.
+      # manifest fails the run here, before this job publishes its assets, not at promotion to stable.
+      # A re-run rebuilds the installers, so its manifest has to replace the one describing the old ones.
       - name: Save update manifest as artifact
         uses: actions/upload-artifact@v4
         with:
@@ -110,6 +111,7 @@ jobs:
           path: release/${{ matrix.manifest }}
           if-no-files-found: error
           retention-days: 30
+          overwrite: true
 
       - name: Upload release assets (installers only)
         uses: softprops/action-gh-release@v2

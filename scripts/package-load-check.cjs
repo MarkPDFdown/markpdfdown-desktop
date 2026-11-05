@@ -119,7 +119,9 @@ async function main() {
   }
 
   process.chdir(os.tmpdir());
-  fs.rmSync(emptyCwd, { recursive: true, force: true });
+  await cleanUp(`remove ${emptyCwd}`, () =>
+    fs.rmSync(emptyCwd, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }),
+  );
   process.exit(failed ? 1 : 0);
 }
 
