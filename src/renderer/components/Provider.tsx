@@ -19,6 +19,12 @@ import {
 } from "antd";
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  NO_SUFFIX,
+  getDefaultSuffix,
+  getSuffixSelection,
+  resolveSuffix,
+} from "../../shared/providerSuffix";
 
 interface ProviderProps {
   providerId?: number;
@@ -94,30 +100,7 @@ const Provider: React.FC<ProviderProps> = ({
             }
           }
 
-          // 根据 provider 类型设置默认后缀
-          if (!data.suffix) {
-            switch (data.type) {
-              case "openai":
-                setSuffix("/chat/completions");
-                break;
-              case "openai-responses":
-                setSuffix("/responses");
-                break;
-              case "gemini":
-                setSuffix("/models");
-                break;
-              case "anthropic":
-                setSuffix("/messages");
-                break;
-              case "ollama":
-                setSuffix("/chat");
-                break;
-              default:
-                setSuffix("");
-            }
-          } else {
-            setSuffix(data.suffix);
-          }
+          setSuffix(getSuffixSelection(data.type, data.suffix));
         } catch (error) {
           console.error("Failed to fetch provider details:", error);
         }
@@ -420,7 +403,7 @@ const Provider: React.FC<ProviderProps> = ({
         <Typography.Text>{t('details.api_url_label')}</Typography.Text>
         <Typography.Text type="secondary">
           {baseUrl}
-          {suffix}
+          {resolveSuffix(providerData?.type, suffix)}
         </Typography.Text>
         <Flex gap={8}>
           <Input
@@ -445,37 +428,15 @@ const Provider: React.FC<ProviderProps> = ({
                 }}
                 options={(() => {
                   const type = providerData?.type;
-                  const noSuffix = { label: t('details.no_suffix'), value: "" };
-                  switch (type) {
-                    case "openai":
-                      return [
-                        { label: "/chat/completions", value: "/chat/completions" },
-                        noSuffix,
-                      ];
-                    case "openai-responses":
-                      return [
-                        { label: "/responses", value: "/responses" },
-                        noSuffix,
-                      ];
-                    case "gemini":
-                      return [
-                        { label: "/models", value: "/models" },
-                        noSuffix,
-                      ];
-                    case "anthropic":
-                      return [
-                        { label: "/messages", value: "/messages" },
-                        noSuffix,
-                      ];
-                    case "ollama":
-                      // 空后缀运行时会回退到 /chat，所以不提供“无后缀”
-                      // base 约定以 /api 结尾（模型列表依赖 base + /tags），所以不提供 /api/chat
-                      return [
-                        { label: "/chat", value: "/chat" },
-                      ];
-                    default:
-                      return [noSuffix];
+                  const noSuffix = { label: t('details.no_suffix'), value: NO_SUFFIX };
+                  const defaultSuffix = getDefaultSuffix(type);
+                  if (!defaultSuffix) {
+                    return [noSuffix];
                   }
+                  const defaultOption = { label: defaultSuffix, value: defaultSuffix };
+                  // Ollama 的 base 约定以 /api 结尾（模型列表依赖 base + /tags），
+                  // 所以不提供“无后缀”和 /api/chat
+                  return type === "ollama" ? [defaultOption] : [defaultOption, noSuffix];
                 })()}
               />
             }

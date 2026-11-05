@@ -27,6 +27,14 @@ describe('LLMClientFactory', () => {
       expect(client.constructor.name).toBe('GeminiClient')
     })
 
+    it('should pass exactEndpoint to the Gemini client', async () => {
+      const exact = await LLMClientFactory.createClient('gemini', 'key', 'https://gateway.test', { exactEndpoint: true })
+      const regular = await LLMClientFactory.createClient('gemini', 'key', 'https://gateway.test')
+
+      expect(exact['exactEndpoint' as keyof typeof exact]).toBe(true)
+      expect(regular['exactEndpoint' as keyof typeof regular]).toBe(false)
+    })
+
     it('should create Ollama client', async () => {
       const client = await LLMClientFactory.createClient('ollama', '', 'http://localhost:11434')
       expect(client).toBeDefined()

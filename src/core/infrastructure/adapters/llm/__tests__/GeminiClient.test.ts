@@ -22,6 +22,26 @@ describe('GeminiClient', () => {
     })
   })
 
+  describe('Endpoint', () => {
+    const request = { messages: [{ role: 'user' as const, content: { type: 'text' as const, text: 'Hi' } }], model: 'gemini-pro' }
+
+    it('should add the model path to the base URL by default', async () => {
+      mockFetchSuccess(createMockGeminiResponse('ok'))
+
+      await new GeminiClient('key', 'https://gateway.test/models').completion(request)
+
+      expect((global.fetch as any).mock.calls[0][0]).toBe('https://gateway.test/models/gemini-pro:generateContent')
+    })
+
+    it('should request the base URL unchanged for an exact endpoint', async () => {
+      mockFetchSuccess(createMockGeminiResponse('ok'))
+
+      await new GeminiClient('key', 'https://gateway.test/full/endpoint', true).completion(request)
+
+      expect((global.fetch as any).mock.calls[0][0]).toBe('https://gateway.test/full/endpoint')
+    })
+  })
+
   describe('Message Format Conversion', () => {
     it('should convert simple text message to Gemini format', async () => {
       const mockResponse = createMockGeminiResponse('Test response')
