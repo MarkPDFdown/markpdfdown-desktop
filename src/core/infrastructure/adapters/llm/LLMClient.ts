@@ -3,6 +3,7 @@
  * Infrastructure layer - contains implementation logic
  */
 
+import { FINISH_REASON_TRUNCATED } from '../../../domain/llm/ILLMClient.js';
 import type {
   ILLMClient,
   CompletionOptions,
@@ -27,6 +28,13 @@ export type {
 } from '../../../domain/llm/ILLMClient.js';
 
 /**
+ * Lowercased provider values meaning the output hit the token limit.
+ * Shared rather than per client: OpenAI- and Anthropic-compatible gateways don't always
+ * use the value of the protocol they implement.
+ */
+const TRUNCATION_FINISH_REASONS = new Set(['length', 'max_tokens', 'max_output_tokens']);
+
+/**
  * LLM Client abstract base class
  */
 export abstract class LLMClient implements ILLMClient {
@@ -42,6 +50,18 @@ export abstract class LLMClient implements ILLMClient {
    * Execute text completion
    */
   abstract completion(options: CompletionOptions): Promise<CompletionResponse>;
+
+  /**
+   * Map the provider's truncation reasons to FINISH_REASON_TRUNCATED, leaving others as they are.
+   * Clients only report the reason: whether truncation is an error is up to the caller,
+   * as the connection test deliberately runs with a tiny maxTokens.
+   */
+  protected normalizeFinishReason(reason?: string | null): string | undefined {
+    if (!reason) {
+      return undefined;
+    }
+    return TRUNCATION_FINISH_REASONS.has(reason.toLowerCase()) ? FINISH_REASON_TRUNCATED : reason;
+  }
 
   /**
    * Normalize options for backward compatibility with single prompt
