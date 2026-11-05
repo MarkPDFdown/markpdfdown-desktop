@@ -433,11 +433,14 @@ app.whenReady().then(async () => {
     // 初始化事件桥接器（立即执行，不耗时）
     eventBridge.initialize();
 
-    // 立即创建并显示窗口（用户体验优先）
+    // 先完成数据库迁移再创建窗口，否则渲染进程的查询会读到还没迁移完的表。
+    // 这里不会抛错，初始化失败时窗口照常打开，由界面提示用户。
+    await initDatabase();
+
     createWindow();
     console.log(`[Main] Window created in ${Date.now() - startTime}ms`);
 
-    // 后台异步初始化数据库和任务（不阻塞UI）
+    // 后台异步初始化其余服务（不阻塞UI）
     initializeBackgroundServices().catch(error => {
       console.error("[Main] Background services initialization failed:", error);
     });
@@ -449,16 +452,43 @@ app.whenReady().then(async () => {
 });
 
 /**
+ * 启动依赖数据库的服务
+ */
+async function startDatabaseServices(startTime: number) {
+  // 注入预设供应商
+  console.log("[Main] Injecting preset providers...");
+  const presetStartTime = Date.now();
+  await presetProviderService.initialize();
+  console.log(`[Main] Preset providers injected in ${Date.now() - presetStartTime}ms`);
+
+  // 启动任务逻辑
+  console.log("[Main] Starting task logic in background...");
+  const taskStartTime = Date.now();
+  await startTask();
+  console.log(`[Main] Task logic started in ${Date.now() - taskStartTime}ms`);
+
+  console.log(
+    `[Main] Background services initialized successfully in ${Date.now() - startTime}ms`,
+  );
+
+  // 通知渲染进程初始化完成
+  if (mainWindow) {
+    mainWindow.webContents.send('app:ready');
+  }
+}
+
+/**
  * 后台异步初始化服务（不阻塞窗口显示）
  */
 async function initializeBackgroundServices() {
   try {
     const startTime = Date.now();
 
-    // 初始化数据库
-    console.log("[Main] Initializing database in background...");
-    await initDatabase();
-    console.log(`[Main] Database initialized in ${Date.now() - startTime}ms`);
+    // 启动时已完成初始化，这里只取结果。渲染进程通过 app:getDatabaseStatus 拿到错误并提示用户
+    const database = await initDatabase();
+    if (!database.success) {
+      console.error("[Main] Database unavailable:", database.error);
+    }
 
     // 恢复认证会话
     console.log("[Main] Restoring auth session...");
@@ -469,25 +499,8 @@ async function initializeBackgroundServices() {
     // SSE connection is managed by renderer's CloudContext via IPC (sseConnect/sseDisconnect)
     // to avoid duplicate connections from both main process and renderer
 
-    // 注入预设供应商
-    console.log("[Main] Injecting preset providers...");
-    const presetStartTime = Date.now();
-    await presetProviderService.initialize();
-    console.log(`[Main] Preset providers injected in ${Date.now() - presetStartTime}ms`);
-
-    // 启动任务逻辑
-    console.log("[Main] Starting task logic in background...");
-    const taskStartTime = Date.now();
-    await startTask();
-    console.log(`[Main] Task logic started in ${Date.now() - taskStartTime}ms`);
-
-    console.log(
-      `[Main] Background services initialized successfully in ${Date.now() - startTime}ms`,
-    );
-
-    // 通知渲染进程初始化完成
-    if (mainWindow) {
-      mainWindow.webContents.send('app:ready');
+    if (database.success) {
+      await startDatabaseServices(startTime);
     }
 
     // 启动时检测更新（fire-and-forget，不阻塞 UI）
@@ -517,7 +530,8 @@ app.on("activate", async () => {
   if (mainWindow === null) {
     try {
       createWindow();
-      if (!workerOrchestrator.getStatus()) {
+      const database = await initDatabase();
+      if (database.success && !workerOrchestrator.getStatus()) {
         await startTask();
       }
     } catch (error) {

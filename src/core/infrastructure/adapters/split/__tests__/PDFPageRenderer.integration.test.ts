@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest';
+import * as canvasModule from '@napi-rs/canvas';
 import { promises as fs } from 'fs';
 import { createRequire } from 'module';
 import os from 'os';
 import path from 'path';
-import sharp from 'sharp';
 import { ImagePathUtil } from '../ImagePathUtil.js';
 
 const require = createRequire(import.meta.url);
@@ -58,6 +58,6 @@ describe('PDF rendering from a cwd without pdfjs-dist', () => {
     const { pages } = await splitter.split({ id: TASK_ID, filename: 'sample.pdf', page_range: '' });
 
     const pngs = await Promise.all(pages.map((page: { imagePath: string }) => fs.readFile(page.imagePath)));
-    expect(await findRenderProblems(pngs, warnings, sharp)).toEqual([]);
+    expect(await findRenderProblems(pngs, warnings, canvasModule)).toEqual([]);
   });
 });

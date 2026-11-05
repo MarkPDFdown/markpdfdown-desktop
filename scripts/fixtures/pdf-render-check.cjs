@@ -4,6 +4,7 @@
  */
 
 const path = require('node:path');
+const { countDarkPixels } = require('./count-dark-pixels.cjs');
 
 const SAMPLE_PDF = path.join(__dirname, 'pdf-render-check.pdf');
 const PAGE_COUNT = 5;
@@ -18,22 +19,13 @@ const MIN_BOX_COVERAGE = 0.9;
 // pdf.js reports both a CMap and a standard font it can't read this way.
 const LOAD_FAILURE = /Unable to load/;
 
-async function countDarkPixels(png, sharp) {
-  const { data, info } = await sharp(png)
-    .flatten({ background: '#fff' })
-    .greyscale()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  return { width: info.width, dark: data.reduce((sum, value) => sum + (value < 128 ? 1 : 0), 0) };
-}
-
 /**
  * @param {Buffer[]} pngs the rendered pages, in order
  * @param {string[]} warnings what pdf.js wrote to console.warn during the rendering
- * @param {Function} sharp the sharp module; the packaged app has to pass its own
+ * @param {object} canvasModule the @napi-rs/canvas module; the packaged app has to pass its own
  * @returns {Promise<string[]>} problems found, empty when the rendering is complete
  */
-async function findRenderProblems(pngs, warnings, sharp) {
+async function findRenderProblems(pngs, warnings, canvasModule) {
   const problems = warnings.filter((warning) => LOAD_FAILURE.test(warning));
   if (pngs.length !== PAGE_COUNT) {
     problems.push(`Expected ${PAGE_COUNT} pages, got ${pngs.length}`);
@@ -41,7 +33,7 @@ async function findRenderProblems(pngs, warnings, sharp) {
 
   for (const [index, name] of BOX_PAGES.entries()) {
     if (!pngs[index]) continue;
-    const { width, dark } = await countDarkPixels(pngs[index], sharp);
+    const { width, dark } = await countDarkPixels(pngs[index], canvasModule);
     const scale = width / PAGE_WIDTH_PT;
     const expected = BOXES_PER_PAGE * (BOX_SIZE_PT * scale) ** 2;
     if (dark < expected * MIN_BOX_COVERAGE) {

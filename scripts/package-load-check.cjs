@@ -10,21 +10,31 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
+const { countDarkPixels } = require('./fixtures/count-dark-pixels.cjs');
 const { SAMPLE_PDF, findRenderProblems } = require('./fixtures/pdf-render-check.cjs');
 
 const appDir = path.join(path.resolve(process.argv[2]), 'app.asar');
 const appModules = path.join(appDir, 'node_modules');
 const loadFromApp = (name) => require(path.join(appModules, name));
 
-async function checkSharp() {
-  const sharp = loadFromApp('sharp');
-  await sharp({ create: { width: 1, height: 1, channels: 3, background: '#000' } }).png().toBuffer();
-  return `libvips ${sharp.versions.vips}`;
-}
-
 async function checkCanvas() {
-  const { createCanvas } = loadFromApp('@napi-rs/canvas');
-  createCanvas(1, 1).getContext('2d');
+  const canvasModule = loadFromApp('@napi-rs/canvas');
+  const canvas = canvasModule.createCanvas(20, 10);
+  const context = canvas.getContext('2d');
+  context.fillStyle = '#fff';
+  context.fillRect(0, 0, 20, 10);
+  context.fillStyle = '#000';
+  context.fillRect(0, 0, 10, 10);
+
+  // ImageReencoder decodes and encodes every uploaded image this way.
+  const { width, dark } = await countDarkPixels(await canvas.encode('jpeg', 80), canvasModule);
+  if (width !== 20 || dark < 90) throw new Error(`A re-encoded image lost its pixels: ${dark} dark of ${width} wide`);
+
+  // Some canvas versions segfault on a damaged image, which in the app takes down the main process,
+  // again on each start once its task is picked up again. Getting past this line is the check.
+  const encoded = await canvas.encode('jpeg', 80);
+  await canvasModule.loadImage(encoded.subarray(0, encoded.length >> 1)).catch(() => {});
+
   // The app reaches canvas through this module, which requires it at load time.
   loadFromApp('pdf-to-png-converter');
 }
@@ -45,9 +55,16 @@ async function checkPdfRendering() {
   }
 
   const pngs = pages.map((page) => page.content);
-  const problems = await findRenderProblems(pngs, warnings, loadFromApp('sharp'));
+  const problems = await findRenderProblems(pngs, warnings, loadFromApp('@napi-rs/canvas'));
   if (problems.length > 0) throw new Error(problems.join('; '));
   return `${pngs.length} pages`;
+}
+
+/** Linux only: the engine Prisma really picked, which verify-package-distros.mjs checks. */
+function loadedPrismaEngine() {
+  if (process.platform !== 'linux') return undefined;
+  const engine = fs.readFileSync('/proc/self/maps', 'utf8').match(/libquery_engine-[^/\s]+\.so\.node/);
+  return engine?.[0];
 }
 
 async function checkPrisma() {
@@ -58,6 +75,7 @@ async function checkPrisma() {
   });
   try {
     await client.$queryRaw`SELECT 1`;
+    return loadedPrismaEngine();
   } finally {
     await client.$disconnect();
     fs.rmSync(tempDir, { recursive: true, force: true });
@@ -66,7 +84,6 @@ async function checkPrisma() {
 
 async function main() {
   const checks = {
-    sharp: checkSharp,
     '@napi-rs/canvas': checkCanvas,
     'Prisma query engine': checkPrisma,
     'PDF rendering': checkPdfRendering,

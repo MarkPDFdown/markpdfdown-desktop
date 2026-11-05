@@ -21,7 +21,7 @@ import { registerUpdaterHandlers } from './updater.handler.js';
  * - Completion: LLM API calls
  * - Auth: Authentication (device flow login, logout, state)
  * - Cloud: Cloud API operations
- * - App: Application info (version)
+ * - App: Application info (version, database status)
  * - Updater: Auto-update management
  */
 export function registerAllHandlers() {

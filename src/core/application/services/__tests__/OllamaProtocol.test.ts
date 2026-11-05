@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
  * Protocol consistency between ModelService (endpoint), OllamaClient (request
  * body and response parsing) and the Ollama server.
  *
- * Only the database and sharp are mocked. Unit tests that mock either side of
+ * Only the database and reading the page image are mocked. Unit tests that mock either side of
  * the HTTP boundary could not catch issue #72: one side asserted /api/generate,
  * the other returned a /api/chat shaped response.
  */
@@ -15,10 +15,8 @@ vi.mock('../../../domain/repositories/ProviderRepository.js', () => ({
   default: mockProviderRepository
 }))
 
-vi.mock('sharp', () => ({
-  default: vi.fn(() => ({
-    toBuffer: vi.fn().mockResolvedValue(Buffer.from('page-image'))
-  }))
+vi.mock('fs', () => ({
+  promises: { readFile: vi.fn().mockResolvedValue(Buffer.from('page-image')) }
 }))
 
 const HOST = 'http://ollama.test:11434'

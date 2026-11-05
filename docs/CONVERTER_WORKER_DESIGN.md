@@ -71,7 +71,7 @@ model TaskDetail {
 
 **执行命令**:
 ```bash
-npx prisma migrate dev --name add_taskdetail_metrics
+npm run migrate:dev -- --name add_taskdetail_metrics
 ```
 
 **SQL 内容** (自动生成):
@@ -1523,7 +1523,7 @@ export class MockLLMClient extends LLMClient {
 ### Phase 1: 数据库准备 ✅
 
 - [ ] 更新 `schema.prisma`（添加 TaskDetail 新字段）
-- [ ] 执行 `npx prisma migrate dev --name add_taskdetail_metrics`
+- [ ] 执行 `npm run migrate:dev -- --name add_taskdetail_metrics`
 - [ ] 验证迁移成功
 - [ ] 更新 TypeScript 类型定义
 

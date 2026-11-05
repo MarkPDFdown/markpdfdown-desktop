@@ -75,18 +75,14 @@ const recordMigration = async (
   const id = generateUUID();
   const now = new Date().toISOString();
 
-  try {
-    await prisma.$executeRaw`
-      INSERT INTO _prisma_migrations (
-        id, checksum, migration_name, started_at, finished_at, applied_steps_count
-      ) VALUES (
-        ${id}, ${checksum}, ${migrationName}, ${now}, ${now}, 1
-      );
-    `;
-    console.log(`Recorded migration: ${migrationName}`);
-  } catch (error) {
-    console.error(`Failed to record migration ${migrationName}:`, error);
-  }
+  await prisma.$executeRaw`
+    INSERT INTO _prisma_migrations (
+      id, checksum, migration_name, started_at, finished_at, applied_steps_count
+    ) VALUES (
+      ${id}, ${checksum}, ${migrationName}, ${now}, ${now}, 1
+    );
+  `;
+  console.log(`Recorded migration: ${migrationName}`);
 };
 
 // 生成UUID
@@ -105,40 +101,37 @@ const calculateChecksum = async (content: string): Promise<string> => {
   return crypto.default.createHash("sha256").update(content).digest("hex");
 };
 
+// 改表的迁移要复制整张表，页面内容又存在表里，所以比默认的 5 秒宽裕得多
+const MIGRATION_TRANSACTION_OPTIONS = { maxWait: 30_000, timeout: 5 * 60_000 };
+
 // 应用单个迁移
 const applyMigration = async (
   prisma: any,
   migrationDir: string,
   migrationName: string,
-): Promise<boolean> => {
+): Promise<void> => {
   const sqlFilePath = path.join(migrationDir, migrationName, "migration.sql");
 
-  try {
-    if (!fs.existsSync(sqlFilePath)) {
-      console.error(`Migration SQL file not found: ${sqlFilePath}`);
-      return false;
-    }
-
-    const sqlContent = fs.readFileSync(sqlFilePath, "utf8");
-    const sqlStatements = sqlContent.split(";").filter((stmt) => stmt.trim());
-
-    // 应用每条SQL语句
-    for (const statement of sqlStatements) {
-      if (statement.trim()) {
-        await prisma.$executeRawUnsafe(statement.trim());
-      }
-    }
-
-    // 记录迁移
-    const checksum = await calculateChecksum(sqlContent);
-    await recordMigration(prisma, migrationName, checksum);
-
-    console.log(`Successfully applied migration: ${migrationName}`);
-    return true;
-  } catch (error) {
-    console.error(`Failed to apply migration ${migrationName}:`, error);
-    return false;
+  if (!fs.existsSync(sqlFilePath)) {
+    throw new Error(`Migration SQL file not found: ${sqlFilePath}`);
   }
+
+  const sqlContent = fs.readFileSync(sqlFilePath, "utf8");
+  const sqlStatements = sqlContent.split(";").filter((stmt) => stmt.trim());
+
+  const checksum = await calculateChecksum(sqlContent);
+
+  // 放进事务才能让所有语句走同一条连接。否则连接池里其他连接的 schema 缓存可能已过期，
+  // DROP TABLE 之后的 RENAME 会偶发 "there is already another table"。失败时也不会留下半截结构。
+  // 注意事务内 PRAGMA foreign_keys 不生效，改表的迁移不能依赖它。
+  await prisma.$transaction(async (tx: any) => {
+    for (const statement of sqlStatements) {
+      await tx.$executeRawUnsafe(statement.trim());
+    }
+    await recordMigration(tx, migrationName, checksum);
+  }, MIGRATION_TRANSACTION_OPTIONS);
+
+  console.log(`Successfully applied migration: ${migrationName}`);
 };
 
 // 批量检查迁移状态（性能优化）
@@ -167,64 +160,61 @@ const getAppliedMigrations = async (prisma: any): Promise<Set<string>> => {
   }
 };
 
-// 主要的迁移函数（性能优化版）
-const runMigrations = async (prisma: any = null): Promise<boolean> => {
+/**
+ * 应用所有未执行的迁移（性能优化版）。
+ * 任何失败都会抛出：数据库结构不完整时应用无法正常工作，调用方需要知道。
+ * 遇到第一个失败就停止，因为后面的迁移依赖它的结果。
+ */
+const runMigrations = async (prisma: any = null): Promise<void> => {
   const startTime = Date.now();
   console.log("Running database migrations...");
 
-  try {
-    // 确保_prisma_migrations表存在
-    await prisma.$executeRawUnsafe(createMigrationsTableSQL);
+  // 确保_prisma_migrations表存在
+  await prisma.$executeRawUnsafe(createMigrationsTableSQL);
 
-    const migrationsDir = getMigrationsDir();
-    console.log("Migrations directory:", migrationsDir);
-    if (!fs.existsSync(migrationsDir)) {
-      console.error(`Migrations directory not found: ${migrationsDir}`);
-      return false;
-    }
-
-    // 批量获取所有已应用的迁移（性能优化）
-    const appliedMigrations = await getAppliedMigrations(prisma);
-
-    // 读取所有迁移目录并按名称排序（优化：减少 stat 调用）
-    const migrationDirs = fs
-      .readdirSync(migrationsDir, { withFileTypes: true })
-      .filter(
-        (dirent) =>
-          dirent.isDirectory() && dirent.name !== "migration_lock.toml",
-      )
-      .map((dirent) => dirent.name)
-      .sort(); // 按名称排序，确保按正确顺序应用
-
-    let migrationsApplied = 0;
-
-    // 应用每个迁移
-    for (const migrationName of migrationDirs) {
-      // 使用批量查询结果检查（避免单独查询）
-      const isApplied = appliedMigrations.has(migrationName);
-
-      if (!isApplied) {
-        console.log(`Applying migration: ${migrationName}`);
-        const success = await applyMigration(
-          prisma,
-          migrationsDir,
-          migrationName,
-        );
-        if (success) migrationsApplied++;
-      } else {
-        console.log(`Migration already applied: ${migrationName}`);
-      }
-    }
-
-    const elapsed = Date.now() - startTime;
-    console.log(
-      `Database migration complete. Applied ${migrationsApplied} migrations in ${elapsed}ms`,
-    );
-    return migrationsApplied > 0;
-  } catch (error) {
-    console.error("Migration error:", error);
-    return false;
+  const migrationsDir = getMigrationsDir();
+  console.log("Migrations directory:", migrationsDir);
+  if (!fs.existsSync(migrationsDir)) {
+    throw new Error(`Migrations directory not found: ${migrationsDir}`);
   }
+
+  // 批量获取所有已应用的迁移（性能优化）
+  const appliedMigrations = await getAppliedMigrations(prisma);
+
+  // 读取所有迁移目录并按名称排序（优化：减少 stat 调用）
+  const migrationDirs = fs
+    .readdirSync(migrationsDir, { withFileTypes: true })
+    .filter(
+      (dirent) =>
+        dirent.isDirectory() && dirent.name !== "migration_lock.toml",
+    )
+    .map((dirent) => dirent.name)
+    .sort(); // 按名称排序，确保按正确顺序应用
+
+  let migrationsApplied = 0;
+
+  // 应用每个迁移
+  for (const migrationName of migrationDirs) {
+    // 使用批量查询结果检查（避免单独查询）
+    if (appliedMigrations.has(migrationName)) {
+      console.log(`Migration already applied: ${migrationName}`);
+      continue;
+    }
+
+    console.log(`Applying migration: ${migrationName}`);
+    try {
+      await applyMigration(prisma, migrationsDir, migrationName);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to apply migration ${migrationName}: ${reason}`);
+    }
+    migrationsApplied++;
+  }
+
+  const elapsed = Date.now() - startTime;
+  console.log(
+    `Database migration complete. Applied ${migrationsApplied} migrations in ${elapsed}ms`,
+  );
 };
 
 export { runMigrations };

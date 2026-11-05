@@ -117,7 +117,7 @@ src/
 - **Build Tool**: Vite 6
 - **UI**: Ant Design 5
 - **Database**: Prisma ORM + SQLite
-- **PDF Processing**: pdf-lib, pdf-to-png-converter, Sharp
+- **PDF Processing**: pdf-lib, pdf-to-png-converter, @napi-rs/canvas
 - **Markdown**: react-markdown, remark-gfm, remark-math, rehype-katex, rehype-prism-plus
 - **Testing**: Vitest + Testing Library
 

@@ -4,7 +4,7 @@ import { NO_SUFFIX } from '../../../../shared/providerSuffix.js'
 /**
  * The URL each provider type really requests, for each stored suffix.
  *
- * Only the database, sharp and fetch are mocked: ModelService builds the URL and
+ * Only the database and fetch are mocked: ModelService builds the URL and
  * the real clients may extend it, so testing either side alone cannot catch a
  * suffix that does not reach the wire (issue #89).
  */
@@ -13,10 +13,6 @@ const mockProviderRepository = { findById: vi.fn() }
 
 vi.mock('../../../domain/repositories/ProviderRepository.js', () => ({
   default: mockProviderRepository
-}))
-
-vi.mock('sharp', () => ({
-  default: vi.fn(() => ({ toBuffer: vi.fn().mockResolvedValue(Buffer.from('page')) }))
 }))
 
 const BASE = 'https://proxy.test/v1/my-endpoint'
